@@ -61,8 +61,6 @@ targets:
           - iCloud.com.centricfiber.cosmica
         com.apple.developer.icloud-services:
           - CloudKit
-        com.apple.developer.ubiquity-kvstore-identifier: "$(TeamIdentifierPrefix)$(CFBundleIdentifier)"
-        aps-environment: development
         com.apple.developer.game-center: true
   CosmicaTests:
     type: bundle.unit-test
