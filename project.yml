@@ -25,6 +25,8 @@ targets:
       - path: Cosmica
         excludes:
           - "**/.DS_Store"
+          - "**/Info.plist"
+          - "**/*.entitlements"
     info:
       path: Generated/Info.plist
       properties:
