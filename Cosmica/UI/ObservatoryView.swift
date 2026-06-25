@@ -31,7 +31,7 @@ struct ObservatoryView: View {
         .overlay {
             // Stars
             Canvas { ctx, size in
-                let seed: UInt64 = 0xC05_M1CA
+                let seed: UInt64 = 0xC051_CA00_C051_CA00
                 var rng = SeededGenerator(seed: seed)
                 for _ in 0..<120 {
                     let x = CGFloat(rng.next01()) * size.width
