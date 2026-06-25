@@ -9,7 +9,7 @@ settings:
   base:
     SWIFT_VERSION: "5.9"
     IPHONEOS_DEPLOYMENT_TARGET: "17.0"
-    TARGETED_DEVICE_FAMILY: "1,2"
+    TARGETED_DEVICE_FAMILY: "1"
     ALWAYS_SEARCH_USER_PATHS: NO
     ENABLE_USER_SCRIPT_SANDBOXING: NO
     DEVELOPMENT_TEAM: "7H5T5AR2X5"
@@ -37,9 +37,6 @@ targets:
           UIColorName: "LaunchBackground"
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
-        UISupportedInterfaceOrientations~ipad:
-          - UIInterfaceOrientationPortrait
-          - UIInterfaceOrientationPortraitUpsideDown
         NSUserTrackingUsageDescription: "Cosmica uses your identifier to show more relevant ads and support the game."
         GADApplicationIdentifier: "ca-app-pub-3940256099942544~1458002511"
         ITSAppUsesNonExemptEncryption: false
