@@ -87,7 +87,9 @@ final class IAPManager {
     private func listenForTransactions() -> Task<Void, Never> {
         Task.detached { [weak self] in
             for await update in Transaction.updates {
-                guard let self else { continue }
+                // Exit cleanly when the manager deallocates — keeps the
+                // detached task from running forever.
+                guard let self else { break }
                 if case .verified(let txn) = update {
                     await self.refreshEntitlements()
                     await txn.finish()
@@ -95,6 +97,4 @@ final class IAPManager {
             }
         }
     }
-
-    deinit { updatesTask?.cancel() }
 }
