@@ -25,8 +25,8 @@ targets:
       - path: Cosmica
         excludes:
           - "**/.DS_Store"
-    resources:
-      - path: Cosmica/Resources
+          - "Resources/Info.plist"
+          - "Cosmica.entitlements"
     info:
       path: Cosmica/Resources/Info.plist
       properties:
