@@ -9,6 +9,7 @@
 *.xcconfig       text eol=lf
 *.gitignore      text eol=lf
 *.gitattributes  text eol=lf
+*.sh             text eol=lf
 
 # Binary
 *.png   binary
