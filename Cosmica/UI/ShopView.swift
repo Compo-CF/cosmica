@@ -6,6 +6,8 @@ struct ShopView: View {
     @Environment(IAPManager.self) var iap
     @Environment(HapticsManager.self) var haptics
 
+    @State private var adUnavailableAlert = false
+
     var body: some View {
         NavigationStack {
             ZStack {
@@ -30,6 +32,11 @@ struct ShopView: View {
             .navigationTitle("Shop")
             .toolbarBackground(Color.black, for: .navigationBar)
             .toolbarColorScheme(.dark, for: .navigationBar)
+            .alert("Ad not ready yet", isPresented: $adUnavailableAlert) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text("AdMob hasn't loaded the next ad yet — this is common with brand-new ad accounts. Try again in a minute or two; the app retries automatically in the background.")
+            }
         }
     }
 
@@ -103,10 +110,10 @@ struct ShopView: View {
                 }
                 HStack(spacing: 10) {
                     actionButton(
-                        title: "Watch Ad",
+                        title: ads.rewardedReady ? "Watch Ad" : "Loading…",
                         subtitle: "1 hour",
                         color: .orange,
-                        disabled: !ads.rewardedReady
+                        disabled: false
                     ) {
                         watchAd { engine.grantBoost(duration: 3600); haptics.upgrade() }
                     }
@@ -145,10 +152,10 @@ struct ShopView: View {
                 }
                 HStack(spacing: 10) {
                     actionButton(
-                        title: "Watch Ad",
+                        title: ads.rewardedReady ? "Watch Ad" : "Loading…",
                         subtitle: "24 hour cap",
                         color: .blue,
-                        disabled: !ads.rewardedReady
+                        disabled: false
                     ) {
                         watchAd {
                             _ = engine.applyOfflineCatchUp(cap: 24 * 3600)
@@ -238,6 +245,13 @@ struct ShopView: View {
     }
 
     private func watchAd(onReward: @escaping () -> Void) {
+        guard ads.rewardedReady else {
+            adUnavailableAlert = true
+            // Kick off another load attempt so by the time the user dismisses
+            // the alert, an ad may be ready.
+            Task { await ads.loadRewarded() }
+            return
+        }
         guard let root = UIApplication.shared.topMostViewController() else { return }
         ads.showRewarded(from: root, onReward: onReward)
     }

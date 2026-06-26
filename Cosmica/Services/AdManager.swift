@@ -61,6 +61,13 @@ final class AdManager: NSObject {
         } catch {
             rewardedReady = false
             print("[AdManager] Rewarded load failed: \(error)")
+            // Schedule a background retry. New AdMob accounts often return
+            // "no fill" for hours; keep trying so the button comes alive
+            // once inventory matches.
+            Task { [weak self] in
+                try? await Task.sleep(nanoseconds: 30_000_000_000)
+                await self?.loadRewarded()
+            }
         }
     }
 
@@ -92,6 +99,12 @@ final class AdManager: NSObject {
         } catch {
             interstitialReady = false
             print("[AdManager] Interstitial load failed: \(error)")
+            // Same retry policy as rewarded — see comment in loadRewarded.
+            Task { [weak self] in
+                try? await Task.sleep(nanoseconds: 30_000_000_000)
+                guard let self else { return }
+                if !self.removeAdsOwned { await self.loadInterstitial() }
+            }
         }
     }
 
