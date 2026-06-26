@@ -32,13 +32,13 @@ targets:
       properties:
         CFBundleDisplayName: Cosmica
         CFBundleShortVersionString: "1.0.0"
-        CFBundleVersion: "2"
+        CFBundleVersion: "3"
         UILaunchScreen:
           UIColorName: "LaunchBackground"
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
         NSUserTrackingUsageDescription: "Cosmica uses your identifier to show more relevant ads and support the game."
-        GADApplicationIdentifier: "ca-app-pub-3940256099942544~1458002511"
+        GADApplicationIdentifier: "ca-app-pub-1927040492403163~7701480321"
         ITSAppUsesNonExemptEncryption: false
     settings:
       base:

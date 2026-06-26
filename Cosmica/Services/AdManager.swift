@@ -8,18 +8,31 @@ import GoogleMobileAds
 /// - Rewarded: player-initiated from `ShopView` (always available, even with removeAds).
 /// - Interstitial: shown after Big Bang, rate-limited to 1 per 3 min (gated).
 ///
-/// Ad unit IDs default to Google's test IDs. Replace with real ones before App Store submission.
+/// `#if DEBUG` keeps dev builds on Google's test ad units so simulator runs and Xcode
+/// debug sessions don't generate impressions / clicks against the real AdMob account.
+/// TestFlight and App Store builds use the production IDs.
 @MainActor
 @Observable
 final class AdManager: NSObject {
-    // Test IDs (safe to ship; Google won't pay for them) — REPLACE FOR PRODUCTION.
+    // Google test IDs — safe to ship, no real impressions / no payout.
     static let testBannerUnitId       = "ca-app-pub-3940256099942544/2934735716"
-    static let testRewardedUnitId     = "ca-app-pub-3940256099942544/1712485313"
     static let testInterstitialUnitId = "ca-app-pub-3940256099942544/4411468910"
+    static let testRewardedUnitId     = "ca-app-pub-3940256099942544/1712485313"
 
+    // Production AdMob ad unit IDs — Cosmica account.
+    static let prodBannerUnitId       = "ca-app-pub-1927040492403163/1305638533"
+    static let prodInterstitialUnitId = "ca-app-pub-1927040492403163/7487903502"
+    static let prodRewardedUnitId     = "ca-app-pub-1927040492403163/3548658494"
+
+    #if DEBUG
     var bannerUnitId       = AdManager.testBannerUnitId
-    var rewardedUnitId     = AdManager.testRewardedUnitId
     var interstitialUnitId = AdManager.testInterstitialUnitId
+    var rewardedUnitId     = AdManager.testRewardedUnitId
+    #else
+    var bannerUnitId       = AdManager.prodBannerUnitId
+    var interstitialUnitId = AdManager.prodInterstitialUnitId
+    var rewardedUnitId     = AdManager.prodRewardedUnitId
+    #endif
 
     private(set) var removeAdsOwned: Bool = false
     private(set) var rewardedReady: Bool = false
