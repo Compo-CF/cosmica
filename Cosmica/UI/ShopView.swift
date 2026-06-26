@@ -21,8 +21,8 @@ struct ShopView: View {
                         sectionHeader("Offline Catch-Up")
                         offlineCatchUpCard
                         sectionHeader("Cosmic Shards")
-                        shardsPackCard(productId: IAPManager.shardsSmallProductId, amount: 250, icon: "diamond", color: .cyan)
-                        shardsPackCard(productId: IAPManager.shardsLargeProductId, amount: 2500, icon: "diamond.fill", color: .teal)
+                        shardsPackCard(productId: IAPManager.shardsSmallProductId, amount: 250, icon: "diamond", color: .cyan, fallbackPrice: "$1.99")
+                        shardsPackCard(productId: IAPManager.shardsLargeProductId, amount: 2500, icon: "diamond.fill", color: .teal, fallbackPrice: "$9.99")
                         restoreButton
                         BannerAdSlot()
                     }
@@ -180,8 +180,8 @@ struct ShopView: View {
         }
     }
 
-    private func shardsPackCard(productId: String, amount: Int, icon: String, color: Color) -> some View {
-        let price = iap.displayPrice(for: productId) ?? "—"
+    private func shardsPackCard(productId: String, amount: Int, icon: String, color: Color, fallbackPrice: String) -> some View {
+        let price = iap.displayPrice(for: productId) ?? fallbackPrice
         return cardBackground {
             HStack(spacing: 14) {
                 Image(systemName: icon)
