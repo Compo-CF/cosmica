@@ -1,10 +1,9 @@
 import SwiftUI
 import GameKit
 
-/// TODO: replace with the developer's actual Ko-fi handle, e.g. "anthonyc".
-/// The Support section in this screen opens `https://ko-fi.com/<handle>` in the
-/// system browser. Empty string hides the Support section entirely.
-private let kofiUsername: String = ""
+/// The Support section opens `https://ko-fi.com/<handle>` in the system browser.
+/// Set to empty string to hide the section entirely.
+private let kofiUsername: String = "subtlefoodie"
 
 struct SettingsView: View {
     @Environment(GameEngine.self) var engine
