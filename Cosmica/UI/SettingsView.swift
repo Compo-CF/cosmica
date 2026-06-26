@@ -1,6 +1,11 @@
 import SwiftUI
 import GameKit
 
+/// TODO: replace with the developer's actual Ko-fi handle, e.g. "anthonyc".
+/// The Support section in this screen opens `https://ko-fi.com/<handle>` in the
+/// system browser. Empty string hides the Support section entirely.
+private let kofiUsername: String = ""
+
 struct SettingsView: View {
     @Environment(GameEngine.self) var engine
     @Environment(IAPManager.self) var iap
@@ -39,6 +44,35 @@ struct SettingsView: View {
                     }
                 }
 
+                if !kofiUsername.isEmpty {
+                    Section("Support the Developer") {
+                        if let url = URL(string: "https://ko-fi.com/\(kofiUsername)") {
+                            Link(destination: url) {
+                                HStack(spacing: 12) {
+                                    Image(systemName: "cup.and.saucer.fill")
+                                        .foregroundStyle(.orange)
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text("Buy me a coffee on Ko-fi")
+                                            .foregroundStyle(.primary)
+                                        Text("Cosmica is built solo — tips help me ship the next update.")
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Section("Legal") {
+                    NavigationLink("Privacy Policy") {
+                        PrivacyPolicyView()
+                    }
+                    NavigationLink("Terms of Service") {
+                        TermsOfServiceView()
+                    }
+                }
+
                 Section("About") {
                     HStack {
                         Text("Version")
@@ -46,8 +80,11 @@ struct SettingsView: View {
                         Text(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0")
                             .foregroundStyle(.secondary)
                     }
-                    Link("Privacy Policy", destination: URL(string: "https://centricfiber.com/cosmica/privacy")!)
-                    Link("Terms of Service", destination: URL(string: "https://centricfiber.com/cosmica/terms")!)
+                    HStack {
+                        Text("Developer")
+                        Spacer()
+                        Text("Anthony Compofelice").foregroundStyle(.secondary)
+                    }
                 }
 
                 Section("Danger Zone") {

@@ -126,9 +126,42 @@ final class GameEngine {
 
     // MARK: - Boosts
 
-    func grantAdBoost(duration: TimeInterval = 3600) {
-        state.adBoostExpiresAt = Date().addingTimeInterval(duration)
+    /// Extend the 2× boost. If a boost is already active, the new duration stacks
+    /// on top of the current expiry instead of overwriting it.
+    func grantBoost(duration: TimeInterval) {
+        let base = max(Date(), state.adBoostExpiresAt ?? .distantPast)
+        state.adBoostExpiresAt = base.addingTimeInterval(duration)
         save()
+    }
+
+    /// Back-compat shim for the rewarded-ad call site. New code should use `grantBoost(duration:)`.
+    func grantAdBoost(duration: TimeInterval = 3600) {
+        grantBoost(duration: duration)
+    }
+
+    /// Direct grant of Cosmic Shards (paid IAP). Each shard contributes 2% permanent earnings.
+    func grantShards(_ amount: Int) {
+        state.cosmicShards += Double(amount)
+        save()
+    }
+
+    /// Offline catch-up with an explicit cap (paid IAPs can pay for longer windows).
+    @discardableResult
+    func applyOfflineCatchUp(cap: TimeInterval) -> OfflineAccrual.Result {
+        let secs = max(0, Date().timeIntervalSince(state.lastSeen))
+        let counted = min(secs, cap)
+        let earned = state.stardustPerSecond * counted * OfflineAccrual.offlineRate
+        state.stardust += earned
+        state.lifetimeStardust += earned
+        state.lastSeen = Date()
+        save()
+        return OfflineAccrual.Result(
+            stardustEarned: earned,
+            secondsElapsed: secs,
+            secondsCounted: counted,
+            capUsed: cap,
+            wasCapped: secs > cap
+        )
     }
 
     // MARK: - Offline accrual

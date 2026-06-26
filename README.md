@@ -88,4 +88,4 @@ The math is pure (`CostCurve`, `PrestigeCalculator`, `OfflineAccrual`) and unit-
 
 ## License
 
-Proprietary © Centric Fiber.
+© 2026 Anthony Compofelice. All rights reserved.

@@ -3,6 +3,8 @@ import SwiftUI
 struct RootView: View {
     @Binding var offlineSummary: OfflineAccrual.Result?
     @State private var selectedTab: Tab = .observatory
+    @AppStorage("hasSeenOnboarding") private var hasSeenOnboarding: Bool = false
+    @State private var showOnboarding: Bool = false
 
     enum Tab: Hashable { case observatory, upgrades, prestige, shop, settings }
 
@@ -30,7 +32,7 @@ struct RootView: View {
         }
         .tint(.purple)
         .sheet(isPresented: Binding(
-            get: { offlineSummary != nil && (offlineSummary?.stardustEarned ?? 0) > 0 },
+            get: { offlineSummary != nil && (offlineSummary?.stardustEarned ?? 0) > 0 && hasSeenOnboarding },
             set: { if !$0 { offlineSummary = nil } }
         )) {
             if let summary = offlineSummary {
@@ -39,6 +41,12 @@ struct RootView: View {
                 }
                 .presentationDetents([.medium])
             }
+        }
+        .fullScreenCover(isPresented: $showOnboarding) {
+            OnboardingView()
+        }
+        .onAppear {
+            if !hasSeenOnboarding { showOnboarding = true }
         }
     }
 }
