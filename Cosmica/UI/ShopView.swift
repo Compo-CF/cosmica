@@ -7,6 +7,8 @@ struct ShopView: View {
     @Environment(HapticsManager.self) var haptics
 
     @State private var adUnavailableAlert = false
+    @State private var purchaseErrorAlert = false
+    @State private var purchaseErrorMessage = ""
 
     var body: some View {
         NavigationStack {
@@ -36,6 +38,13 @@ struct ShopView: View {
                 Button("OK", role: .cancel) {}
             } message: {
                 Text("AdMob hasn't loaded the next ad yet — this is common with brand-new ad accounts. Try again in a minute or two; the app retries automatically in the background.")
+            }
+            .alert("Purchase Unavailable", isPresented: $purchaseErrorAlert) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(purchaseErrorMessage.isEmpty
+                     ? "This item isn't available right now. The App Store may still be preparing the products — try again in a few minutes."
+                     : purchaseErrorMessage)
             }
         }
     }
@@ -72,11 +81,7 @@ struct ShopView: View {
                 Spacer()
                 if !owned {
                     Button {
-                        Task {
-                            if await iap.purchase(IAPManager.removeAdsProductId) {
-                                haptics.purchase()
-                            }
-                        }
+                        Task { await attemptPurchase(IAPManager.removeAdsProductId) { haptics.purchase() } }
                     } label: {
                         Text(price)
                             .font(.headline)
@@ -124,7 +129,7 @@ struct ShopView: View {
                         disabled: iap.purchaseInFlight
                     ) {
                         Task {
-                            if await iap.purchase(IAPManager.boost2x24hrProductId) {
+                            await attemptPurchase(IAPManager.boost2x24hrProductId) {
                                 engine.grantBoost(duration: 24 * 3600)
                                 haptics.purchase()
                             }
@@ -169,7 +174,7 @@ struct ShopView: View {
                         disabled: iap.purchaseInFlight
                     ) {
                         Task {
-                            if await iap.purchase(IAPManager.offline7dayProductId) {
+                            await attemptPurchase(IAPManager.offline7dayProductId) {
                                 _ = engine.applyOfflineCatchUp(cap: 7 * 24 * 3600)
                                 haptics.purchase()
                             }
@@ -195,12 +200,7 @@ struct ShopView: View {
                 }
                 Spacer()
                 Button {
-                    Task {
-                        if await iap.purchase(productId) {
-                            engine.grantShards(amount)
-                            haptics.purchase()
-                        }
-                    }
+                    Task { await attemptPurchase(productId) { engine.grantShards(amount); haptics.purchase() } }
                 } label: {
                     Text(price)
                         .font(.headline)
@@ -242,6 +242,31 @@ struct ShopView: View {
         guard let exp = engine.state.adBoostExpiresAt else { return "" }
         let remaining = max(0, exp.timeIntervalSinceNow)
         return Formatter.duration(remaining) + " remaining"
+    }
+
+    /// Attempts an IAP purchase and surfaces failures with a user-visible alert.
+    /// Previously, when the product wasn't loaded StoreKit returned nil and nothing
+    /// happened — that read as an "unresponsive" button to App Review and triggered
+    /// the 2.1(b) App Completeness rejection.
+    @MainActor
+    private func attemptPurchase(_ productId: String, onSuccess: @escaping () -> Void) async {
+        let ok = await iap.purchase(productId)
+        if ok {
+            onSuccess()
+            return
+        }
+        // Purchase didn't complete. If it was a user cancel there's no lastError set,
+        // and showing an alert would be annoying — only show it when we have an actual
+        // error message to display.
+        if let msg = iap.lastError, !msg.isEmpty {
+            purchaseErrorMessage = msg
+            purchaseErrorAlert = true
+            iap.lastError = nil
+        } else if iap.product(for: productId) == nil {
+            // Product just isn't loaded yet — surface this so the button doesn't feel dead.
+            purchaseErrorMessage = "The App Store hasn't loaded this product yet. It may still be preparing after a recent purchase configuration change — try again in a moment."
+            purchaseErrorAlert = true
+        }
     }
 
     private func watchAd(onReward: @escaping () -> Void) {

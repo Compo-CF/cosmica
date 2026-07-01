@@ -2,8 +2,11 @@ import SwiftUI
 import GameKit
 
 /// The Support section opens `https://ko-fi.com/<handle>` in the system browser.
-/// Set to empty string to hide the section entirely.
-private let kofiUsername: String = "subtlefoodie"
+/// KEPT EMPTY for App Store builds — Apple guideline 3.1.1 requires all donation
+/// mechanisms for a developer's own app to go through IAP so Apple takes its cut.
+/// Ko-fi links referencing the app or the developer are rejected.
+/// v1.1 plan: replace with an IAP-based "Tip Jar" (small/medium/large consumables).
+private let kofiUsername: String = ""
 
 struct SettingsView: View {
     @Environment(GameEngine.self) var engine
