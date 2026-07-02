@@ -30,18 +30,22 @@ struct CosmicaApp: App {
                 .environment(gameCenter)
                 .preferredColorScheme(.dark)
                 .task {
-                    // ATT prompt must run before AdMob starts serving personalized
-                    // ads so the user's choice is respected. Small delay lets the
-                    // launch UI settle so the prompt doesn't feel jarring.
-                    try? await Task.sleep(nanoseconds: 800_000_000)
-                    await requestTrackingPermissionIfNeeded()
-
                     await iap.start()
                     ads.configure(removeAdsOwned: iap.removeAdsOwned)
                     gameCenter.authenticate()
                     offlineSummary = engine.applyOffline()
                     engine.start()
                     await syncFromCloudIfNeeded()
+
+                    // Fallback ATT request for users who already dismissed
+                    // onboarding on an older build (their .notDetermined status
+                    // was never resolved because the previous placement in the
+                    // launch flow got suppressed by the fullScreenCover). New
+                    // installs get the prompt inside OnboardingView.finish().
+                    // Delay so this only fires once the main UI is settled and
+                    // no modal is presenting.
+                    try? await Task.sleep(nanoseconds: 1_500_000_000)
+                    await requestTrackingPermissionIfNeeded()
                 }
                 .onChange(of: iap.removeAdsOwned) { _, owned in
                     ads.configure(removeAdsOwned: owned)

@@ -1,4 +1,5 @@
 import SwiftUI
+import AppTrackingTransparency
 
 /// First-launch tutorial. Four paged cards explaining the core loop.
 /// Dismisses to `hasSeenOnboarding = true` so it never reappears.
@@ -65,7 +66,7 @@ struct OnboardingView: View {
         }
         .overlay(alignment: .topTrailing) {
             if page < pages.count - 1 {
-                Button("Skip") { finish() }
+                Button("Skip") { Task { await finish() } }
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .padding()
@@ -115,12 +116,22 @@ struct OnboardingView: View {
         if page < pages.count - 1 {
             withAnimation { page += 1 }
         } else {
-            finish()
+            Task { await finish() }
         }
     }
 
-    private func finish() {
+    /// Dismisses onboarding and, on the way out, requests App Tracking
+    /// Transparency permission. Firing the prompt in direct response to the
+    /// "Start Playing" tap satisfies iOS's requirement that the app be active
+    /// and no other modal be presenting — the previous placement in
+    /// RootView.task collided with the .fullScreenCover appearing and the
+    /// system quietly suppressed the alert.
+    @MainActor
+    private func finish() async {
         hasSeenOnboarding = true
+        if ATTrackingManager.trackingAuthorizationStatus == .notDetermined {
+            _ = await ATTrackingManager.requestTrackingAuthorization()
+        }
         dismiss()
     }
 }
