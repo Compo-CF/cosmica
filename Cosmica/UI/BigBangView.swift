@@ -17,6 +17,7 @@ struct BigBangView: View {
                         prestigeOrb
                         statsCard
                         tierCard
+                        cosmicTreeLink
                         if engine.canPrestige {
                             bigBangButton
                         } else {
@@ -132,6 +133,24 @@ struct BigBangView: View {
         .padding()
         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
         .padding(.horizontal)
+    }
+
+    private var cosmicTreeLink: some View {
+        NavigationLink { CosmicTreeView() } label: {
+            HStack {
+                Image(systemName: "circle.hexagongrid.fill").foregroundStyle(.cyan)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Cosmic Tree").font(.headline).foregroundStyle(.white)
+                    Text("Spend \(Formatter.short(engine.state.cosmicShards)) ◈ Cosmic Shards on permanent upgrades")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+                Spacer()
+                Image(systemName: "chevron.right").foregroundStyle(.secondary)
+            }
+            .padding()
+            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
+            .padding(.horizontal)
+        }
     }
 
     private var bigBangButton: some View {

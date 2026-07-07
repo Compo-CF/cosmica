@@ -1,10 +1,12 @@
 import SwiftUI
 
 struct RootView: View {
+    @Environment(GameEngine.self) private var engine
     @Binding var offlineSummary: OfflineAccrual.Result?
     @State private var selectedTab: Tab = .observatory
     @AppStorage("hasSeenOnboarding") private var hasSeenOnboarding: Bool = false
     @State private var showOnboarding: Bool = false
+    @State private var dailyDismissed: Bool = false
 
     enum Tab: Hashable { case observatory, upgrades, prestige, shop, settings }
 
@@ -41,6 +43,13 @@ struct RootView: View {
                 }
                 .presentationDetents([.medium])
             }
+        }
+        .sheet(isPresented: Binding(
+            get: { engine.dailyRewardAvailable && hasSeenOnboarding && offlineSummary == nil && !dailyDismissed },
+            set: { if !$0 { dailyDismissed = true } }
+        )) {
+            DailyRewardView { dailyDismissed = true }
+                .presentationDetents([.medium])
         }
         .fullScreenCover(isPresented: $showOnboarding) {
             OnboardingView()

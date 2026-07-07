@@ -19,9 +19,11 @@ enum OfflineAccrual {
     static func compute(now: Date,
                         lastSeen: Date,
                         ratePerSecond: Double,
-                        extended: Bool = false) -> Result {
+                        extended: Bool = false,
+                        extraCap: TimeInterval = 0) -> Result {
         let elapsed = max(0, now.timeIntervalSince(lastSeen))
-        let cap = extended ? extendedCap : baseCap
+        let baseline = extended ? extendedCap : baseCap
+        let cap = baseline + max(0, extraCap)
         let counted = min(elapsed, cap)
         let earned = max(0, ratePerSecond) * counted * offlineRate
         return Result(

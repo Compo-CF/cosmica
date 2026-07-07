@@ -6,15 +6,19 @@ struct GeneratorRow: View {
 
     let generator: Generator
     @State private var buyMode: BuyMode = .one
+    @State private var showDetail: Bool = false
 
     enum BuyMode: String, CaseIterable, Identifiable {
         case one = "×1", ten = "×10", max = "Max"
         var id: String { rawValue }
     }
 
-    private var owned: Int {
-        engine.state.generators.first(where: { $0.id == generator.id })?.count ?? 0
+    /// Engine's authoritative copy — carries the current count and any specialization.
+    private var liveGenerator: Generator? {
+        engine.state.generators.first { $0.id == generator.id }
     }
+
+    private var owned: Int { liveGenerator?.count ?? 0 }
 
     private var unlocked: Bool {
         // Unlock cascades — the very first is always unlocked, others require the previous one owned.
@@ -44,10 +48,11 @@ struct GeneratorRow: View {
     private var canAfford: Bool { engine.state.stardust >= totalCost }
 
     var body: some View {
-        if !unlocked {
-            lockedView
-        } else {
-            unlockedView
+        Group {
+            if !unlocked { lockedView } else { unlockedView }
+        }
+        .sheet(isPresented: $showDetail) {
+            GeneratorDetailSheet(generatorId: generator.id)
         }
     }
 
@@ -64,13 +69,24 @@ struct GeneratorRow: View {
                     Text(generator.name)
                         .font(.headline)
                         .foregroundStyle(.white)
+                    if let spec = liveGenerator?.specializationDetail {
+                        Image(systemName: spec.symbol)
+                            .font(.caption2.bold())
+                            .foregroundStyle(.orange)
+                    }
                     Spacer()
+                    Button { showDetail = true } label: {
+                        Image(systemName: "info.circle")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                    .buttonStyle(.plain)
                     Text("\(owned)")
                         .font(.subheadline.bold())
                         .foregroundStyle(.secondary)
                         .monospacedDigit()
                 }
-                Text("\(Formatter.short(generator.unitRate(with: engine.state.upgrades)))/s each")
+                Text("\(Formatter.short((liveGenerator ?? generator).unitRate(with: engine.state.upgrades)))/s each")
                     .font(.caption)
                     .foregroundStyle(.green)
                     .monospacedDigit()

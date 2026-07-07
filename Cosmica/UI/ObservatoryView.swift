@@ -14,11 +14,46 @@ struct ObservatoryView: View {
             VStack(spacing: 0) {
                 CurrencyBar()
                 tierStrip
+                if let event = engine.state.activeEvent {
+                    eventBanner(event)
+                }
                 tapZone
                 generatorList
                 BannerAdSlot()
             }
         }
+    }
+
+    /// Live banner shown while a Cosmic Event is running. Updates its own remaining-time
+    /// text every second via a Timer.publish so the countdown feels responsive.
+    private func eventBanner(_ event: CosmicEvent) -> some View {
+        TimelineView(.periodic(from: .now, by: 1)) { context in
+            let secs = max(0, engine.state.activeEventExpiresAt?.timeIntervalSince(context.date) ?? 0)
+            HStack(spacing: 10) {
+                Image(systemName: event.symbol)
+                    .foregroundStyle(.orange)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(event.name).font(.subheadline.bold()).foregroundStyle(.white)
+                    Text(event.detail).font(.caption).foregroundStyle(.orange)
+                }
+                Spacer()
+                Text(Formatter.duration(secs))
+                    .font(.caption.bold())
+                    .foregroundStyle(.orange)
+                    .monospacedDigit()
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 8)
+            .background(
+                LinearGradient(colors: [.orange.opacity(0.28), .red.opacity(0.14)], startPoint: .leading, endPoint: .trailing),
+                in: RoundedRectangle(cornerRadius: 10)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 10).stroke(Color.orange.opacity(0.5), lineWidth: 1)
+            )
+        }
+        .padding(.horizontal)
+        .padding(.top, 2)
     }
 
     // MARK: - Components
