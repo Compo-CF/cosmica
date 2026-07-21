@@ -1,16 +1,10 @@
 import SwiftUI
 import GameKit
 
-/// The Support section opens `https://ko-fi.com/<handle>` in the system browser.
-/// KEPT EMPTY for App Store builds — Apple guideline 3.1.1 requires all donation
-/// mechanisms for a developer's own app to go through IAP so Apple takes its cut.
-/// Ko-fi links referencing the app or the developer are rejected.
-/// v1.1 plan: replace with an IAP-based "Tip Jar" (small/medium/large consumables).
-private let kofiUsername: String = ""
-
 struct SettingsView: View {
     @Environment(GameEngine.self) var engine
     @Environment(IAPManager.self) var iap
+    @Environment(HapticsManager.self) var haptics
     @Environment(GameCenterManager.self) var gameCenter
     @State private var showResetConfirm = false
     @State private var showGameCenter = false
@@ -46,25 +40,7 @@ struct SettingsView: View {
                     }
                 }
 
-                if !kofiUsername.isEmpty {
-                    Section("Support the Developer") {
-                        if let url = URL(string: "https://ko-fi.com/\(kofiUsername)") {
-                            Link(destination: url) {
-                                HStack(spacing: 12) {
-                                    Image(systemName: "cup.and.saucer.fill")
-                                        .foregroundStyle(.orange)
-                                    VStack(alignment: .leading, spacing: 2) {
-                                        Text("Buy me a coffee on Ko-fi")
-                                            .foregroundStyle(.primary)
-                                        Text("Cosmica is built solo — tips help me ship the next update.")
-                                            .font(.caption)
-                                            .foregroundStyle(.secondary)
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
+                tipJarSection
 
                 Section("Legal") {
                     NavigationLink("Privacy Policy") {
@@ -79,8 +55,7 @@ struct SettingsView: View {
                     HStack {
                         Text("Version")
                         Spacer()
-                        Text(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0")
-                            .foregroundStyle(.secondary)
+                        Text(versionString).foregroundStyle(.secondary).monospacedDigit()
                     }
                     HStack {
                         Text("Developer")
@@ -113,7 +88,74 @@ struct SettingsView: View {
                 GameCenterDashboard()
                     .ignoresSafeArea()
             }
+            .alert("Thank you! 🙏", isPresented: Binding(
+                get: { iap.didTip },
+                set: { if !$0 { iap.didTip = false } }
+            )) {
+                Button("You're welcome", role: .cancel) { iap.didTip = false }
+            } message: {
+                Text("Your tip genuinely helps keep Cosmica free and shipping updates. It means a lot.")
+            }
         }
+    }
+
+    // MARK: - Tip jar (always-accessible)
+
+    /// v1.2: in-app tip jar (StoreKit consumables). Hidden until products load so
+    /// there are never dead buttons. Labels map small → generous; the amount comes
+    /// from StoreKit's localized price, never hard-coded. Matches S-Tier Eats'
+    /// AboutSheetView pattern.
+    @ViewBuilder
+    private var tipJarSection: some View {
+        let tips = iap.tipProducts
+        if !tips.isEmpty {
+            Section {
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Cosmica is free. If it's earned a spot in your day, a tip helps keep it going — no pressure.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
+                    HStack(spacing: 10) {
+                        ForEach(Array(tips.enumerated()), id: \.element.id) { idx, product in
+                            Button {
+                                Task {
+                                    let ok = await iap.purchaseTip(product)
+                                    if ok { haptics.upgrade() }
+                                }
+                            } label: {
+                                VStack(spacing: 3) {
+                                    Text(tipLabel(idx))
+                                        .font(.caption.weight(.semibold))
+                                        .foregroundStyle(.secondary)
+                                    Text(product.displayPrice)
+                                        .font(.subheadline.bold())
+                                        .foregroundStyle(.primary)
+                                }
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 10)
+                                .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 10))
+                            }
+                            .buttonStyle(.plain)
+                            .disabled(iap.purchaseInFlight)
+                        }
+                    }
+                }
+                .padding(.vertical, 4)
+            } header: {
+                Text("Leave a tip")
+            }
+        }
+    }
+
+    private func tipLabel(_ idx: Int) -> String {
+        ["Small tip", "Medium tip", "Generous tip"][min(idx, 2)]
+    }
+
+    private var versionString: String {
+        let dict = Bundle.main.infoDictionary
+        let v = dict?["CFBundleShortVersionString"] as? String ?? "—"
+        let b = dict?["CFBundleVersion"] as? String ?? "—"
+        return "\(v) (\(b))"
     }
 
     private func statRow(_ label: String, _ value: String) -> some View {
