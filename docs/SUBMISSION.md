@@ -205,6 +205,9 @@ Create all 5 in App Store Connect → Monetization → In-App Purchases before s
 | `com.centricfiber.cosmica.offline_7day` | Consumable | Offline 7d | 7-Day Offline Catch-Up | $2.99 (Tier 3) |
 | `com.centricfiber.cosmica.shards_pack_small` | Consumable | Shards Small | 250 Cosmic Shards | $1.99 (Tier 2) |
 | `com.centricfiber.cosmica.shards_pack_large` | Consumable | Shards Large | 2500 Cosmic Shards | $9.99 (Tier 10) |
+| `com.centricfiber.cosmica.tip.small`         | Consumable | Tip Small    | Small Tip           | $0.99 (Tier 1) |
+| `com.centricfiber.cosmica.tip.medium`        | Consumable | Tip Medium   | Medium Tip          | $2.99 (Tier 3) |
+| `com.centricfiber.cosmica.tip.large`         | Consumable | Tip Large    | Generous Tip        | $4.99 (Tier 5) |
 
 For each, you'll need:
 - **Localized name** (the user-visible name, can match Display Name above)
