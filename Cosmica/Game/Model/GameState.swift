@@ -39,6 +39,14 @@ struct GameState: Codable {
     var adBoostExpiresAt: Date? = nil
     var removeAdsOwned: Bool = false
 
+    // ───────── Absolute Ascension (v1.3) ─────────
+    /// The moment the player's lifetime Stardust first crossed the Absolute threshold.
+    /// nil = never ascended. Persists across Big Bang (lifetime resets, this doesn't).
+    var absoluteAscendedAt: Date? = nil
+    /// Whether we've already shown the celebration sheet. Guards against re-showing on
+    /// every cold launch after ascension.
+    var absoluteCelebrationShown: Bool = false
+
     // ───────── Codable: lenient decode so v1.0.x saves migrate to v2 ─────────
 
     init() {}   // memberwise-equivalent default init for fresh saves.
@@ -63,7 +71,13 @@ struct GameState: Codable {
         lastEventEndedAt    = try c.decodeIfPresent(Date.self,          forKey: .lastEventEndedAt)
         adBoostExpiresAt    = try c.decodeIfPresent(Date.self,          forKey: .adBoostExpiresAt)
         removeAdsOwned      = try c.decodeIfPresent(Bool.self,          forKey: .removeAdsOwned)      ?? false
+        absoluteAscendedAt  = try c.decodeIfPresent(Date.self,          forKey: .absoluteAscendedAt)
+        absoluteCelebrationShown = try c.decodeIfPresent(Bool.self,     forKey: .absoluteCelebrationShown) ?? false
     }
+
+    /// Convenience — true once the player has crossed Absolute at any point in their save.
+    /// Uses the persisted date so it survives Big Bang (lifetime resets each prestige).
+    var hasAbsoluteAscended: Bool { absoluteAscendedAt != nil }
 
     // ───────── Derived (not persisted by Codable choice — recomputed each frame) ─────────
 

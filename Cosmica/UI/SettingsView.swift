@@ -12,6 +12,30 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             List {
+                if engine.state.hasAbsoluteAscended {
+                    Section {
+                        HStack(spacing: 12) {
+                            Image(systemName: "infinity.circle.fill")
+                                .font(.title2)
+                                .foregroundStyle(
+                                    LinearGradient(
+                                        colors: [Color(red: 1.0, green: 0.55, blue: 0.90), Color(red: 0.30, green: 0.90, blue: 1.00), Color(red: 1.0, green: 0.72, blue: 0.20)],
+                                        startPoint: .leading, endPoint: .trailing
+                                    )
+                                )
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Absolute Observer")
+                                    .font(.headline)
+                                Text("You reached the end of the ladder.")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                        }
+                        .padding(.vertical, 4)
+                    }
+                }
+
                 Section("Stats") {
                     statRow("Stardust", Formatter.short(engine.state.stardust) + " ✦")
                     statRow("Lifetime Stardust", Formatter.short(engine.state.lifetimeStardust) + " ✦")

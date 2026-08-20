@@ -57,6 +57,15 @@ struct RootView: View {
         .sheet(isPresented: $showTipReminder) {
             TipReminderView()
         }
+        // Absolute Ascension — highest-priority full-screen moment. Engine flips
+        // showAbsoluteCelebration the first time lifetime crosses 1e36 ✦; the sheet
+        // acknowledges it (which persists a "shown" flag so it never re-fires).
+        .fullScreenCover(isPresented: Binding(
+            get: { engine.showAbsoluteCelebration },
+            set: { if !$0 { engine.acknowledgeAscension() } }
+        )) {
+            AbsoluteAscensionView()
+        }
         .fullScreenCover(isPresented: $showOnboarding) {
             OnboardingView()
         }

@@ -127,7 +127,18 @@ struct BigBangView: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
             } else {
-                Text("Maximum tier reached.").font(.caption).foregroundStyle(tier.color)
+                HStack(spacing: 6) {
+                    Image(systemName: "infinity.circle.fill")
+                        .font(.caption)
+                        .foregroundStyle(
+                            LinearGradient(
+                                colors: [Color(red: 1.0, green: 0.55, blue: 0.90), Color(red: 0.30, green: 0.90, blue: 1.00), Color(red: 1.0, green: 0.72, blue: 0.20)],
+                                startPoint: .leading, endPoint: .trailing
+                            )
+                        )
+                    Text(engine.state.hasAbsoluteAscended ? "Absolute Observer — the ladder is complete." : "Maximum tier reached.")
+                        .font(.caption).foregroundStyle(tier.color)
+                }
             }
         }
         .padding()

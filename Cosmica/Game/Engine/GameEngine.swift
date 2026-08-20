@@ -15,6 +15,13 @@ final class GameEngine {
     /// 10Hz — smooth enough for counters, cheap enough to be invisible on battery.
     private let tickHz: Double = 10.0
 
+    /// Transient flag flipped when the player first crosses Absolute. Observed by RootView
+    /// to present the celebration sheet. Consumed via `acknowledgeAscension()` which
+    /// persists `absoluteCelebrationShown` so the sheet never re-fires.
+    private(set) var showAbsoluteCelebration: Bool = false
+    /// One-time reward granted with the Absolute Ascension.
+    static let absoluteAscensionShardBonus: Int = 500
+
     init(state: GameState, persistence: Persistence) {
         self.state = state
         self.persistence = persistence
@@ -50,6 +57,30 @@ final class GameEngine {
         let earned = state.stardustPerSecond * dt
         state.stardust += earned
         state.lifetimeStardust += earned
+
+        checkAbsoluteAscension()
+    }
+
+    // MARK: - Absolute Ascension (v1.3)
+
+    /// If the player has just crossed the Absolute threshold for the very first time,
+    /// stamp the ascension date, grant the one-time shard bonus, and queue the
+    /// celebration sheet. Called from every tick + after any offline accrual.
+    private func checkAbsoluteAscension() {
+        guard state.absoluteAscendedAt == nil else { return }
+        guard state.lifetimeStardust >= Tier.absolute.threshold else { return }
+        state.absoluteAscendedAt = Date()
+        state.cosmicShards += Double(Self.absoluteAscensionShardBonus)
+        showAbsoluteCelebration = true
+        save()
+    }
+
+    /// Called by the celebration sheet on dismiss. Persists the "already shown" flag
+    /// so it never re-fires — the reward is granted at most once per save.
+    func acknowledgeAscension() {
+        state.absoluteCelebrationShown = true
+        showAbsoluteCelebration = false
+        save()
     }
 
     // MARK: - Manual tap
@@ -309,6 +340,7 @@ final class GameEngine {
         state.stardust += result.stardustEarned
         state.lifetimeStardust += result.stardustEarned
         state.lastSeen = Date()
+        checkAbsoluteAscension()
         save()
         return result
     }
