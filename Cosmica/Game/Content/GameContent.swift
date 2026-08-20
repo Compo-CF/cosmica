@@ -19,6 +19,11 @@ enum GameContent {
         Generator(id: "g10", name: "Galactic Survey Net",    index: 9,  baseCost: 200_000_000_000,     baseRate: 1_600_000,   costGrowth: 1.15, symbol: "globe.americas.fill"),
         Generator(id: "g11", name: "Multiverse Receiver",    index: 10, baseCost: 3_000_000_000_000,   baseRate: 10_000_000,  costGrowth: 1.16, symbol: "circle.dotted.and.circle"),
         Generator(id: "g12", name: "Demiurge Engine",        index: 11, baseCost: 50_000_000_000_000,  baseRate: 65_000_000,  costGrowth: 1.17, symbol: "sparkles"),
+        // v1.3 — post-Demiurge frontier. Same ~15× per-tier scaling.
+        Generator(id: "g13", name: "Chrono-Engine",          index: 12, baseCost: 800_000_000_000_000,     baseRate: 500_000_000,       costGrowth: 1.17, symbol: "clock.arrow.circlepath"),
+        Generator(id: "g14", name: "Entropic Field",         index: 13, baseCost: 15_000_000_000_000_000,  baseRate: 4_000_000_000,     costGrowth: 1.18, symbol: "waveform.path"),
+        Generator(id: "g15", name: "Anthropic Prism",        index: 14, baseCost: 300_000_000_000_000_000, baseRate: 30_000_000_000,    costGrowth: 1.18, symbol: "cube.transparent.fill"),
+        Generator(id: "g16", name: "Primordial Engine",      index: 15, baseCost: 6e18,                    baseRate: 250_000_000_000,   costGrowth: 1.19, symbol: "flame.circle.fill"),
     ]
 
     /// Three escalating per-generator upgrades, unlocked by ownership milestones.

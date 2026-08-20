@@ -28,6 +28,7 @@ enum CosmicTree {
         CosmicSkill(id: "deep_field",    name: "Deep Field",           detail: "+12% from Backyard→Orbital gens / lvl", symbol: "scope",              baseCost: 4, growth: 1.7, maxLevel: 8),
         CosmicSkill(id: "wormhole",      name: "Wormhole Resonance",   detail: "+12% from Solar→Wormhole gens / lvl",  symbol: "tornado",            baseCost: 4, growth: 1.7, maxLevel: 8),
         CosmicSkill(id: "multiverse",    name: "Multiverse Weave",     detail: "+12% from Dyson→Demiurge gens / lvl", symbol: "circle.dotted.and.circle", baseCost: 4, growth: 1.7, maxLevel: 8),
+        CosmicSkill(id: "chronal",       name: "Chronal Resonance",    detail: "+12% from Chrono→Primordial gens / lvl", symbol: "clock.arrow.circlepath", baseCost: 5, growth: 1.7, maxLevel: 8),
         CosmicSkill(id: "big_bang",      name: "Big Bang Yield",       detail: "+15% Cosmic Shards on Big Bang / lvl", symbol: "burst.fill",         baseCost: 5, growth: 1.8, maxLevel: 6),
         CosmicSkill(id: "tap_mastery",   name: "Tap Mastery",          detail: "+25% tap value per level",           symbol: "hand.tap.fill",       baseCost: 3, growth: 1.6, maxLevel: 8),
         CosmicSkill(id: "nightwatch",    name: "Nightwatch",           detail: "+2h offline cap per level",          symbol: "moon.zzz.fill",      baseCost: 4, growth: 1.7, maxLevel: 8),
@@ -53,14 +54,16 @@ enum CosmicTree {
         return 100 * pow(10, Double(lvl))   // 1K, 10K, 100K…
     }
 
-    /// Per-tier generator multiplier: the "Deep Field / Wormhole / Multiverse" clusters.
-    /// Generator index 0-3 = Deep Field, 4-7 = Wormhole, 8-11 = Multiverse.
+    /// Per-tier generator multiplier: the "Deep Field / Wormhole / Multiverse / Chronal"
+    /// clusters. Generator index 0-3 = Deep Field, 4-7 = Wormhole, 8-11 = Multiverse,
+    /// 12-15 = Chronal (v1.3).
     static func generatorTierMultiplier(_ generatorIndex: Int, _ l: [String: Int]) -> Double {
         let skillId: String
         switch generatorIndex {
-        case 0...3: skillId = "deep_field"
-        case 4...7: skillId = "wormhole"
-        default:    skillId = "multiverse"
+        case 0...3:  skillId = "deep_field"
+        case 4...7:  skillId = "wormhole"
+        case 8...11: skillId = "multiverse"
+        default:     skillId = "chronal"
         }
         return 1 + 0.12 * Double(level(skillId, l))
     }
