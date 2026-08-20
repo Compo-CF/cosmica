@@ -136,14 +136,17 @@ struct ObservatoryView: View {
     }
 
     private var generatorList: some View {
-        ScrollView {
-            LazyVStack(spacing: 10) {
-                ForEach(engine.state.generators) { gen in
-                    GeneratorRow(generator: gen)
+        VStack(spacing: 8) {
+            BuyModePicker()
+            ScrollView {
+                LazyVStack(spacing: 10) {
+                    ForEach(engine.state.generators) { gen in
+                        GeneratorRow(generator: gen)
+                    }
                 }
+                .padding(.horizontal)
+                .padding(.bottom, 16)
             }
-            .padding(.horizontal)
-            .padding(.bottom, 16)
         }
     }
 }
