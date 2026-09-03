@@ -16,7 +16,14 @@ struct WondersView: View {
                     ForEach(WondersCatalog.all) { w in
                         WonderRow(wonder: w) {
                             let ok = engine.buildWonder(id: w.id)
-                            if ok { haptics.skillUnlock() }
+                            if ok {
+                                haptics.skillUnlock()
+                                // Happy-moment: they just spent a mountain of shards on
+                                // something permanent. Rate-limited on ReviewPrompter's side.
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+                                    reviewPrompter.maybePrompt(reason: "wonder_built")
+                                }
+                            }
                         }
                         .padding(.horizontal)
                     }

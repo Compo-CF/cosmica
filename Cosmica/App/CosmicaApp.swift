@@ -30,6 +30,7 @@ struct CosmicaApp: App {
                     .environment(iap)
                     .environment(haptics)
                     .environment(gameCenter)
+                    .environment(reviewPrompter)
                 if showSplash {
                     SplashView()
                         .transition(.opacity)

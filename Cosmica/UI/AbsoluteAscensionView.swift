@@ -98,6 +98,12 @@ struct AbsoluteAscensionView: View {
         haptics.upgrade()
         engine.acknowledgeAscension()
         dismiss()
+        // Happy-moment: they just crossed the biggest threshold in the game.
+        // Delay so the dismiss animation finishes and the prompt lands in the
+        // "wow that was cool" beat rather than on top of the cover transition.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+            reviewPrompter.maybePrompt(reason: "absolute_ascension")
+        }
     }
 
     // MARK: - Composition

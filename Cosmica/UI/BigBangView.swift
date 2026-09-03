@@ -272,8 +272,16 @@ struct BigBangView: View {
         withAnimation { collapseAnim = true }
         haptics.bigBang()
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-            _ = engine.bigBang()
+            let shards = engine.bigBang()
             withAnimation { collapseAnim = false }
+            // Happy-moment: a Big Bang that actually paid out something meaningful.
+            // Delay one full second so the confetti/haptics finish first — nothing
+            // ruins a review prompt like landing it on top of an animation.
+            if shards >= 10 {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                    reviewPrompter.maybePrompt(reason: "big_bang")
+                }
+            }
         }
     }
 }
