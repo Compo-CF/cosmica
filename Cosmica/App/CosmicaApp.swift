@@ -13,6 +13,7 @@ struct CosmicaApp: App {
     @State private var gameCenter = GameCenterManager()
     @State private var cloud = CloudSync()
     @State private var offlineSummary: OfflineAccrual.Result?
+    @State private var showSplash = true
 
     init() {
         let persistence = (try? Persistence()) ?? Persistence.inMemory()
@@ -22,14 +23,27 @@ struct CosmicaApp: App {
 
     var body: some Scene {
         WindowGroup {
-            RootView(offlineSummary: $offlineSummary)
-                .environment(engine)
-                .environment(ads)
-                .environment(iap)
-                .environment(haptics)
-                .environment(gameCenter)
-                .preferredColorScheme(.dark)
-                .task {
+            ZStack {
+                RootView(offlineSummary: $offlineSummary)
+                    .environment(engine)
+                    .environment(ads)
+                    .environment(iap)
+                    .environment(haptics)
+                    .environment(gameCenter)
+                if showSplash {
+                    SplashView()
+                        .transition(.opacity)
+                        .zIndex(1)
+                }
+            }
+            .preferredColorScheme(.dark)
+            .task {
+                // Cold-launch splash. Long enough to read the version, short enough
+                // to stay out of the way. Only fires on the first mount per launch.
+                try? await Task.sleep(nanoseconds: 1_500_000_000)
+                withAnimation(.easeInOut(duration: 0.45)) { showSplash = false }
+            }
+            .task {
                     await iap.start()
                     ads.configure(removeAdsOwned: iap.removeAdsOwned)
                     gameCenter.authenticate()
@@ -47,10 +61,10 @@ struct CosmicaApp: App {
                     try? await Task.sleep(nanoseconds: 1_500_000_000)
                     await requestTrackingPermissionIfNeeded()
                 }
-                .onChange(of: iap.removeAdsOwned) { _, owned in
-                    ads.configure(removeAdsOwned: owned)
-                    engine.state.removeAdsOwned = owned
-                }
+            .onChange(of: iap.removeAdsOwned) { _, owned in
+                ads.configure(removeAdsOwned: owned)
+                engine.state.removeAdsOwned = owned
+            }
         }
         .onChange(of: scenePhase) { _, phase in
             switch phase {

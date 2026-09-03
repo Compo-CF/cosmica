@@ -18,8 +18,12 @@ struct BigBangView: View {
                         statsCard
                         tierCard
                         cosmicTreeLink
+                        achievementsLink
                         if engine.state.hasAbsoluteAscended {
                             trueCosmosLink
+                        }
+                        if engine.state.cosmosCount >= 1 {
+                            wondersLink
                         }
                         if engine.canPrestige {
                             bigBangButton
@@ -156,6 +160,46 @@ struct BigBangView: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Cosmic Tree").font(.headline).foregroundStyle(.white)
                     Text("Spend \(Formatter.short(engine.state.cosmicShards)) ◈ Cosmic Shards on permanent upgrades")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+                Spacer()
+                Image(systemName: "chevron.right").foregroundStyle(.secondary)
+            }
+            .padding()
+            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
+            .padding(.horizontal)
+        }
+    }
+
+    /// Always-visible achievements board. Populates as the player plays; opening it
+    /// early shows all 25 goals with progress bars.
+    private var achievementsLink: some View {
+        NavigationLink { AchievementsView() } label: {
+            HStack {
+                Image(systemName: "rosette").foregroundStyle(.orange)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Achievements").font(.headline).foregroundStyle(.white)
+                    Text("\(engine.state.unlockedAchievementIds.count) / \(AchievementCatalog.all.count) unlocked  ·  ×\(String(format: "%.3f", engine.state.achievementMultiplier)) permanent")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+                Spacer()
+                Image(systemName: "chevron.right").foregroundStyle(.secondary)
+            }
+            .padding()
+            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
+            .padding(.horizontal)
+        }
+    }
+
+    /// Endgame Wonders. Only shown once the player has completed at least one True Cosmos
+    /// (so the intro doesn't leak the meta-loop before it's earned).
+    private var wondersLink: some View {
+        NavigationLink { WondersView() } label: {
+            HStack {
+                Image(systemName: "building.columns.fill").foregroundStyle(.pink)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Cosmic Wonders").font(.headline).foregroundStyle(.white)
+                    Text("\(engine.state.builtWonderIds.count) / \(WondersCatalog.all.count) built  ·  permanent across every reset")
                         .font(.caption).foregroundStyle(.secondary)
                 }
                 Spacer()

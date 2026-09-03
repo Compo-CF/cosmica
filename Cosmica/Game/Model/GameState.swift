@@ -54,8 +54,20 @@ struct GameState: Codable {
     /// How many True Cosmoi the player has performed. Cosmetic — surfaces as a title.
     var cosmosCount: Int = 0
     /// Sum of Reality Fragments ever earned. Kept separate from `realityFragments` so a
-    /// future fragment sink (v1.5 achievements shop, etc.) doesn't lose historical count.
+    /// future fragment sink doesn't lose historical count.
     var lifetimeRealityFragments: Double = 0
+
+    // ───────── Achievements (v2.0) ─────────
+    /// Ids of every Achievement the player has ever satisfied. Never removed once added,
+    /// so the passive `achievementMultiplier` only ratchets up.
+    var unlockedAchievementIds: Set<String> = []
+    /// Sum of Cosmic Shards ever earned (grant path only — spending doesn't reduce this).
+    /// Backs the `.lifetimeCosmicShards` Achievement goal.
+    var lifetimeCosmicShards: Double = 0
+
+    // ───────── Cosmic Wonders (v2.0) ─────────
+    /// Ids of every built Wonder. Persistent — survives Big Bang AND True Cosmos.
+    var builtWonderIds: Set<String> = []
 
     // ───────── Codable: lenient decode so v1.0.x saves migrate to v2 ─────────
 
@@ -86,6 +98,9 @@ struct GameState: Codable {
         realityFragments    = try c.decodeIfPresent(Double.self,        forKey: .realityFragments)    ?? 0
         cosmosCount         = try c.decodeIfPresent(Int.self,           forKey: .cosmosCount)         ?? 0
         lifetimeRealityFragments = try c.decodeIfPresent(Double.self,   forKey: .lifetimeRealityFragments) ?? 0
+        unlockedAchievementIds = try c.decodeIfPresent(Set<String>.self, forKey: .unlockedAchievementIds) ?? []
+        lifetimeCosmicShards = try c.decodeIfPresent(Double.self,       forKey: .lifetimeCosmicShards) ?? 0
+        builtWonderIds      = try c.decodeIfPresent(Set<String>.self,   forKey: .builtWonderIds)      ?? []
     }
 
     /// Convenience — true once the player has crossed Absolute at any point in their save.
@@ -120,8 +135,37 @@ struct GameState: Codable {
 
     /// Product of Cosmic-tree "Harvest Moon" × active-event ✦/s multiplier.
     /// Applied on top of tier × shards × ad boost.
+    /// Nexus Lattice Wonder: while an event is active, further ×3.
     var eventStardustMultiplier: Double {
-        CosmicEventScheduler.stardustPerSecondMultiplier(activeEvent)
+        let base = CosmicEventScheduler.stardustPerSecondMultiplier(activeEvent)
+        if activeEvent != nil && builtWonderIds.contains("nexus_lattice") {
+            return base * 3.0
+        }
+        return base
+    }
+
+    // ───────── Achievement multiplier ─────────
+    /// Cumulative bonus from every unlocked Achievement (1.0 with none).
+    var achievementMultiplier: Double {
+        AchievementCatalog.multiplier(unlocked: unlockedAchievementIds)
+    }
+
+    // ───────── Wonder-derived helpers folded into other systems ─────────
+    /// Chronosphere: adds 12 hours to the offline cap. Used by `GameEngine.applyOffline`.
+    var wonderOfflineCapBonus: TimeInterval {
+        builtWonderIds.contains("chronosphere") ? 12 * 3600 : 0
+    }
+    /// Voidkeeper: +50% Cosmic Shards on every Big Bang.
+    var wonderBigBangYieldMultiplier: Double {
+        builtWonderIds.contains("voidkeeper") ? 1.5 : 1.0
+    }
+    /// Multiverse Engine: ×2 manual tap value.
+    var wonderTapMultiplier: Double {
+        builtWonderIds.contains("multiverse_engine") ? 2.0 : 1.0
+    }
+    /// Absolute Aperture: +25% Reality Fragments per True Cosmos.
+    var wonderFragmentMultiplier: Double {
+        builtWonderIds.contains("absolute_aperture") ? 1.25 : 1.0
     }
 
     /// Permanent multiplier from accumulated Reality Fragments. Never resets — this is
@@ -139,6 +183,7 @@ struct GameState: Codable {
         * CosmicTree.harvestMultiplier(cosmicSkillLevels)
         * eventStardustMultiplier
         * realityFragmentMultiplier
+        * achievementMultiplier
     }
 
     /// Base stardust per second across all generators, with each generator's tier-cluster
@@ -155,9 +200,12 @@ struct GameState: Codable {
     }
 
     /// Value of a single manual tap.
-    /// = max(1, one-tenth of a second of automated production) × tap-mastery × active-event tap boost.
+    /// = max(1, one-tenth of a second of automated production) × tap-mastery × active-event tap boost × Multiverse Engine.
     var tapValue: Double {
         let base = max(1.0, stardustPerSecond * 0.1)
-        return base * CosmicTree.tapMultiplier(cosmicSkillLevels) * CosmicEventScheduler.tapMultiplier(activeEvent)
+        return base
+            * CosmicTree.tapMultiplier(cosmicSkillLevels)
+            * CosmicEventScheduler.tapMultiplier(activeEvent)
+            * wonderTapMultiplier
     }
 }

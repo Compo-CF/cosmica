@@ -59,6 +59,27 @@ final class GameEngine {
         state.lifetimeStardust += earned
 
         checkAbsoluteAscension()
+        checkAchievements()
+    }
+
+    // MARK: - Achievements (v2.0)
+
+    /// Transient list of achievements newly unlocked on the last check. AchievementsView
+    /// doesn't consume it (yet), but a future "toast" UI can read + clear.
+    private(set) var recentAchievementUnlocks: [Achievement] = []
+
+    /// Fold every newly-met achievement into `unlockedAchievementIds` and, when at least
+    /// one flipped, save. Cheap enough to run every tick — 25 catalog entries × constant
+    /// arithmetic each.
+    private func checkAchievements() {
+        let unlocked = state.unlockedAchievementIds
+        let newly = AchievementCatalog.newlyMet(state: state, unlocked: unlocked)
+        guard !newly.isEmpty else { return }
+        for a in newly {
+            state.unlockedAchievementIds.insert(a.id)
+        }
+        recentAchievementUnlocks.append(contentsOf: newly)
+        save()
     }
 
     // MARK: - Absolute Ascension (v1.3)
@@ -71,6 +92,7 @@ final class GameEngine {
         guard state.lifetimeStardust >= Tier.absolute.threshold else { return }
         state.absoluteAscendedAt = Date()
         state.cosmicShards += Double(Self.absoluteAscensionShardBonus)
+        state.lifetimeCosmicShards += Double(Self.absoluteAscensionShardBonus)
         showAbsoluteCelebration = true
         save()
     }
@@ -141,7 +163,8 @@ final class GameEngine {
         let base = PrestigeCalculator.shardsEarned(lifetimeStardust: state.lifetimeStardust)
         let treeMult = CosmicTree.bigBangYieldMultiplier(state.cosmicSkillLevels)
         let eventMult = CosmicEventScheduler.bigBangYieldMultiplier(state.activeEvent)
-        return Int(Double(base) * treeMult * eventMult)
+        let wonderMult = state.wonderBigBangYieldMultiplier
+        return Int(Double(base) * treeMult * eventMult * wonderMult)
     }
 
     var canPrestige: Bool { availableShards > 0 }
@@ -151,6 +174,7 @@ final class GameEngine {
         let shards = availableShards
         guard shards > 0 else { return 0 }
         state.cosmicShards += Double(shards)
+        state.lifetimeCosmicShards += Double(shards)
         state.prestigeCount += 1
         state.stardust = CosmicTree.startingStardust(state.cosmicSkillLevels)
         state.lifetimeStardust = 0
@@ -165,8 +189,10 @@ final class GameEngine {
     // MARK: - True Cosmos (v1.4 meta-prestige)
 
     /// Reality Fragments the player would earn if they True Cosmoi'd right now.
+    /// Absolute Aperture Wonder adds +25%.
     var availableFragments: Int {
-        CosmosCalculator.fragmentsEarned(cosmicShards: state.cosmicShards)
+        let base = CosmosCalculator.fragmentsEarned(cosmicShards: state.cosmicShards)
+        return Int(floor(Double(base) * state.wonderFragmentMultiplier))
     }
 
     /// True Cosmos unlocks after Absolute Ascension AND when the shard balance yields
@@ -291,7 +317,9 @@ final class GameEngine {
         let r = reward(forStreak: streak)
         state.stardust += r.stardust
         state.lifetimeStardust += r.stardust
-        state.cosmicShards += Double(r.cosmicShards) * CosmicEventScheduler.shardGrantMultiplier(state.activeEvent)
+        let shardGain = Double(r.cosmicShards) * CosmicEventScheduler.shardGrantMultiplier(state.activeEvent)
+        state.cosmicShards += shardGain
+        state.lifetimeCosmicShards += shardGain
         state.dailyStreak = streak
         state.lastDailyClaim = Date()
         if r.boostHours > 0 { grantBoost(duration: r.boostHours * 3600) } // grantBoost saves
@@ -346,7 +374,9 @@ final class GameEngine {
     /// Applies the active-event shard multiplier if any.
     func grantShards(_ amount: Int) {
         let mult = CosmicEventScheduler.shardGrantMultiplier(state.activeEvent)
-        state.cosmicShards += Double(amount) * mult
+        let gain = Double(amount) * mult
+        state.cosmicShards += gain
+        state.lifetimeCosmicShards += gain
         save()
     }
 
@@ -378,14 +408,32 @@ final class GameEngine {
             lastSeen: state.lastSeen,
             ratePerSecond: state.stardustPerSecond,
             extended: extended,
-            extraCap: CosmicTree.offlineCapBonus(state.cosmicSkillLevels)
+            extraCap: CosmicTree.offlineCapBonus(state.cosmicSkillLevels) + state.wonderOfflineCapBonus
         )
         state.stardust += result.stardustEarned
         state.lifetimeStardust += result.stardustEarned
         state.lastSeen = Date()
         checkAbsoluteAscension()
+        checkAchievements()
         save()
         return result
+    }
+
+    // MARK: - Cosmic Wonders (v2.0)
+
+    /// Attempt to build the wonder with `id`. Fails silently if already built, unknown id,
+    /// insufficient Cosmos count, or insufficient Cosmic Shards. Shards spent do NOT
+    /// reduce `lifetimeCosmicShards` — that's an earn-track, not a balance.
+    @discardableResult
+    func buildWonder(id: String) -> Bool {
+        guard let wonder = WondersCatalog.wonder(id: id) else { return false }
+        guard !state.builtWonderIds.contains(id) else { return false }
+        guard state.cosmosCount >= wonder.cosmosRequired else { return false }
+        guard state.cosmicShards >= wonder.shardCost else { return false }
+        state.cosmicShards -= wonder.shardCost
+        state.builtWonderIds.insert(id)
+        save()
+        return true
     }
 
     // MARK: - Persistence

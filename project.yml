@@ -31,8 +31,8 @@ targets:
       path: Generated/Info.plist
       properties:
         CFBundleDisplayName: Cosmica
-        CFBundleShortVersionString: "1.4.0"
-        CFBundleVersion: "13"
+        CFBundleShortVersionString: "2.0.0"
+        CFBundleVersion: "14"
         UILaunchScreen:
           UIColorName: "LaunchBackground"
         UISupportedInterfaceOrientations:
