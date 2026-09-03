@@ -9,7 +9,7 @@ title: Cosmica — Idle Universe
 
 Cosmica is a relaxed idle game for iPhone. Start with a backyard telescope, grow to operate Dyson Swarms and Multiverse Receivers, and Big Bang your way to permanent multipliers across seven cosmic tiers.
 
-[Download on the App Store →](https://apps.apple.com/app/cosmica-idle-universe/) *(coming soon)*
+[Download on the App Store →](https://apps.apple.com/us/app/cosmica-idle-universe/id6784340038)
 
 ---
 
