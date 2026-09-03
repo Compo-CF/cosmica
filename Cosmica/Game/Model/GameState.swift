@@ -47,6 +47,16 @@ struct GameState: Codable {
     /// every cold launch after ascension.
     var absoluteCelebrationShown: Bool = false
 
+    // ───────── True Cosmos meta-prestige (v1.4) ─────────
+    /// Permanent meta-currency earned by True Cosmoi. Never resets. Each fragment adds
+    /// +5% to `totalMultiplier` via `CosmosCalculator.multiplier(fragments:)`.
+    var realityFragments: Double = 0
+    /// How many True Cosmoi the player has performed. Cosmetic — surfaces as a title.
+    var cosmosCount: Int = 0
+    /// Sum of Reality Fragments ever earned. Kept separate from `realityFragments` so a
+    /// future fragment sink (v1.5 achievements shop, etc.) doesn't lose historical count.
+    var lifetimeRealityFragments: Double = 0
+
     // ───────── Codable: lenient decode so v1.0.x saves migrate to v2 ─────────
 
     init() {}   // memberwise-equivalent default init for fresh saves.
@@ -73,6 +83,9 @@ struct GameState: Codable {
         removeAdsOwned      = try c.decodeIfPresent(Bool.self,          forKey: .removeAdsOwned)      ?? false
         absoluteAscendedAt  = try c.decodeIfPresent(Date.self,          forKey: .absoluteAscendedAt)
         absoluteCelebrationShown = try c.decodeIfPresent(Bool.self,     forKey: .absoluteCelebrationShown) ?? false
+        realityFragments    = try c.decodeIfPresent(Double.self,        forKey: .realityFragments)    ?? 0
+        cosmosCount         = try c.decodeIfPresent(Int.self,           forKey: .cosmosCount)         ?? 0
+        lifetimeRealityFragments = try c.decodeIfPresent(Double.self,   forKey: .lifetimeRealityFragments) ?? 0
     }
 
     /// Convenience — true once the player has crossed Absolute at any point in their save.
@@ -111,6 +124,12 @@ struct GameState: Codable {
         CosmicEventScheduler.stardustPerSecondMultiplier(activeEvent)
     }
 
+    /// Permanent multiplier from accumulated Reality Fragments. Never resets — this is
+    /// what carries power across True Cosmoi.
+    var realityFragmentMultiplier: Double {
+        CosmosCalculator.multiplier(fragments: realityFragments)
+    }
+
     /// Full multiplier stack on Stardust production.
     var totalMultiplier: Double {
         currentTier.multiplier
@@ -119,6 +138,7 @@ struct GameState: Codable {
         * CosmicTree.focusMultiplier(cosmicSkillLevels)
         * CosmicTree.harvestMultiplier(cosmicSkillLevels)
         * eventStardustMultiplier
+        * realityFragmentMultiplier
     }
 
     /// Base stardust per second across all generators, with each generator's tier-cluster

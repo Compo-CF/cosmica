@@ -18,6 +18,9 @@ struct BigBangView: View {
                         statsCard
                         tierCard
                         cosmicTreeLink
+                        if engine.state.hasAbsoluteAscended {
+                            trueCosmosLink
+                        }
                         if engine.canPrestige {
                             bigBangButton
                         } else {
@@ -154,6 +157,37 @@ struct BigBangView: View {
                     Text("Cosmic Tree").font(.headline).foregroundStyle(.white)
                     Text("Spend \(Formatter.short(engine.state.cosmicShards)) ◈ Cosmic Shards on permanent upgrades")
                         .font(.caption).foregroundStyle(.secondary)
+                }
+                Spacer()
+                Image(systemName: "chevron.right").foregroundStyle(.secondary)
+            }
+            .padding()
+            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
+            .padding(.horizontal)
+        }
+    }
+
+    /// Meta-prestige entry point. Only shown once the player has crossed Absolute
+    /// (matches the `.hasAbsoluteAscended` gate in the parent VStack).
+    private var trueCosmosLink: some View {
+        NavigationLink { TrueCosmosView() } label: {
+            HStack {
+                Image(systemName: "infinity.circle.fill")
+                    .foregroundStyle(
+                        LinearGradient(
+                            colors: [Color(red: 1.0, green: 0.55, blue: 0.90), Color(red: 0.30, green: 0.90, blue: 1.00), Color(red: 1.0, green: 0.72, blue: 0.20)],
+                            startPoint: .leading, endPoint: .trailing
+                        )
+                    )
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("True Cosmos").font(.headline).foregroundStyle(.white)
+                    if engine.state.cosmosCount > 0 {
+                        Text("\(engine.state.cosmosCount) cosmos collapsed  ·  ×\(String(format: "%.2f", engine.state.realityFragmentMultiplier)) permanent")
+                            .font(.caption).foregroundStyle(.secondary)
+                    } else {
+                        Text("Collapse the universe for permanent Reality Fragments")
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
                 }
                 Spacer()
                 Image(systemName: "chevron.right").foregroundStyle(.secondary)

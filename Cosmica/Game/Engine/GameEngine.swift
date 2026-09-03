@@ -162,6 +162,49 @@ final class GameEngine {
         return shards
     }
 
+    // MARK: - True Cosmos (v1.4 meta-prestige)
+
+    /// Reality Fragments the player would earn if they True Cosmoi'd right now.
+    var availableFragments: Int {
+        CosmosCalculator.fragmentsEarned(cosmicShards: state.cosmicShards)
+    }
+
+    /// True Cosmos unlocks after Absolute Ascension AND when the shard balance yields
+    /// at least one Fragment. Both gates are needed — otherwise a first-run player
+    /// could Cosmos immediately for zero yield.
+    var canTrueCosmos: Bool {
+        state.hasAbsoluteAscended && availableFragments > 0
+    }
+
+    /// Collapse the current cosmos into Reality Fragments. Trades every Cosmic Shard,
+    /// every tree level, every generator, and every upgrade for a permanent +5% per
+    /// Fragment multiplier that stacks across all future Cosmoi. Keeps the Absolute
+    /// Observer title.
+    @discardableResult
+    func trueCosmos() -> Int {
+        let fragments = availableFragments
+        guard fragments > 0 else { return 0 }
+        state.realityFragments += Double(fragments)
+        state.lifetimeRealityFragments += Double(fragments)
+        state.cosmosCount += 1
+
+        // Full reset — everything a Big Bang resets, plus Cosmic Shards and the tree.
+        state.stardust = 0
+        state.lifetimeStardust = 0
+        state.cosmicShards = 0
+        state.prestigeCount = 0
+        state.generators = GameContent.defaultGenerators
+        state.upgrades = GameContent.defaultUpgrades
+        state.cosmicSkillLevels = [:]
+
+        // Absolute Observer title survives — they earned it once, they keep it forever.
+        // absoluteAscendedAt and absoluteCelebrationShown intentionally NOT reset.
+
+        state.lastSeen = Date()
+        save()
+        return fragments
+    }
+
     // MARK: - Cosmic tree
 
     func cosmicSkillLevel(_ id: String) -> Int { state.cosmicSkillLevels[id] ?? 0 }
