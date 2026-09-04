@@ -6,6 +6,7 @@ import SwiftUI
 struct WondersView: View {
     @Environment(GameEngine.self) private var engine
     @Environment(HapticsManager.self) private var haptics
+    @Environment(ReviewPrompter.self) private var reviewPrompter
 
     var body: some View {
         ZStack {

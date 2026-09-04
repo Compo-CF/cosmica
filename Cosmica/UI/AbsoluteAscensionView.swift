@@ -9,6 +9,7 @@ import SwiftUI
 struct AbsoluteAscensionView: View {
     @Environment(GameEngine.self) var engine
     @Environment(HapticsManager.self) var haptics
+    @Environment(ReviewPrompter.self) var reviewPrompter
     @Environment(\.dismiss) var dismiss
 
     @State private var titleVisible = false

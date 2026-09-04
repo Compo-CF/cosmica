@@ -3,6 +3,7 @@ import SwiftUI
 struct BigBangView: View {
     @Environment(GameEngine.self) var engine
     @Environment(HapticsManager.self) var haptics
+    @Environment(ReviewPrompter.self) var reviewPrompter
 
     @State private var showConfirm = false
     @State private var collapseAnim = false
