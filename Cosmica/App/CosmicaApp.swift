@@ -14,6 +14,7 @@ struct CosmicaApp: App {
     @State private var cloud = CloudSync()
     @State private var offlineSummary: OfflineAccrual.Result?
     @State private var showSplash = true
+    @State private var reviewPrompter = ReviewPrompter()
 
     init() {
         let persistence = (try? Persistence()) ?? Persistence.inMemory()
