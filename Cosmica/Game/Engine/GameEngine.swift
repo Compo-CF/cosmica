@@ -164,7 +164,13 @@ final class GameEngine {
         let treeMult = CosmicTree.bigBangYieldMultiplier(state.cosmicSkillLevels)
         let eventMult = CosmicEventScheduler.bigBangYieldMultiplier(state.activeEvent)
         let wonderMult = state.wonderBigBangYieldMultiplier
-        return Int(Double(base) * treeMult * eventMult * wonderMult)
+        // Even with `base` already clamped in PrestigeCalculator, multiplying by
+        // tree/event/wonder mults can push the product past Int.max. Guard with
+        // the same .nextDown pattern used in GameCenterManager / PrestigeCalculator.
+        let raw = Double(base) * treeMult * eventMult * wonderMult
+        guard raw.isFinite, raw > 0 else { return 0 }
+        let safeMax = Double(Int.max).nextDown
+        return Int(min(raw, safeMax))
     }
 
     var canPrestige: Bool { availableShards > 0 }

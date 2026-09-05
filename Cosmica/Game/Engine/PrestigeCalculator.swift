@@ -8,9 +8,19 @@ import Foundation
 enum PrestigeCalculator {
     static let threshold: Double = 1e12
 
+    /// Largest `Double` guaranteed to round-trip through `Int` without trapping.
+    /// See GameCenterManager for the full explanation of the .nextDown pattern —
+    /// `Double(Int.max)` itself rounds up to 2^63, which is one above Int.max.
+    private static let safeMaxAsDouble: Double = Double(Int.max).nextDown
+
     static func shardsEarned(lifetimeStardust: Double) -> Int {
-        guard lifetimeStardust >= threshold else { return 0 }
-        return Int(150.0 * sqrt(lifetimeStardust / threshold))
+        guard lifetimeStardust.isFinite, lifetimeStardust >= threshold else { return 0 }
+        // A True Cosmos endgame player past Absolute Ascension can accumulate
+        // lifetime > 1e50; sqrt(1e50/1e12)*150 = 1.5e21, well past Int.max (9.2e18).
+        // Clamp to safeMaxAsDouble before the Int() conversion to dodge the trap.
+        let raw = 150.0 * sqrt(lifetimeStardust / threshold)
+        guard raw.isFinite else { return Int(safeMaxAsDouble) }
+        return Int(min(raw, safeMaxAsDouble))
     }
 
     /// Lifetime stardust required to earn at least `targetShards` shards.
