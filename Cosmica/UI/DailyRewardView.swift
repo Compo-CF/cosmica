@@ -5,6 +5,7 @@ import SwiftUI
 struct DailyRewardView: View {
     @Environment(GameEngine.self) var engine
     @Environment(HapticsManager.self) var haptics
+    @Environment(ReviewPrompter.self) var reviewPrompter
     let onClaim: () -> Void
 
     var body: some View {
@@ -42,6 +43,16 @@ struct DailyRewardView: View {
             Button {
                 _ = engine.claimDaily()
                 haptics.dailyClaim()
+                // v2.1: retention celebration. A 7+ day streak is a strong
+                // signal the player is enjoying Cosmica. Fire the rating
+                // prompt after the sheet dismisses so the moment isn't
+                // stepped on.
+                let streak = engine.state.dailyStreak
+                if streak >= 7 {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+                        reviewPrompter.maybePrompt(reason: "daily_streak_\(streak)")
+                    }
+                }
                 onClaim()
             } label: {
                 Text("Claim")

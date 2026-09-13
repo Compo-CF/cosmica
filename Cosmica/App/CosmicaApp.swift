@@ -25,7 +25,7 @@ struct CosmicaApp: App {
     var body: some Scene {
         WindowGroup {
             ZStack {
-                RootView(offlineSummary: $offlineSummary)
+                RootView(offlineSummary: $offlineSummary, showSplash: $showSplash)
                     .environment(engine)
                     .environment(ads)
                     .environment(iap)

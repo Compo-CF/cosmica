@@ -4,6 +4,10 @@ struct RootView: View {
     @Environment(GameEngine.self) private var engine
     @Environment(IAPManager.self) private var iap
     @Binding var offlineSummary: OfflineAccrual.Result?
+    /// True while the cold-launch splash is still on-screen. All auto-presenting
+    /// sheets (offline, daily reward, tip) and full-screen covers (Absolute
+    /// Ascension) gate on `!showSplash` so nothing pops over the splash.
+    @Binding var showSplash: Bool
     @State private var selectedTab: Tab = .observatory
     @AppStorage("hasSeenOnboarding") private var hasSeenOnboarding: Bool = false
     @State private var showOnboarding: Bool = false
@@ -37,7 +41,7 @@ struct RootView: View {
         }
         .tint(.purple)
         .sheet(isPresented: Binding(
-            get: { offlineSummary != nil && (offlineSummary?.stardustEarned ?? 0) > 0 && hasSeenOnboarding },
+            get: { !showSplash && offlineSummary != nil && (offlineSummary?.stardustEarned ?? 0) > 0 && hasSeenOnboarding },
             set: { if !$0 { offlineSummary = nil } }
         )) {
             if let summary = offlineSummary {
@@ -48,7 +52,7 @@ struct RootView: View {
             }
         }
         .sheet(isPresented: Binding(
-            get: { engine.dailyRewardAvailable && hasSeenOnboarding && offlineSummary == nil && !dailyDismissed },
+            get: { !showSplash && engine.dailyRewardAvailable && hasSeenOnboarding && offlineSummary == nil && !dailyDismissed },
             set: { if !$0 { dailyDismissed = true } }
         )) {
             DailyRewardView { dailyDismissed = true }
@@ -61,7 +65,7 @@ struct RootView: View {
         // showAbsoluteCelebration the first time lifetime crosses 1e36 ✦; the sheet
         // acknowledges it (which persists a "shown" flag so it never re-fires).
         .fullScreenCover(isPresented: Binding(
-            get: { engine.showAbsoluteCelebration },
+            get: { !showSplash && engine.showAbsoluteCelebration },
             set: { if !$0 { engine.acknowledgeAscension() } }
         )) {
             AbsoluteAscensionView()
@@ -71,6 +75,24 @@ struct RootView: View {
         }
         .onAppear {
             if !hasSeenOnboarding { showOnboarding = true }
+        }
+        // v2.1: achievement-burst rating trigger. Fires when a play session pushes
+        // total unlocked achievements across a multiple of 5. ReviewPrompter's 30-day
+        // floor keeps this from ever feeling spammy.
+        .onChange(of: engine.state.unlockedAchievementIds.count) { oldValue, newValue in
+            guard newValue > oldValue, newValue > 0, newValue % 5 == 0 else { return }
+            reviewPrompter.maybePrompt(reason: "achievement_burst_\(newValue)")
+        }
+        // v2.1: view-layer tip trigger. First True Cosmos and first Wonder built
+        // both set pendingTipTrigger; here we honor it if the "big moment" gate
+        // agrees (opt-out, hasEverTipped, products loaded, past 7-day grace).
+        .onChange(of: iap.pendingTipTrigger) { _, newValue in
+            guard newValue else { return }
+            iap.pendingTipTrigger = false   // consume regardless of eligibility
+            guard iap.tipReminderEligibleForBigMoment else { return }
+            iap.recordTipPromptShown()
+            tipDismissed = false
+            showTipReminder = true
         }
         // Fire the gentle tip reminder at most once per cold launch, after any
         // higher-priority sheet has had its chance (onboarding, offline sheet,

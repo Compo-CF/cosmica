@@ -49,13 +49,17 @@ final class IAPManager {
         tipSmallProductId, tipMediumProductId, tipLargeProductId,
     ]
 
-    // MARK: - Tip reminder cadence (matches S-Tier Eats)
+    // MARK: - Tip reminder cadence (tuned in v2.1 for higher opportunity)
     private let hasEverTippedKey    = "cosmica.iap.hasEverTipped"
     private let tipNeverAskKey      = "cosmica.tip.neverAsk"
     private let tipLastPromptKey    = "cosmica.tip.lastPromptAt"  // epoch seconds
     private let tipInstallDateKey   = "cosmica.tip.firstSeenAt"   // epoch seconds
-    private let graceDays: Double = 14
-    private let betweenPromptDays: Double = 60
+    private let graceDays: Double = 7        // was 14 — bring first ask into week 2 instead of week 3
+    private let betweenPromptDays: Double = 45  // was 60 — still respectful, more moments captured
+
+    // MARK: - Boost nudge cadence (v2.1)
+    private let boostNudgeLastShownKey = "cosmica.boost.nudge.lastShownAt"
+    private let betweenBoostNudgeDays: Double = 7
 
     // MARK: - State
 
@@ -64,6 +68,10 @@ final class IAPManager {
     var purchaseInFlight: Bool = false
     /// Briefly true after a successful tip so the UI can show a thank-you beat.
     var didTip: Bool = false
+    /// View-layer coordination flag. Non-cold-launch trigger points (first True
+    /// Cosmos, first Wonder built) set this to `true`; `RootView` observes and
+    /// shows the tip sheet if `tipReminderEligibleForBigMoment` is also true.
+    var pendingTipTrigger: Bool = false
     /// Whether the user has ever tipped (persisted). Once true, the reminder never fires again.
     private(set) var hasEverTipped: Bool = false
     var lastError: String?
@@ -212,7 +220,39 @@ final class IAPManager {
         return last == 0 ? true : (now - last >= betweenPromptDays * 86400)
     }
 
-    /// Call when the reminder is shown, to reset the 60-day clock.
+    /// Same gates as `tipReminderEligible` EXCEPT the between-prompt cooldown.
+    /// Use ONLY from one-shot big-moment triggers (first True Cosmos, first Wonder
+    /// build) where the emotional beat justifies bypassing cadence. Still honors
+    /// opt-out, already-tipped, grace period, product-load — all the real gates.
+    var tipReminderEligibleForBigMoment: Bool {
+        let d = UserDefaults.standard
+        guard !d.bool(forKey: tipNeverAskKey),
+              !hasEverTipped,
+              !tipProducts.isEmpty,
+              !purchaseInFlight
+        else { return false }
+        let now = Date().timeIntervalSince1970
+        let firstSeen = d.double(forKey: tipInstallDateKey)
+        return firstSeen > 0 && now - firstSeen >= graceDays * 86400
+    }
+
+    /// Boost-nudge sheet is eligible when: player is monetizable (no Remove Ads yet
+    /// — those users already engaged), the boost product loaded, and it's been at
+    /// least `betweenBoostNudgeDays` since the last showing.
+    var boostNudgeEligible: Bool {
+        guard !removeAdsOwned else { return false }
+        guard product(for: Self.boost2x24hrProductId) != nil else { return false }
+        let now = Date().timeIntervalSince1970
+        let last = UserDefaults.standard.double(forKey: boostNudgeLastShownKey)
+        return last == 0 ? true : (now - last >= betweenBoostNudgeDays * 86400)
+    }
+
+    /// Call when the boost nudge sheet is presented, to reset the 7-day clock.
+    func recordBoostNudgeShown() {
+        UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: boostNudgeLastShownKey)
+    }
+
+    /// Call when the reminder is shown, to reset the between-prompt clock.
     func recordTipPromptShown() {
         UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: tipLastPromptKey)
     }

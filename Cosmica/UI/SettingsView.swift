@@ -66,6 +66,27 @@ struct SettingsView: View {
 
                 tipJarSection
 
+                Section("Support Cosmica") {
+                    // Manual Rate button — bypasses the ReviewPrompter's 3/year
+                    // limit by routing straight to the App Store review composer.
+                    // Some users WANT to leave a review and can't find where.
+                    Link(destination: URL(string: "https://apps.apple.com/app/id6784340038?action=write-review")!) {
+                        HStack {
+                            Image(systemName: "star.fill").foregroundStyle(.yellow)
+                            Text("Rate Cosmica").foregroundStyle(.primary)
+                            Spacer()
+                            Image(systemName: "arrow.up.forward.square").font(.footnote).foregroundStyle(.secondary)
+                        }
+                    }
+                    ShareLink(item: URL(string: "https://apps.apple.com/us/app/cosmica-idle-universe/id6784340038")!) {
+                        HStack {
+                            Image(systemName: "square.and.arrow.up").foregroundStyle(.purple)
+                            Text("Share Cosmica").foregroundStyle(.primary)
+                            Spacer()
+                        }
+                    }
+                }
+
                 Section("Legal") {
                     NavigationLink("Privacy Policy") {
                         PrivacyPolicyView()

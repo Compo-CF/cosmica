@@ -7,6 +7,7 @@ struct WondersView: View {
     @Environment(GameEngine.self) private var engine
     @Environment(HapticsManager.self) private var haptics
     @Environment(ReviewPrompter.self) private var reviewPrompter
+    @Environment(IAPManager.self) private var iap
 
     var body: some View {
         ZStack {
@@ -16,6 +17,7 @@ struct WondersView: View {
                     headerCard
                     ForEach(WondersCatalog.all) { w in
                         WonderRow(wonder: w) {
+                            let wasFirst = engine.state.builtWonderIds.isEmpty
                             let ok = engine.buildWonder(id: w.id)
                             if ok {
                                 haptics.skillUnlock()
@@ -23,6 +25,14 @@ struct WondersView: View {
                                 // something permanent. Rate-limited on ReviewPrompter's side.
                                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
                                     reviewPrompter.maybePrompt(reason: "wonder_built")
+                                }
+                                // v2.1: first Wonder is a strong "the game is delivering"
+                                // moment — good time for a tip nudge (bypasses cooldown
+                                // via the "big moment" gate).
+                                if wasFirst {
+                                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                                        iap.pendingTipTrigger = true
+                                    }
                                 }
                             }
                         }

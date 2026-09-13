@@ -16,8 +16,11 @@ final class ReviewPrompter {
     @ObservationIgnored @AppStorage("review.promptCount")     private var promptCount: Int = 0
     @ObservationIgnored @AppStorage("review.promptedVersion") private var promptedVersion: String = ""
 
-    /// Minimum days between our own prompts. Apple additionally rate-limits system-wide.
-    private let minDaysBetween: Double = 60
+    /// Minimum days between our own prompts. Apple's system-wide cap is 3 per 365 days
+    /// per app version; 30 days lets us capture more happy moments while staying
+    /// comfortably under the ceiling (a 30-day floor caps at ~12 attempts, of which
+    /// iOS silently suppresses all but the first 3).
+    private let minDaysBetween: Double = 30
 
     private var currentVersion: String {
         Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? ""

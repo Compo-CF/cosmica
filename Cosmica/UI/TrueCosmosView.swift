@@ -7,6 +7,7 @@ import SwiftUI
 struct TrueCosmosView: View {
     @Environment(GameEngine.self) var engine
     @Environment(HapticsManager.self) var haptics
+    @Environment(IAPManager.self) var iap
 
     @State private var showConfirm = false
     @State private var collapseAnim = false
@@ -273,6 +274,14 @@ struct TrueCosmosView: View {
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.4) {
             _ = engine.trueCosmos()
             withAnimation { collapseAnim = false }
+            // v2.1: first True Cosmos is the highest-emotion moment in the game.
+            // Fire the tip nudge (bypasses the 45-day cooldown via the "big
+            // moment" gate). RootView observes pendingTipTrigger and presents.
+            if engine.state.cosmosCount == 1 {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+                    iap.pendingTipTrigger = true
+                }
+            }
         }
     }
 }

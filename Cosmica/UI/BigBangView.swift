@@ -4,9 +4,11 @@ struct BigBangView: View {
     @Environment(GameEngine.self) var engine
     @Environment(HapticsManager.self) var haptics
     @Environment(ReviewPrompter.self) var reviewPrompter
+    @Environment(IAPManager.self) var iap
 
     @State private var showConfirm = false
     @State private var collapseAnim = false
+    @State private var showBoostNudge = false
 
     var body: some View {
         NavigationStack {
@@ -49,6 +51,9 @@ struct BigBangView: View {
                 Button("Cancel", role: .cancel) {}
             } message: {
                 Text("Resets generators and stardust. Cosmic Shards, tier, and achievements are kept.")
+            }
+            .sheet(isPresented: $showBoostNudge) {
+                BoostNudgeSheet()
             }
         }
     }
@@ -281,6 +286,20 @@ struct BigBangView: View {
             if shards >= 10 {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
                     reviewPrompter.maybePrompt(reason: "big_bang")
+                }
+            }
+            // v2.1: IAP nudge. Only fires on the 3rd, 7th, 15th prestige, only if
+            // the player has no active boost, no Remove Ads, and hasn't seen the
+            // nudge in 7 days. Rating prompt (above) and nudge (below) don't
+            // conflict — the rating prompt uses the iOS system sheet, our nudge
+            // is a SwiftUI sheet. But we prefer rating first, so nudge waits ~2s.
+            let noActiveBoost = (engine.state.adBoostExpiresAt.map { $0 < Date() } ?? true)
+            if [3, 7, 15].contains(engine.state.prestigeCount)
+                && iap.boostNudgeEligible
+                && noActiveBoost {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                    iap.recordBoostNudgeShown()
+                    showBoostNudge = true
                 }
             }
         }
