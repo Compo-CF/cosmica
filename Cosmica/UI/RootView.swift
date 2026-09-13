@@ -3,6 +3,7 @@ import SwiftUI
 struct RootView: View {
     @Environment(GameEngine.self) private var engine
     @Environment(IAPManager.self) private var iap
+    @Environment(ReviewPrompter.self) private var reviewPrompter
     @Binding var offlineSummary: OfflineAccrual.Result?
     /// True while the cold-launch splash is still on-screen. All auto-presenting
     /// sheets (offline, daily reward, tip) and full-screen covers (Absolute
