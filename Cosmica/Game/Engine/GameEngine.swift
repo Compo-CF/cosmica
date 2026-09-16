@@ -159,28 +159,28 @@ final class GameEngine {
 
     // MARK: - Prestige
 
-    var availableShards: Int {
+    /// v2.1.1: `Double` (was `Int`). Int64.max pinned rewards at ~9.2e18 for
+    /// endgame players past ~3.8e33 lifetime; Double handles up to ~1.7e308.
+    /// The .nextDown clamp is gone — it was only there because of the Int
+    /// conversion, which no longer happens. Keep isFinite/>0 for defense.
+    var availableShards: Double {
         let base = PrestigeCalculator.shardsEarned(lifetimeStardust: state.lifetimeStardust)
         let treeMult = CosmicTree.bigBangYieldMultiplier(state.cosmicSkillLevels)
         let eventMult = CosmicEventScheduler.bigBangYieldMultiplier(state.activeEvent)
         let wonderMult = state.wonderBigBangYieldMultiplier
-        // Even with `base` already clamped in PrestigeCalculator, multiplying by
-        // tree/event/wonder mults can push the product past Int.max. Guard with
-        // the same .nextDown pattern used in GameCenterManager / PrestigeCalculator.
-        let raw = Double(base) * treeMult * eventMult * wonderMult
+        let raw = base * treeMult * eventMult * wonderMult
         guard raw.isFinite, raw > 0 else { return 0 }
-        let safeMax = Double(Int.max).nextDown
-        return Int(min(raw, safeMax))
+        return raw.rounded(.down)
     }
 
     var canPrestige: Bool { availableShards > 0 }
 
     @discardableResult
-    func bigBang() -> Int {
+    func bigBang() -> Double {
         let shards = availableShards
         guard shards > 0 else { return 0 }
-        state.cosmicShards += Double(shards)
-        state.lifetimeCosmicShards += Double(shards)
+        state.cosmicShards += shards
+        state.lifetimeCosmicShards += shards
         state.prestigeCount += 1
         state.stardust = CosmicTree.startingStardust(state.cosmicSkillLevels)
         state.lifetimeStardust = 0

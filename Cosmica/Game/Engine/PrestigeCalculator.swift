@@ -8,25 +8,23 @@ import Foundation
 enum PrestigeCalculator {
     static let threshold: Double = 1e12
 
-    /// Largest `Double` guaranteed to round-trip through `Int` without trapping.
-    /// See GameCenterManager for the full explanation of the .nextDown pattern —
-    /// `Double(Int.max)` itself rounds up to 2^63, which is one above Int.max.
-    private static let safeMaxAsDouble: Double = Double(Int.max).nextDown
-
-    static func shardsEarned(lifetimeStardust: Double) -> Int {
+    /// v2.1.1: shards return as `Double` (was `Int`, which pinned rewards at
+    /// Int64.max ≈ 9.22e18 once lifetime crossed ~3.8e33 — well within reach
+    /// of Absolute Observers running True Cosmos loops). `state.cosmicShards`
+    /// was already Double, so no save migration.
+    static func shardsEarned(lifetimeStardust: Double) -> Double {
         guard lifetimeStardust.isFinite, lifetimeStardust >= threshold else { return 0 }
-        // A True Cosmos endgame player past Absolute Ascension can accumulate
-        // lifetime > 1e50; sqrt(1e50/1e12)*150 = 1.5e21, well past Int.max (9.2e18).
-        // Clamp to safeMaxAsDouble before the Int() conversion to dodge the trap.
+        // Double natively holds up to ~1.7e308; the Int clamp we needed before
+        // is gone. Keep the isFinite / >0 guards for defense.
         let raw = 150.0 * sqrt(lifetimeStardust / threshold)
-        guard raw.isFinite else { return Int(safeMaxAsDouble) }
-        return Int(min(raw, safeMaxAsDouble))
+        guard raw.isFinite, raw > 0 else { return 0 }
+        return raw.rounded(.down)
     }
 
     /// Lifetime stardust required to earn at least `targetShards` shards.
-    static func lifetimeRequired(forShards targetShards: Int) -> Double {
+    static func lifetimeRequired(forShards targetShards: Double) -> Double {
         guard targetShards > 0 else { return threshold }
-        let ratio = pow(Double(targetShards) / 150.0, 2.0)
+        let ratio = pow(targetShards / 150.0, 2.0)
         return threshold * ratio
     }
 

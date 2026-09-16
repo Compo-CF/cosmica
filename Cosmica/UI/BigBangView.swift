@@ -45,7 +45,7 @@ struct BigBangView: View {
                 isPresented: $showConfirm,
                 titleVisibility: .visible
             ) {
-                Button("Big Bang (\(engine.availableShards) ◈)", role: .destructive) {
+                Button("Big Bang (\(Formatter.short(engine.availableShards)) ◈)", role: .destructive) {
                     triggerBigBang()
                 }
                 Button("Cancel", role: .cancel) {}
@@ -98,7 +98,7 @@ struct BigBangView: View {
             HStack {
                 Text("If you Big Bang now").foregroundStyle(.secondary).font(.subheadline)
                 Spacer()
-                Text("+\(engine.availableShards) ◈")
+                Text("+\(Formatter.short(engine.availableShards)) ◈")
                     .font(.title2.bold())
                     .foregroundStyle(.cyan)
             }
@@ -250,7 +250,7 @@ struct BigBangView: View {
 
     private var bigBangButton: some View {
         Button { showConfirm = true } label: {
-            Text("Big Bang — claim \(engine.availableShards) ◈")
+            Text("Big Bang — claim \(Formatter.short(engine.availableShards)) ◈")
                 .font(.headline)
                 .frame(maxWidth: .infinity, minHeight: 54)
                 .background(
