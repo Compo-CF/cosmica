@@ -7,6 +7,7 @@ struct SettingsView: View {
     @Environment(HapticsManager.self) var haptics
     @Environment(GameCenterManager.self) var gameCenter
     @Environment(AutomationManager.self) var automation
+    @Environment(NotificationManager.self) var notif
     @State private var showResetConfirm = false
     @State private var showGameCenter = false
 
@@ -73,6 +74,8 @@ struct SettingsView: View {
                 }
 
                 automationSection
+
+                notificationsSection
 
                 tipJarSection
 
@@ -204,6 +207,58 @@ struct SettingsView: View {
 
     private func tipLabel(_ idx: Int) -> String {
         ["Small tip", "Medium tip", "Generous tip"][min(idx, 2)]
+    }
+
+    // v3.0 Phase 5 — Notifications. Local notifications only (no APNs).
+    // Master toggle triggers the OS permission prompt the first time the player
+    // flips it on. Denied state shows a link to iOS Settings — the app-store-
+    // blessed way to guide users back to the toggle.
+    @ViewBuilder
+    private var notificationsSection: some View {
+        Section {
+            Toggle("Notifications", isOn: Binding(
+                get: { notif.masterEnabled && notif.authorizationStatus == .authorized },
+                set: { newValue in
+                    if newValue {
+                        // First tap ON — request the OS permission. If already
+                        // authorized, this just sets the master flag. If denied
+                        // at the OS level, the toggle will snap back to off and
+                        // the "Open iOS Settings" link below will guide the user.
+                        Task { await notif.requestPermission() }
+                    } else {
+                        notif.masterEnabled = false
+                        notif.cancelAll()
+                    }
+                }
+            ))
+            if notif.authorizationStatus == .denied {
+                Button {
+                    notif.openSystemSettings()
+                } label: {
+                    HStack {
+                        Text("Enable in iOS Settings")
+                        Spacer()
+                        Image(systemName: "arrow.up.forward.square")
+                            .font(.footnote)
+                    }
+                }
+            }
+            if notif.masterEnabled && notif.authorizationStatus == .authorized {
+                Toggle("Reactor ready", isOn: Binding(
+                    get: { notif.reactorEnabled },
+                    set: { notif.reactorEnabled = $0 }
+                ))
+                Toggle("Daily reward available", isOn: Binding(
+                    get: { notif.dailyEnabled },
+                    set: { notif.dailyEnabled = $0 }
+                ))
+                Text("Local reminders — Cosmica pings you when your reactor is ready or your daily reward is back. Nothing is sent to a server.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        } header: {
+            Text("Notifications")
+        }
     }
 
     // v3.0 Phase 4 — Automation Core-gated preferences. Hidden entirely when

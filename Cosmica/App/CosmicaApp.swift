@@ -16,6 +16,7 @@ struct CosmicaApp: App {
     @State private var showSplash = true
     @State private var reviewPrompter = ReviewPrompter()
     @State private var automation = AutomationManager()
+    @State private var notif = NotificationManager()
 
     init() {
         let persistence = (try? Persistence()) ?? Persistence.inMemory()
@@ -34,6 +35,7 @@ struct CosmicaApp: App {
                     .environment(gameCenter)
                     .environment(reviewPrompter)
                     .environment(automation)
+                    .environment(notif)
                 if showSplash {
                     SplashView()
                         .transition(.opacity)
@@ -56,6 +58,9 @@ struct CosmicaApp: App {
                     automation.iap = iap
                     automation.engine = engine
                     engine.automation = automation
+                    // v3.0 Phase 5 — notification manager needs to install its
+                    // delegate before the OS may deliver a tap event on cold launch.
+                    notif.start()
                     gameCenter.authenticate()
                     offlineSummary = engine.applyOffline()
                     engine.start()
@@ -82,8 +87,16 @@ struct CosmicaApp: App {
                 engine.save()
                 Task { try? await cloud.push(state: engine.state) }
                 Task { await gameCenter.report(state: engine.state) }
+                // v3.0 Phase 5 — schedule "reactor ready" + "daily reward"
+                // notifications for while the app is closed. No-op unless the
+                // player has opted in AND the OS has granted permission.
+                notif.scheduleAll(engine: engine)
             case .active:
                 engine.start()
+                // Coming back — nothing to remind them about now that they're here.
+                notif.cancelAll()
+                // User may have toggled our permission in iOS Settings while away.
+                Task { await notif.refreshAuthorizationStatus() }
             @unknown default:
                 break
             }

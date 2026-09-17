@@ -4,6 +4,7 @@ struct RootView: View {
     @Environment(GameEngine.self) private var engine
     @Environment(IAPManager.self) private var iap
     @Environment(ReviewPrompter.self) private var reviewPrompter
+    @Environment(NotificationManager.self) private var notif
     @Binding var offlineSummary: OfflineAccrual.Result?
     /// True while the cold-launch splash is still on-screen. All auto-presenting
     /// sheets (offline, daily reward, tip) and full-screen covers (Absolute
@@ -104,6 +105,16 @@ struct RootView: View {
                engine.state.lifetimeStardust == 0 {
                 hasSeenWhatsNew_3_0 = true
             }
+        }
+        // v3.0 Phase 5 — a tapped notification tells us which tab to land on.
+        // NotificationManager sets pendingTab; we consume + clear it.
+        .onChange(of: notif.pendingTab) { _, pending in
+            guard let pending else { return }
+            switch pending {
+            case .bigBang:     selectedTab = .prestige
+            case .observatory: selectedTab = .observatory
+            }
+            notif.pendingTab = nil
         }
         // v2.1: achievement-burst rating trigger. Fires when a play session pushes
         // total unlocked achievements across a multiple of 5. ReviewPrompter's 30-day
