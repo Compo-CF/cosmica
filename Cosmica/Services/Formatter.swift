@@ -3,13 +3,19 @@ import Foundation
 /// Compact formatter for cosmic-scale numbers. 1.23K / 4.56M / 7.89B / 1.23T / 4.56Qa…
 enum Formatter {
     /// Suffix ladder (powers of 1000). Order: largest threshold first.
+    ///
+    /// The -decillion tier (1e36 through 1e60) uses `d`-suffixed abbreviations
+    /// so it doesn't collide with the base -illion tier below. Earlier builds
+    /// used "Sx" for both 1e21 (Sextillion) and 1e51 (Sexdecillion), which made
+    /// endgame numbers LOOK stuck as they climbed from one to the other — the
+    /// value was growing, the label just wasn't.
     private static let ladder: [(threshold: Double, suffix: String)] = [
-        (1e60, "Nv"),  // Novemdecillion
-        (1e57, "Oc"),  // Octodecillion
-        (1e54, "Sp"),  // Septendecillion
-        (1e51, "Sx"),  // Sexdecillion
-        (1e48, "Qi"),  // Quindecillion
-        (1e45, "Qa"),  // Quattuordecillion
+        (1e60, "Nvd"), // Novemdecillion
+        (1e57, "Ocd"), // Octodecillion
+        (1e54, "Spd"), // Septendecillion
+        (1e51, "Sxd"), // Sexdecillion
+        (1e48, "Qid"), // Quindecillion
+        (1e45, "Qad"), // Quattuordecillion
         (1e42, "Td"),  // Tredecillion
         (1e39, "Dd"),  // Duodecillion
         (1e36, "Ud"),  // Undecillion
