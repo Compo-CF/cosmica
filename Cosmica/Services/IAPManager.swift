@@ -24,6 +24,12 @@ final class IAPManager {
     static let shardsSmallProductId    = "com.centricfiber.cosmica.shards_pack_small"
     static let shardsLargeProductId    = "com.centricfiber.cosmica.shards_pack_large"
 
+    // v3.0: Automation Core — one-time non-consumable that unlocks the whole
+    // automation feature set (auto-buy generators, auto-Big-Bang, auto-collect
+    // events, auto-spend Cosmic Tree). Rewarded ad grants a 4-hour trial that
+    // sets `GameState.automationTrialExpiresAt` instead of setting this flag.
+    static let automationCoreProductId = "com.centricfiber.cosmica.automation_core"
+
     // Tip jar (v1.2). All consumables. No in-game effect — pure "buy me a coffee".
     static let tipSmallProductId       = "com.centricfiber.cosmica.tip.small"
     static let tipMediumProductId      = "com.centricfiber.cosmica.tip.medium"
@@ -39,6 +45,7 @@ final class IAPManager {
         offline7dayProductId,
         shardsSmallProductId,
         shardsLargeProductId,
+        automationCoreProductId,
     ] + tipProductIds
 
     static let consumableIds: Set<String> = [
@@ -65,6 +72,10 @@ final class IAPManager {
 
     var products: [Product] = []
     var removeAdsOwned: Bool = false
+    /// v3.0: true once the player owns Automation Core. NOT true during trial —
+    /// trial lives on `GameState.automationTrialExpiresAt` and is checked by
+    /// `AutomationManager.isActive` together with this flag.
+    var automationCoreOwned: Bool = false
     var purchaseInFlight: Bool = false
     /// Briefly true after a successful tip so the UI can show a thank-you beat.
     var didTip: Bool = false
@@ -142,6 +153,9 @@ final class IAPManager {
                 if productId == Self.removeAdsProductId {
                     removeAdsOwned = true
                 }
+                if productId == Self.automationCoreProductId {
+                    automationCoreOwned = true
+                }
                 if Self.tipProductIds.contains(productId) {
                     markTipped()
                 }
@@ -178,14 +192,21 @@ final class IAPManager {
     }
 
     private func refreshEntitlements() async {
-        var owned = false
+        // v3.0: two non-consumables now (Remove Ads + Automation Core). Iterate
+        // the full entitlement list instead of breaking on the first match so
+        // both flags get set from a single pass.
+        var removeAds = false
+        var automation = false
         for await result in Transaction.currentEntitlements {
-            if case .verified(let txn) = result, txn.productID == Self.removeAdsProductId {
-                owned = true
-                break
+            guard case .verified(let txn) = result else { continue }
+            switch txn.productID {
+            case Self.removeAdsProductId:      removeAds = true
+            case Self.automationCoreProductId: automation = true
+            default: break
             }
         }
-        removeAdsOwned = owned
+        removeAdsOwned = removeAds
+        automationCoreOwned = automation
     }
 
     private func listenForTransactions() -> Task<Void, Never> {

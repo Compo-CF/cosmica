@@ -6,6 +6,7 @@ struct SettingsView: View {
     @Environment(IAPManager.self) var iap
     @Environment(HapticsManager.self) var haptics
     @Environment(GameCenterManager.self) var gameCenter
+    @Environment(AutomationManager.self) var automation
     @State private var showResetConfirm = false
     @State private var showGameCenter = false
 
@@ -58,6 +59,13 @@ struct SettingsView: View {
                         Spacer()
                         Text(iap.removeAdsOwned ? "Owned" : "Not owned")
                             .foregroundStyle(iap.removeAdsOwned ? .green : .secondary)
+                    }
+                    HStack {
+                        Text("Automation Core")
+                        Spacer()
+                        Text(automationStatusLabel)
+                            .foregroundStyle(automationStatusColor)
+                            .monospacedDigit()
                     }
                     Button("Restore Purchases") {
                         Task { await iap.restore() }
@@ -194,6 +202,21 @@ struct SettingsView: View {
 
     private func tipLabel(_ idx: Int) -> String {
         ["Small tip", "Medium tip", "Generous tip"][min(idx, 2)]
+    }
+
+    // v3.0: Automation Core row status. Owned > Trial > Not owned.
+    private var automationStatusLabel: String {
+        if iap.automationCoreOwned { return "Owned" }
+        if automation.trialActive {
+            return "Trial · " + Formatter.duration(automation.trialRemaining) + " left"
+        }
+        return "Not owned"
+    }
+
+    private var automationStatusColor: Color {
+        if iap.automationCoreOwned { return .green }
+        if automation.trialActive   { return .orange }
+        return .secondary
     }
 
     private var versionString: String {

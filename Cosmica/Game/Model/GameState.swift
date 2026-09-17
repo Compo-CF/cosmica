@@ -69,6 +69,14 @@ struct GameState: Codable {
     /// Ids of every built Wonder. Persistent — survives Big Bang AND True Cosmos.
     var builtWonderIds: Set<String> = []
 
+    // ───────── Automation trial (v3.0) ─────────
+    /// When the player's 4-hour Automation trial expires. nil = never trialed.
+    /// Ownership of the Automation Core IAP is separate and lives on
+    /// `IAPManager.automationCoreOwned`; `AutomationManager.isActive` OR's both.
+    /// Rewarded-ad grants extend from max(now, existing) so a second ad
+    /// doesn't waste time already granted.
+    var automationTrialExpiresAt: Date? = nil
+
     // ───────── Codable: lenient decode so v1.0.x saves migrate to v2 ─────────
 
     init() {}   // memberwise-equivalent default init for fresh saves.
@@ -101,11 +109,20 @@ struct GameState: Codable {
         unlockedAchievementIds = try c.decodeIfPresent(Set<String>.self, forKey: .unlockedAchievementIds) ?? []
         lifetimeCosmicShards = try c.decodeIfPresent(Double.self,       forKey: .lifetimeCosmicShards) ?? 0
         builtWonderIds      = try c.decodeIfPresent(Set<String>.self,   forKey: .builtWonderIds)      ?? []
+        automationTrialExpiresAt = try c.decodeIfPresent(Date.self,     forKey: .automationTrialExpiresAt)
     }
 
     /// Convenience — true once the player has crossed Absolute at any point in their save.
     /// Uses the persisted date so it survives Big Bang (lifetime resets each prestige).
     var hasAbsoluteAscended: Bool { absoluteAscendedAt != nil }
+
+    /// v3.0: true while the 4-hour Automation trial is still valid. Not the whole
+    /// active-state check — see `AutomationManager.isActive` which OR's this with
+    /// IAP ownership.
+    var automationTrialActive: Bool {
+        guard let exp = automationTrialExpiresAt else { return false }
+        return Date() < exp
+    }
 
     // ───────── Derived (not persisted by Codable choice — recomputed each frame) ─────────
 

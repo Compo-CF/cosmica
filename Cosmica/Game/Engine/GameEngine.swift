@@ -371,6 +371,15 @@ final class GameEngine {
         save()
     }
 
+    /// v3.0: grant a timed Automation trial (rewarded-ad path). Same extend-from-max
+    /// pattern as `grantBoost` — watching a second ad while a trial is still valid
+    /// extends from the current expiry, not from "now", so no time is wasted.
+    func grantAutomationTrial(hours: Double) {
+        let base = max(Date(), state.automationTrialExpiresAt ?? .distantPast)
+        state.automationTrialExpiresAt = base.addingTimeInterval(hours * 3600)
+        save()
+    }
+
     /// Back-compat shim for the rewarded-ad call site. New code should use `grantBoost(duration:)`.
     func grantAdBoost(duration: TimeInterval = 3600) {
         grantBoost(duration: duration)

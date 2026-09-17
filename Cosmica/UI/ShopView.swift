@@ -5,6 +5,7 @@ struct ShopView: View {
     @Environment(AdManager.self) var ads
     @Environment(IAPManager.self) var iap
     @Environment(HapticsManager.self) var haptics
+    @Environment(AutomationManager.self) var automation
 
     @State private var adUnavailableAlert = false
     @State private var purchaseErrorAlert = false
@@ -25,6 +26,8 @@ struct ShopView: View {
                         sectionHeader("Cosmic Shards")
                         shardsPackCard(productId: IAPManager.shardsSmallProductId, amount: 250, icon: "diamond", color: .cyan, fallbackPrice: "$1.99")
                         shardsPackCard(productId: IAPManager.shardsLargeProductId, amount: 2500, icon: "diamond.fill", color: .teal, fallbackPrice: "$9.99")
+                        sectionHeader("Automation")
+                        automationCard
                         restoreButton
                         BannerAdSlot()
                     }
@@ -209,6 +212,62 @@ struct ShopView: View {
                         .foregroundStyle(.white)
                 }
                 .disabled(iap.purchaseInFlight)
+            }
+        }
+    }
+
+    // v3.0: Automation Core card. Buy path grants a one-time non-consumable that
+    // unlocks the whole automation feature set. Watch-Ad path grants a 4-hour
+    // trial. Both go through the same paths used by every other card in this file.
+    private var automationCard: some View {
+        let owned = iap.automationCoreOwned
+        let trialing = automation.trialActive
+        let price = iap.displayPrice(for: IAPManager.automationCoreProductId) ?? "$2.99"
+        return cardBackground {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(spacing: 14) {
+                    Image(systemName: owned ? "checkmark.seal.fill" : "sparkles.rectangle.stack.fill")
+                        .font(.title)
+                        .foregroundStyle(owned ? .green : .yellow)
+                        .frame(width: 50)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Automation Core").font(.headline).foregroundStyle(.white)
+                        Text(owned
+                             ? "Automation unlocked. Set your toggles in the Cosmic Tree, Big Bang tab, and Settings."
+                             : (trialing
+                                ? "Trial · \(Formatter.duration(automation.trialRemaining)) left. Purchase to keep it forever."
+                                : "Unlock auto-buy, auto-Big-Bang, and auto-collect events. Try 4 hours free."))
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                }
+                if !owned {
+                    HStack(spacing: 10) {
+                        actionButton(
+                            title: ads.rewardedReady ? "Watch Ad" : "Loading…",
+                            subtitle: "4 hours",
+                            color: .orange,
+                            disabled: false
+                        ) {
+                            watchAd {
+                                automation.grantTrial(hours: 4)
+                                haptics.upgrade()
+                            }
+                        }
+                        actionButton(
+                            title: price,
+                            subtitle: "Forever",
+                            color: .purple,
+                            disabled: iap.purchaseInFlight
+                        ) {
+                            Task {
+                                await attemptPurchase(IAPManager.automationCoreProductId) {
+                                    haptics.purchase()
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
     }

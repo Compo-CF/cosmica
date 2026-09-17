@@ -15,6 +15,7 @@ struct CosmicaApp: App {
     @State private var offlineSummary: OfflineAccrual.Result?
     @State private var showSplash = true
     @State private var reviewPrompter = ReviewPrompter()
+    @State private var automation = AutomationManager()
 
     init() {
         let persistence = (try? Persistence()) ?? Persistence.inMemory()
@@ -32,6 +33,7 @@ struct CosmicaApp: App {
                     .environment(haptics)
                     .environment(gameCenter)
                     .environment(reviewPrompter)
+                    .environment(automation)
                 if showSplash {
                     SplashView()
                         .transition(.opacity)
@@ -48,6 +50,10 @@ struct CosmicaApp: App {
             .task {
                     await iap.start()
                     ads.configure(removeAdsOwned: iap.removeAdsOwned)
+                    // v3.0: wire the automation façade once both services exist.
+                    // Refs are set once and never rebound (App @State holds strong).
+                    automation.iap = iap
+                    automation.engine = engine
                     gameCenter.authenticate()
                     offlineSummary = engine.applyOffline()
                     engine.start()
