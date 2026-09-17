@@ -89,4 +89,29 @@ final class AutomationManager {
             _ = engine.buy(generatorId: hit.id, amount: 1)
         }
     }
+
+    // MARK: - Phase 3: auto-Big-Bang step
+
+    /// Auto-fire cadence limit. 30s is generous — a legitimate player can't Big
+    /// Bang faster than this anyway, so it never blocks manual play. The cap is
+    /// insurance against a coding bug that would otherwise auto-fire every tick.
+    private let autoBigBangMinInterval: TimeInterval = 30
+
+    /// v3.0 Phase 3 — called from `GameEngine.tickFromTimer` after auto-buy.
+    /// Fires `engine.autoBigBang()` when the shard reward crosses the player's
+    /// chosen threshold. Rate-limited to at most one fire per 30 seconds.
+    /// No-op when: Automation Core inactive, player hasn't enabled auto-BB,
+    /// threshold not met, or cooldown still active.
+    func autoBigBangStep() {
+        guard isActive, let engine else { return }
+        guard engine.state.autoBigBangEnabled else { return }
+        guard engine.canPrestige else { return }
+        // engine.availableShards is Double post-v2.1.1 — direct comparison.
+        guard engine.availableShards >= engine.state.autoBigBangThreshold else { return }
+        if let last = engine.state.lastAutoBangAt,
+           Date().timeIntervalSince(last) < autoBigBangMinInterval {
+            return
+        }
+        _ = engine.autoBigBang()
+    }
 }

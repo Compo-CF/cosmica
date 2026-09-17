@@ -71,6 +71,9 @@ final class GameEngine {
         // v3.0 Phase 2 — cheap no-op when automation is off. When on, spends up to
         // half the current budget on the cheapest eligible generator on this tick.
         automation?.autoBuyStep()
+        // v3.0 Phase 3 — auto-Big-Bang when threshold crossed. Rate-limited to
+        // at most one fire per 30 seconds via `state.lastAutoBangAt`.
+        automation?.autoBigBangStep()
     }
 
     // MARK: - Achievements (v2.0)
@@ -399,6 +402,33 @@ final class GameEngine {
         } else {
             state.autoBuyEnabled.removeValue(forKey: generatorId)
         }
+        save()
+    }
+
+    // MARK: - Phase 3: auto-Big-Bang
+
+    /// v3.0 Phase 3 — same as `bigBang()` but stamps `lastAutoBangAt` for the
+    /// automation cooldown, and deliberately bypasses the view-layer effects
+    /// (BoostNudgeSheet, ReviewPrompter) that only fire from the manual
+    /// `BigBangView.triggerBigBang()` path. Shard grant, prestige counter,
+    /// GameCenter score, achievements — all identical to the manual path.
+    @discardableResult
+    func autoBigBang() -> Double {
+        let shards = bigBang()
+        if shards > 0 {
+            state.lastAutoBangAt = Date()
+            save()
+        }
+        return shards
+    }
+
+    func setAutoBigBangEnabled(_ enabled: Bool) {
+        state.autoBigBangEnabled = enabled
+        save()
+    }
+
+    func setAutoBigBangThreshold(_ threshold: Double) {
+        state.autoBigBangThreshold = max(1, threshold)
         save()
     }
 

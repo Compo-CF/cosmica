@@ -83,6 +83,13 @@ struct GameState: Codable {
     /// `CosmicTree.isGeneratorAutoBuyUnlocked` — this field is purely player intent.
     var autoBuyEnabled: [String: Bool] = [:]
 
+    /// v3.0 Phase 3 — auto-Big-Bang. When enabled AND `availableShards >= threshold`,
+    /// `AutomationManager.autoBigBangStep` fires `engine.autoBigBang()` on tick.
+    /// Rate-limited to at most one fire per 30 seconds via `lastAutoBangAt`.
+    var autoBigBangEnabled: Bool = false
+    var autoBigBangThreshold: Double = 100
+    var lastAutoBangAt: Date? = nil
+
     // ───────── Codable: lenient decode so v1.0.x saves migrate to v2 ─────────
 
     init() {}   // memberwise-equivalent default init for fresh saves.
@@ -117,6 +124,9 @@ struct GameState: Codable {
         builtWonderIds      = try c.decodeIfPresent(Set<String>.self,   forKey: .builtWonderIds)      ?? []
         automationTrialExpiresAt = try c.decodeIfPresent(Date.self,     forKey: .automationTrialExpiresAt)
         autoBuyEnabled      = try c.decodeIfPresent([String: Bool].self, forKey: .autoBuyEnabled)      ?? [:]
+        autoBigBangEnabled  = try c.decodeIfPresent(Bool.self,          forKey: .autoBigBangEnabled)  ?? false
+        autoBigBangThreshold = try c.decodeIfPresent(Double.self,       forKey: .autoBigBangThreshold) ?? 100
+        lastAutoBangAt      = try c.decodeIfPresent(Date.self,          forKey: .lastAutoBangAt)
     }
 
     /// Convenience — true once the player has crossed Absolute at any point in their save.

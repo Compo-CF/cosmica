@@ -5,10 +5,15 @@ struct BigBangView: View {
     @Environment(HapticsManager.self) var haptics
     @Environment(ReviewPrompter.self) var reviewPrompter
     @Environment(IAPManager.self) var iap
+    @Environment(AutomationManager.self) var automation
 
     @State private var showConfirm = false
     @State private var collapseAnim = false
     @State private var showBoostNudge = false
+
+    /// v3.0 Phase 3 — Auto-Big-Bang threshold options. Double to match the
+    /// post-v2.1.1 shard type.
+    private let autoBangThresholdOptions: [Double] = [10, 100, 1_000, 10_000, 100_000, 1_000_000]
 
     var body: some View {
         NavigationStack {
@@ -27,6 +32,9 @@ struct BigBangView: View {
                         }
                         if engine.state.cosmosCount >= 1 {
                             wondersLink
+                        }
+                        if automation.isActive {
+                            autoBigBangCard
                         }
                         if engine.canPrestige {
                             bigBangButton
@@ -246,6 +254,90 @@ struct BigBangView: View {
             .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
             .padding(.horizontal)
         }
+    }
+
+    // v3.0 Phase 3 — Auto-Big-Bang panel. Only visible when Automation Core is
+    // active. Toggle + threshold picker; when armed, prestige fires on the tick
+    // that `engine.availableShards >= threshold` (rate-limited to one per 30s).
+    private var autoBigBangCard: some View {
+        let enabled = engine.state.autoBigBangEnabled
+        let threshold = engine.state.autoBigBangThreshold
+        return VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Image(systemName: "burst.fill")
+                    .foregroundStyle(.orange)
+                Text("Auto-Big-Bang")
+                    .font(.headline)
+                    .foregroundStyle(.white)
+                Spacer()
+                Toggle("", isOn: Binding(
+                    get: { engine.state.autoBigBangEnabled },
+                    set: { engine.setAutoBigBangEnabled($0); haptics.purchase() }
+                ))
+                .labelsHidden()
+                .tint(.orange)
+            }
+            if enabled {
+                Menu {
+                    ForEach(autoBangThresholdOptions, id: \.self) { t in
+                        Button {
+                            engine.setAutoBigBangThreshold(t)
+                        } label: {
+                            HStack {
+                                Text("\(Formatter.short(t)) ◈")
+                                if t == threshold {
+                                    Image(systemName: "checkmark")
+                                }
+                            }
+                        }
+                    }
+                } label: {
+                    HStack {
+                        Text("Fire when Big Bang grants")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                        Spacer()
+                        Text("≥ \(Formatter.short(threshold)) ◈")
+                            .font(.subheadline.bold())
+                            .foregroundStyle(.cyan)
+                            .monospacedDigit()
+                        Image(systemName: "chevron.up.chevron.down")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(.vertical, 8)
+                    .padding(.horizontal, 10)
+                    .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 10))
+                }
+                Text(autoBangStatusText)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            } else {
+                Text("Off — Big Bang stays a manual action.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding()
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
+        .padding(.horizontal)
+    }
+
+    /// Live status line under the threshold picker. Tells the player what's
+    /// happening right now: waiting, ready to fire, or recently fired.
+    private var autoBangStatusText: String {
+        let available = engine.availableShards
+        let threshold = engine.state.autoBigBangThreshold
+        if available >= threshold {
+            return "Ready — firing on the next tick."
+        }
+        if let last = engine.state.lastAutoBangAt {
+            let elapsed = Date().timeIntervalSince(last)
+            if elapsed < 3600 {
+                return "Last auto-fire: \(Formatter.duration(elapsed)) ago. Waiting for \(Formatter.short(threshold - available)) more ◈."
+            }
+        }
+        return "Waiting for \(Formatter.short(threshold - available)) more ◈."
     }
 
     private var bigBangButton: some View {
