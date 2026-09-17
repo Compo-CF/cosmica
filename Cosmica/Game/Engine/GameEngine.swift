@@ -203,6 +203,10 @@ final class GameEngine {
         state.upgrades = GameContent.defaultUpgrades
         state.lastSeen = Date()
         save()
+        // v3.0 Phase 4 — after the shard grant, let auto-tree-buy sweep. No-op
+        // when disabled. Runs from both manual and auto Big Bang paths since
+        // `autoBigBang()` calls back into this method.
+        automation?.autoBuyCosmicTreeStep()
         return shards
     }
 
@@ -429,6 +433,13 @@ final class GameEngine {
 
     func setAutoBigBangThreshold(_ threshold: Double) {
         state.autoBigBangThreshold = max(1, threshold)
+        save()
+    }
+
+    /// v3.0 Phase 4 — flip the auto-buy Cosmic Tree toggle. Setter only; the
+    /// actual step runs at the end of `bigBang()`.
+    func setAutoBuyCosmicTree(_ enabled: Bool) {
+        state.autoBuyCosmicTreeEnabled = enabled
         save()
     }
 

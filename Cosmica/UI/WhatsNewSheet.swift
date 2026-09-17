@@ -67,10 +67,10 @@ struct WhatsNewSheet: View {
                 detail: "Set a shard threshold in the Big Bang tab. Prestige runs on autopilot when the number is right."
             )
             featureRow(
-                icon: "bolt.circle.fill",
-                tint: .yellow,
-                title: "Auto-collect events + tree spend",
-                detail: "Cosmic events collect themselves. Banked Cosmic Shards auto-spend on your cheapest available tree node."
+                icon: "circle.hexagongrid.fill",
+                tint: .cyan,
+                title: "Auto-spend the Cosmic Tree",
+                detail: "After each Big Bang, banked Cosmic Shards buy the cheapest available tree node — leaving you 100 in reserve for anything you're saving for."
             )
             featureRow(
                 icon: "bell.badge.fill",

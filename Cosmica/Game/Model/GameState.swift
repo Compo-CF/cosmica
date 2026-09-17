@@ -90,6 +90,13 @@ struct GameState: Codable {
     var autoBigBangThreshold: Double = 100
     var lastAutoBangAt: Date? = nil
 
+    /// v3.0 Phase 4 — auto-buy Cosmic Tree upgrades. After each Big Bang (manual
+    /// or auto), spend banked shards on the cheapest available NON-Autonomy node,
+    /// stopping when either nothing's affordable OR the next purchase would drop
+    /// the balance below the reserve (100 shards). Reserve lets the player still
+    /// hoard for a targeted purchase without wrestling the automator.
+    var autoBuyCosmicTreeEnabled: Bool = false
+
     // ───────── Codable: lenient decode so v1.0.x saves migrate to v2 ─────────
 
     init() {}   // memberwise-equivalent default init for fresh saves.
@@ -127,6 +134,7 @@ struct GameState: Codable {
         autoBigBangEnabled  = try c.decodeIfPresent(Bool.self,          forKey: .autoBigBangEnabled)  ?? false
         autoBigBangThreshold = try c.decodeIfPresent(Double.self,       forKey: .autoBigBangThreshold) ?? 100
         lastAutoBangAt      = try c.decodeIfPresent(Date.self,          forKey: .lastAutoBangAt)
+        autoBuyCosmicTreeEnabled = try c.decodeIfPresent(Bool.self,     forKey: .autoBuyCosmicTreeEnabled) ?? false
     }
 
     /// Convenience — true once the player has crossed Absolute at any point in their save.

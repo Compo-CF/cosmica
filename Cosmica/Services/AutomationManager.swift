@@ -114,4 +114,42 @@ final class AutomationManager {
         }
         _ = engine.autoBigBang()
     }
+
+    // MARK: - Phase 4: auto-buy Cosmic Tree upgrades
+
+    /// Reserve the player keeps for their own planning. Auto-tree-buy stops
+    /// before dipping below this. If the player wants to save for a specific
+    /// expensive node, having any 100-shard-plus balance triggers "hands off".
+    private let autoTreeReserve: Double = 100
+
+    /// v3.0 Phase 4 — spend freshly-earned shards on the tree. Called from
+    /// `GameEngine.bigBang()` at the end so it fires after both manual AND
+    /// auto Big Bangs.
+    ///
+    /// Loop rules:
+    ///   - Skip the Autonomy branch (autonomy_*). We don't want auto-buy
+    ///     buying its own successor nodes with the shards the player is trying
+    ///     to save for something they picked.
+    ///   - Buy the cheapest node whose cost would keep `cosmicShards` ≥ reserve.
+    ///   - Stop when nothing's affordable under the reserve, or when a
+    ///     `buyCosmicSkill` returns false (safety net).
+    func autoBuyCosmicTreeStep() {
+        guard isActive, let engine, engine.state.autoBuyCosmicTreeEnabled else { return }
+
+        var safety = 0
+        while safety < 100 {  // hard iteration cap — defense-in-depth
+            safety += 1
+            let candidates = CosmicTree.skills
+                .filter { !$0.id.hasPrefix("autonomy_") }
+                .compactMap { skill -> (id: String, cost: Int)? in
+                    let lvl = engine.state.cosmicSkillLevels[skill.id] ?? 0
+                    guard lvl < skill.maxLevel else { return nil }
+                    return (skill.id, skill.cost(atLevel: lvl))
+                }
+                .filter { engine.state.cosmicShards - Double($0.cost) >= autoTreeReserve }
+                .sorted { $0.cost < $1.cost }
+            guard let hit = candidates.first else { return }
+            guard engine.buyCosmicSkill(hit.id) else { return }
+        }
+    }
 }

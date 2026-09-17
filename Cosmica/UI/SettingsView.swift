@@ -72,6 +72,8 @@ struct SettingsView: View {
                     }
                 }
 
+                automationSection
+
                 tipJarSection
 
                 Section("Support Cosmica") {
@@ -202,6 +204,26 @@ struct SettingsView: View {
 
     private func tipLabel(_ idx: Int) -> String {
         ["Small tip", "Medium tip", "Generous tip"][min(idx, 2)]
+    }
+
+    // v3.0 Phase 4 — Automation Core-gated preferences. Hidden entirely when
+    // the player doesn't have automation active (no ghost UI for feature they
+    // can't use).
+    @ViewBuilder
+    private var automationSection: some View {
+        if automation.isActive {
+            Section {
+                Toggle("Auto-buy Cosmic Tree", isOn: Binding(
+                    get: { engine.state.autoBuyCosmicTreeEnabled },
+                    set: { engine.setAutoBuyCosmicTree($0) }
+                ))
+                Text("After each Big Bang, spends banked ◈ Cosmic Shards on the cheapest available Cosmic Tree node. Skips the Autonomy branch. Stops before dipping below 100 shards so you can still hoard for a targeted purchase.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            } header: {
+                Text("Automation")
+            }
+        }
     }
 
     // v3.0: Automation Core row status. Owned > Trial > Not owned.
