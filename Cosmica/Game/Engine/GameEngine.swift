@@ -15,6 +15,13 @@ final class GameEngine {
     /// 10Hz — smooth enough for counters, cheap enough to be invisible on battery.
     private let tickHz: Double = 10.0
 
+    /// v3.0: back-reference to the Automation service so `tickFromTimer` can run
+    /// its auto-buy step in-line with the earnings tick. Weak so we don't cycle
+    /// with `AutomationManager.engine` (strong the other direction). Set once at
+    /// app-boot by CosmicaApp; nil until then.
+    @ObservationIgnored
+    weak var automation: AutomationManager?
+
     /// Transient flag flipped when the player first crosses Absolute. Observed by RootView
     /// to present the celebration sheet. Consumed via `acknowledgeAscension()` which
     /// persists `absoluteCelebrationShown` so the sheet never re-fires.
@@ -60,6 +67,10 @@ final class GameEngine {
 
         checkAbsoluteAscension()
         checkAchievements()
+
+        // v3.0 Phase 2 — cheap no-op when automation is off. When on, spends up to
+        // half the current budget on the cheapest eligible generator on this tick.
+        automation?.autoBuyStep()
     }
 
     // MARK: - Achievements (v2.0)
@@ -377,6 +388,17 @@ final class GameEngine {
     func grantAutomationTrial(hours: Double) {
         let base = max(Date(), state.automationTrialExpiresAt ?? .distantPast)
         state.automationTrialExpiresAt = base.addingTimeInterval(hours * 3600)
+        save()
+    }
+
+    /// v3.0 Phase 2 — flip the per-generator auto-buy toggle. Removes the key when
+    /// disabling so the persisted dict stays tidy.
+    func setAutoBuy(generatorId: String, enabled: Bool) {
+        if enabled {
+            state.autoBuyEnabled[generatorId] = true
+        } else {
+            state.autoBuyEnabled.removeValue(forKey: generatorId)
+        }
         save()
     }
 

@@ -52,8 +52,10 @@ struct CosmicaApp: App {
                     ads.configure(removeAdsOwned: iap.removeAdsOwned)
                     // v3.0: wire the automation façade once both services exist.
                     // Refs are set once and never rebound (App @State holds strong).
+                    // The engine.automation back-ref is `weak` — no cycle.
                     automation.iap = iap
                     automation.engine = engine
+                    engine.automation = automation
                     gameCenter.authenticate()
                     offlineSummary = engine.applyOffline()
                     engine.start()

@@ -34,6 +34,13 @@ enum CosmicTree {
         CosmicSkill(id: "nightwatch",    name: "Nightwatch",           detail: "+2h offline cap per level",          symbol: "moon.zzz.fill",      baseCost: 4, growth: 1.7, maxLevel: 8),
         CosmicSkill(id: "vanguard",      name: "Vanguard",             detail: "Start each Big Bang with more ✦",     symbol: "shippingbox.fill",   baseCost: 5, growth: 1.8, maxLevel: 6),
         CosmicSkill(id: "boost_extend",  name: "Boost Extension",      detail: "+5 min on every 2× boost / lvl",     symbol: "bolt.badge.clock.fill", baseCost: 4, growth: 1.7, maxLevel: 8),
+
+        // v3.0 — Autonomy branch. Each is a one-shot unlock (maxLevel 1) that
+        // opens auto-buy on a widening slice of generators. Gated behind
+        // Automation Core (checked by AutomationManager.isActive at tick time).
+        CosmicSkill(id: "autonomy_reactor",  name: "Autonomous Reactor",  detail: "Unlock auto-buy on Backyard→Orbital generators",  symbol: "gearshape.2.fill",                       baseCost: 25,  growth: 1.0, maxLevel: 1),
+        CosmicSkill(id: "autonomy_nexus",    name: "Autonomous Nexus",    detail: "Extend auto-buy through the Wormhole cluster",     symbol: "gearshape.arrow.triangle.2.circlepath",  baseCost: 100, growth: 1.0, maxLevel: 1),
+        CosmicSkill(id: "autonomy_absolute", name: "Autonomous Absolute", detail: "Auto-buy on every generator — Multiverse + Chronal", symbol: "infinity",                            baseCost: 500, growth: 1.0, maxLevel: 1),
     ]
 
     static func skill(_ id: String) -> CosmicSkill? { skills.first { $0.id == id } }
@@ -66,5 +73,22 @@ enum CosmicTree {
         default:     skillId = "chronal"
         }
         return 1 + 0.12 * Double(level(skillId, l))
+    }
+
+    /// v3.0 — is auto-buy unlocked for this generator's cluster? Successive Autonomy
+    /// nodes cover a widening slice of generators. Independent from the player's
+    /// per-generator toggle in `GameState.autoBuyEnabled` — this is the tier gate.
+    /// Independent from Automation Core ownership — `AutomationManager.isActive`
+    /// handles that gate at tick time.
+    static func isGeneratorAutoBuyUnlocked(index: Int, levels: [String: Int]) -> Bool {
+        // Cluster boundaries match `generatorTierMultiplier` above.
+        // 0-3 (Deep Field) needs Reactor.
+        // 4-7 (Wormhole) needs Nexus.
+        // 8+  (Multiverse + Chronal) needs Absolute.
+        switch index {
+        case 0...3:  return level("autonomy_reactor",  levels) >= 1
+        case 4...7:  return level("autonomy_nexus",    levels) >= 1
+        default:     return level("autonomy_absolute", levels) >= 1
+        }
     }
 }

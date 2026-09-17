@@ -48,4 +48,45 @@ final class AutomationManager {
     func grantTrial(hours: Double) {
         engine?.grantAutomationTrial(hours: hours)
     }
+
+    // MARK: - Phase 2: auto-buy step
+
+    /// v3.0 Phase 2 — called from `GameEngine.tickFromTimer` on every tick (10 Hz).
+    /// Buys ONE cheapest-eligible generator per call, capped at 50% of current
+    /// stardust so the auto-buyer never drains the balance right before a Big Bang.
+    /// A no-op when: Automation Core inactive, no candidates, or none affordable
+    /// under the cap.
+    ///
+    /// Eligibility for a generator, all required:
+    ///   1. Its previous generator is owned (existing unlock cascade — matches
+    ///      `GeneratorRow.unlocked`), OR it's generator 0
+    ///   2. Player has toggled auto-buy ON in `state.autoBuyEnabled[gen.id]`
+    ///   3. The Autonomy branch on the Cosmic Tree covers this generator's cluster
+    ///      per `CosmicTree.isGeneratorAutoBuyUnlocked(index:levels:)`
+    func autoBuyStep() {
+        guard isActive, let engine else { return }
+        let state = engine.state
+        let budgetCap = state.stardust * 0.5
+        guard budgetCap > 0 else { return }
+
+        // Build the eligible set once, walk once.
+        var best: (id: String, cost: Double)?
+        for (i, gen) in state.generators.enumerated() {
+            // Unlock cascade: gen 0 always unlocked, others need previous owned.
+            let unlocked = (i == 0) || (state.generators[i - 1].count >= 1)
+            guard unlocked else { continue }
+            guard state.autoBuyEnabled[gen.id] == true else { continue }
+            guard CosmicTree.isGeneratorAutoBuyUnlocked(
+                index: gen.index, levels: state.cosmicSkillLevels
+            ) else { continue }
+            let cost = gen.nextCost
+            guard cost <= budgetCap else { continue }
+            if best == nil || cost < best!.cost {
+                best = (gen.id, cost)
+            }
+        }
+        if let hit = best {
+            _ = engine.buy(generatorId: hit.id, amount: 1)
+        }
+    }
 }

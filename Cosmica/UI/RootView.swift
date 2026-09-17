@@ -11,10 +11,13 @@ struct RootView: View {
     @Binding var showSplash: Bool
     @State private var selectedTab: Tab = .observatory
     @AppStorage("hasSeenOnboarding") private var hasSeenOnboarding: Bool = false
+    /// v3.0: one-shot "here's what's new" flag. Rename the key when v4.0 ships.
+    @AppStorage("hasSeenWhatsNew_3_0") private var hasSeenWhatsNew_3_0: Bool = false
     @State private var showOnboarding: Bool = false
     @State private var dailyDismissed: Bool = false
     @State private var tipDismissed: Bool = false
     @State private var showTipReminder: Bool = false
+    @State private var showWhatsNew: Bool = false
 
     enum Tab: Hashable { case observatory, upgrades, prestige, shop, settings }
 
@@ -74,8 +77,33 @@ struct RootView: View {
         .fullScreenCover(isPresented: $showOnboarding) {
             OnboardingView()
         }
+        // v3.0: one-shot "What's New" sheet for players upgrading from v2.x.
+        // Brand new installs skip because prestigeCount/lifetimeStardust are 0
+        // and hasSeenWhatsNew_3_0 will get seeded when they finish onboarding
+        // (see the .onChange below).
+        .sheet(isPresented: $showWhatsNew) {
+            WhatsNewSheet {
+                hasSeenWhatsNew_3_0 = true
+                showWhatsNew = false
+            }
+        }
         .onAppear {
             if !hasSeenOnboarding { showOnboarding = true }
+        }
+        // Fire the What's New once splash + onboarding are out of the way, and
+        // only for players who had prior progress (upgrade path, not new install).
+        .onChange(of: showSplash) { _, isSplash in
+            guard !isSplash else { return }
+            maybeShowWhatsNew()
+        }
+        // Also seed the flag when a brand-new install finishes onboarding, so
+        // they don't get the v3.0 popup on their SECOND launch.
+        .onChange(of: hasSeenOnboarding) { _, done in
+            if done, !hasSeenWhatsNew_3_0,
+               engine.state.prestigeCount == 0,
+               engine.state.lifetimeStardust == 0 {
+                hasSeenWhatsNew_3_0 = true
+            }
         }
         // v2.1: achievement-burst rating trigger. Fires when a play session pushes
         // total unlocked achievements across a multiple of 5. ReviewPrompter's 30-day
@@ -95,6 +123,13 @@ struct RootView: View {
             tipDismissed = false
             showTipReminder = true
         }
+        // v3.0 WhatsNew fires after splash on the first cold launch of the
+        // upgraded build for any player with prior progress. Never on brand
+        // new installs (see .onChange(hasSeenOnboarding) above).
+        .task {
+            try? await Task.sleep(nanoseconds: 800_000_000)
+            maybeShowWhatsNew()
+        }
         // Fire the gentle tip reminder at most once per cold launch, after any
         // higher-priority sheet has had its chance (onboarding, offline sheet,
         // daily reward). Gating lives in IAPManager.tipReminderEligible; we
@@ -112,6 +147,22 @@ struct RootView: View {
             showTipReminder = true
             tipDismissed = true
         }
+    }
+
+    /// Fire the v3.0 WhatsNew sheet at most once per install. Guards on:
+    /// splash gone, onboarding done, hasn't seen it, has actual prior progress
+    /// (avoids showing to brand-new installs that haven't touched anything yet).
+    private func maybeShowWhatsNew() {
+        guard !showSplash,
+              hasSeenOnboarding,
+              !hasSeenWhatsNew_3_0,
+              (engine.state.prestigeCount > 0 || engine.state.lifetimeStardust > 0),
+              !showOnboarding,
+              !showTipReminder,
+              offlineSummary == nil,
+              !engine.showAbsoluteCelebration
+        else { return }
+        showWhatsNew = true
     }
 }
 

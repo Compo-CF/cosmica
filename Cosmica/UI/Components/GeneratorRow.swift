@@ -25,6 +25,7 @@ enum GeneratorBuyMode: String, CaseIterable, Identifiable {
 struct GeneratorRow: View {
     @Environment(GameEngine.self) var engine
     @Environment(HapticsManager.self) var haptics
+    @Environment(AutomationManager.self) var automation
     @AppStorage("generatorBuyMode") private var buyMode: GeneratorBuyMode = .one
 
     let generator: Generator
@@ -63,6 +64,16 @@ struct GeneratorRow: View {
 
     private var canAfford: Bool { engine.state.stardust >= totalCost }
 
+    // v3.0 Phase 2 — auto-buy toggle visibility gates on: Automation Core active AND
+    // the Autonomy branch has unlocked this generator's tier. Player intent lives in
+    // `state.autoBuyEnabled` keyed by generator id.
+    private var autoBuyUnlocked: Bool {
+        automation.isActive &&
+        CosmicTree.isGeneratorAutoBuyUnlocked(index: generator.index, levels: engine.state.cosmicSkillLevels)
+    }
+
+    private var autoBuyOn: Bool { engine.state.autoBuyEnabled[generator.id] == true }
+
     var body: some View {
         Group {
             if !unlocked { lockedView } else { unlockedView }
@@ -91,6 +102,18 @@ struct GeneratorRow: View {
                             .foregroundStyle(.orange)
                     }
                     Spacer()
+                    if autoBuyUnlocked {
+                        Button {
+                            engine.setAutoBuy(generatorId: generator.id, enabled: !autoBuyOn)
+                            haptics.purchase()
+                        } label: {
+                            Image(systemName: autoBuyOn ? "gearshape.2.fill" : "gearshape.2")
+                                .font(.subheadline)
+                                .foregroundStyle(autoBuyOn ? .orange : .secondary)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel(autoBuyOn ? "Auto-buy on" : "Auto-buy off")
+                    }
                     Button { showDetail = true } label: {
                         Image(systemName: "info.circle")
                             .font(.subheadline)
