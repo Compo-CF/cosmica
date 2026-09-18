@@ -6,6 +6,7 @@ struct BigBangView: View {
     @Environment(ReviewPrompter.self) var reviewPrompter
     @Environment(IAPManager.self) var iap
     @Environment(AutomationManager.self) var automation
+    @Environment(AdManager.self) var ads
 
     @State private var showConfirm = false
     @State private var collapseAnim = false
@@ -385,13 +386,26 @@ struct BigBangView: View {
             // nudge in 7 days. Rating prompt (above) and nudge (below) don't
             // conflict — the rating prompt uses the iOS system sheet, our nudge
             // is a SwiftUI sheet. But we prefer rating first, so nudge waits ~2s.
+            //
+            // v3.0.x: on prestiges where the boost nudge ISN'T firing, we try to
+            // show an interstitial ad instead — mutually exclusive so we never
+            // double-hit players in one Big Bang cycle. Remove Ads owners always
+            // skip. AdManager enforces a 3-min rate limit internally, so tight
+            // Big Bang sessions don't spam ads.
             let noActiveBoost = (engine.state.adBoostExpiresAt.map { $0 < Date() } ?? true)
-            if [3, 7, 15].contains(engine.state.prestigeCount)
+            let isBoostNudgePrestige = [3, 7, 15].contains(engine.state.prestigeCount)
                 && iap.boostNudgeEligible
-                && noActiveBoost {
+                && noActiveBoost
+            if isBoostNudgePrestige {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
                     iap.recordBoostNudgeShown()
                     showBoostNudge = true
+                }
+            } else if !iap.removeAdsOwned && ads.interstitialReady {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
+                    if let root = UIApplication.shared.topMostViewController() {
+                        ads.showInterstitialIfReady(from: root)
+                    }
                 }
             }
         }
