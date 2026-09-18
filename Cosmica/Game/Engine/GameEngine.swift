@@ -245,7 +245,11 @@ final class GameEngine {
         state.prestigeCount = 0
         state.generators = GameContent.defaultGenerators
         state.upgrades = GameContent.defaultUpgrades
-        state.cosmicSkillLevels = [:]
+        // v3.0 — Autonomy branch keys survive True Cosmos. Same class of
+        // permanent unlock as Cosmic Wonders: the player paid $2.99 for
+        // Automation Core (or is trialing it), forcing them to re-buy the
+        // auto-buy tier gates every collapse punishes ownership.
+        state.cosmicSkillLevels = state.cosmicSkillLevels.filter { $0.key.hasPrefix("autonomy_") }
 
         // Absolute Observer title survives — they earned it once, they keep it forever.
         // absoluteAscendedAt and absoluteCelebrationShown intentionally NOT reset.
