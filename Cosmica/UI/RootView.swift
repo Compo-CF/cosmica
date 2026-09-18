@@ -97,14 +97,16 @@ struct RootView: View {
             guard !isSplash else { return }
             maybeShowWhatsNew()
         }
-        // Also seed the flag when a brand-new install finishes onboarding, so
-        // they don't get the v3.0 popup on their SECOND launch.
+        // Fire the WhatsNew sheet after onboarding finishes. New installs
+        // land here immediately after their first-launch flow; upgrading
+        // players had onboarding-done from an earlier version, so the
+        // splash-finish path above catches them instead.
         .onChange(of: hasSeenOnboarding) { _, done in
-            if done, !hasSeenWhatsNew_3_0,
-               engine.state.prestigeCount == 0,
-               engine.state.lifetimeStardust == 0 {
-                hasSeenWhatsNew_3_0 = true
-            }
+            if done { maybeShowWhatsNew() }
+        }
+        // If the daily-reward sheet was blocking us, try again once dismissed.
+        .onChange(of: dailyDismissed) { _, dismissed in
+            if dismissed { maybeShowWhatsNew() }
         }
         // v3.0 Phase 5 — a tapped notification tells us which tab to land on.
         // NotificationManager sets pendingTab; we consume + clear it.
@@ -160,17 +162,20 @@ struct RootView: View {
         }
     }
 
-    /// Fire the v3.0 WhatsNew sheet at most once per install. Guards on:
-    /// splash gone, onboarding done, hasn't seen it, has actual prior progress
-    /// (avoids showing to brand-new installs that haven't touched anything yet).
+    /// Fire the v3.0 WhatsNew sheet at most once per install. Fires for BOTH
+    /// fresh installs (as a feature primer) AND upgrading players (as "what
+    /// changed"). Trigger callers: splash-finish, onboarding-finish, daily-
+    /// dismissed — whichever unblocks last actually shows it, all others
+    /// no-op through the guards below.
     private func maybeShowWhatsNew() {
         guard !showSplash,
               hasSeenOnboarding,
               !hasSeenWhatsNew_3_0,
-              (engine.state.prestigeCount > 0 || engine.state.lifetimeStardust > 0),
               !showOnboarding,
               !showTipReminder,
+              !showWhatsNew,
               offlineSummary == nil,
+              (dailyDismissed || !engine.dailyRewardAvailable),
               !engine.showAbsoluteCelebration
         else { return }
         showWhatsNew = true
