@@ -30,6 +30,13 @@ final class IAPManager {
     // sets `GameState.automationTrialExpiresAt` instead of setting this flag.
     static let automationCoreProductId = "com.centricfiber.cosmica.automation_core"
 
+    // v3.0.x: Everything Bundle — one-shot non-consumable that grants both
+    // `removeAds` AND `automationCore` entitlements at a discount vs. buying
+    // them separately. Apple's ASC has no first-class IAP bundle type, so
+    // this is a plain non-consumable whose purchase we treat as granting the
+    // two member products' flags below.
+    static let everythingBundleProductId = "com.centricfiber.cosmica.everything_bundle"
+
     // Tip jar (v1.2). All consumables. No in-game effect — pure "buy me a coffee".
     static let tipSmallProductId       = "com.centricfiber.cosmica.tip.small"
     static let tipMediumProductId      = "com.centricfiber.cosmica.tip.medium"
@@ -46,6 +53,7 @@ final class IAPManager {
         shardsSmallProductId,
         shardsLargeProductId,
         automationCoreProductId,
+        everythingBundleProductId,
     ] + tipProductIds
 
     static let consumableIds: Set<String> = [
@@ -156,6 +164,11 @@ final class IAPManager {
                 if productId == Self.automationCoreProductId {
                     automationCoreOwned = true
                 }
+                if productId == Self.everythingBundleProductId {
+                    // v3.0.x — bundle grants both member entitlements.
+                    removeAdsOwned = true
+                    automationCoreOwned = true
+                }
                 if Self.tipProductIds.contains(productId) {
                     markTipped()
                 }
@@ -192,16 +205,18 @@ final class IAPManager {
     }
 
     private func refreshEntitlements() async {
-        // v3.0: two non-consumables now (Remove Ads + Automation Core). Iterate
-        // the full entitlement list instead of breaking on the first match so
-        // both flags get set from a single pass.
+        // v3.0: two non-consumables (Remove Ads + Automation Core). v3.0.x adds
+        // the Everything Bundle, whose ownership implies BOTH member flags.
+        // Iterate the full entitlement list so a bundle transaction or
+        // individual purchases both settle to the right flags in one pass.
         var removeAds = false
         var automation = false
         for await result in Transaction.currentEntitlements {
             guard case .verified(let txn) = result else { continue }
             switch txn.productID {
-            case Self.removeAdsProductId:      removeAds = true
-            case Self.automationCoreProductId: automation = true
+            case Self.removeAdsProductId:        removeAds = true
+            case Self.automationCoreProductId:   automation = true
+            case Self.everythingBundleProductId: removeAds = true; automation = true
             default: break
             }
         }

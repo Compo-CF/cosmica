@@ -18,6 +18,9 @@ struct ShopView: View {
                 ScrollView {
                     VStack(spacing: 16) {
                         CurrencyBar().background(.clear)
+                        if !iap.removeAdsOwned && !iap.automationCoreOwned {
+                            bundleCard
+                        }
                         removeAdsCard
                         sectionHeader("Earnings Boost")
                         boost2xCard
@@ -63,6 +66,66 @@ struct ShopView: View {
         }
         .padding(.horizontal)
         .padding(.top, 8)
+    }
+
+    // v3.0.x — Everything Bundle. Hidden once the player owns either component
+    // so we never charge them for something they already have. On purchase, the
+    // IAPManager grants both `removeAdsOwned` and `automationCoreOwned`, which
+    // makes this card disappear on the next render.
+    private var bundleCard: some View {
+        let price = iap.displayPrice(for: IAPManager.everythingBundleProductId) ?? "$4.99"
+        return cardBackground {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(spacing: 10) {
+                    Text("BEST VALUE")
+                        .font(.caption2.bold())
+                        .foregroundStyle(.black)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
+                        .background(Color.yellow, in: Capsule())
+                    Text("Save vs. buying separately")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                }
+                HStack(spacing: 14) {
+                    Image(systemName: "sparkles.rectangle.stack.fill")
+                        .font(.title)
+                        .foregroundStyle(
+                            LinearGradient(colors: [.orange, .yellow],
+                                           startPoint: .topLeading, endPoint: .bottomTrailing)
+                        )
+                        .frame(width: 50)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Everything Bundle")
+                            .font(.headline)
+                            .foregroundStyle(.white)
+                        Text("Remove Ads + Automation Core, forever. One tap, one purchase.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                }
+                Button {
+                    Task {
+                        await attemptPurchase(IAPManager.everythingBundleProductId) {
+                            haptics.purchase()
+                        }
+                    }
+                } label: {
+                    Text(price)
+                        .font(.headline)
+                        .frame(maxWidth: .infinity, minHeight: 46)
+                        .background(
+                            LinearGradient(colors: [.orange, .yellow],
+                                           startPoint: .leading, endPoint: .trailing),
+                            in: RoundedRectangle(cornerRadius: 12)
+                        )
+                        .foregroundStyle(.black)
+                }
+                .disabled(iap.purchaseInFlight)
+            }
+        }
     }
 
     private var removeAdsCard: some View {
