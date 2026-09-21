@@ -4,6 +4,10 @@ import SwiftUI
 struct ObservatoryView: View {
     @Environment(GameEngine.self) var engine
     @Environment(HapticsManager.self) var haptics
+    /// v3.0.1: adaptive tap-zone sizing. `.compact` = shorter iPhones (Plus/Pro
+    /// landscape, or very small portrait). We shrink further there so the
+    /// generator list has room to breathe.
+    @Environment(\.verticalSizeClass) private var vSizeClass
     @State private var floats: [Floater] = []
 
     struct Floater: Identifiable { let id = UUID(); let value: Double; let x: CGFloat }
@@ -94,6 +98,12 @@ struct ObservatoryView: View {
         .padding(.vertical, 8)
     }
 
+    /// v3.0.1: adaptive tap-orb size. Shorter iPhones lose ~30pt in the orb
+    /// and matching padding so the generator list gets 1-2 more visible rows.
+    private var orbSize: CGFloat { vSizeClass == .compact ? 140 : 170 }
+    private var orbSymbolSize: CGFloat { vSizeClass == .compact ? 40 : 48 }
+    private var tapZoneVerticalPad: CGFloat { vSizeClass == .compact ? 8 : 12 }
+
     private var tapZone: some View {
         ZStack {
             Circle()
@@ -101,26 +111,26 @@ struct ObservatoryView: View {
                     colors: [engine.state.currentTier.color.opacity(0.9),
                              engine.state.currentTier.color.opacity(0.2),
                              .clear],
-                    center: .center, startRadius: 5, endRadius: 130))
-                .frame(width: 230, height: 230)
+                    center: .center, startRadius: 5, endRadius: orbSize * 0.57))
+                .frame(width: orbSize, height: orbSize)
                 .overlay {
                     Image(systemName: "sparkles")
-                        .font(.system(size: 56))
+                        .font(.system(size: orbSymbolSize))
                         .foregroundStyle(.white)
-                        .shadow(color: engine.state.currentTier.color, radius: 18)
+                        .shadow(color: engine.state.currentTier.color, radius: 14)
                 }
 
             ForEach(floats) { f in
                 Text("+\(Formatter.short(f.value))")
                     .font(.title3.bold())
                     .foregroundStyle(.white)
-                    .offset(x: f.x, y: -80)
+                    .offset(x: f.x, y: -(orbSize * 0.5 + 10))
                     .transition(.move(edge: .top).combined(with: .opacity))
                     .id(f.id)
             }
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 24)
+        .padding(.vertical, tapZoneVerticalPad)
         .contentShape(Rectangle())
         .onTapGesture {
             let v = engine.manualTap()
