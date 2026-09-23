@@ -141,6 +141,37 @@ struct GameState: Codable {
     /// Uses the persisted date so it survives Big Bang (lifetime resets each prestige).
     var hasAbsoluteAscended: Bool { absoluteAscendedAt != nil }
 
+    // ───────── Cloud conflict resolution (v3.0.2) ─────────
+    /// Progress measure for choosing between two saves (this device vs iCloud).
+    /// Compared lexicographically — the first component that differs decides.
+    ///
+    /// Every component is one that NEVER goes down in normal play. The old rule
+    /// compared `lifetimeStardust`, which resets to 0 on every Big Bang and True
+    /// Cosmos — so a veteran who had just prestiged "lost" to a 20-second fresh
+    /// install on a new phone, and the fresh save overwrote months of progress.
+    ///   1. lifetimeRealityFragments — survives everything
+    ///   2. lifetimeCosmicShards     — survives Big Bang and True Cosmos
+    ///   3. achievements unlocked    — never removed
+    ///   4. cosmosCount              — only increases
+    ///   5. totalTaps                — never reset
+    ///   6. lifetimeStardust         — current-run tiebreaker only
+    var progressRank: [Double] {
+        [lifetimeRealityFragments,
+         lifetimeCosmicShards,
+         Double(unlockedAchievementIds.count),
+         Double(cosmosCount),
+         Double(totalTaps),
+         lifetimeStardust]
+    }
+
+    /// True when this save represents strictly more progress than `other`.
+    func isAhead(of other: GameState) -> Bool {
+        for (a, b) in zip(progressRank, other.progressRank) where a != b {
+            return a > b
+        }
+        return false
+    }
+
     /// v3.0: true while the 4-hour Automation trial is still valid. Not the whole
     /// active-state check — see `AutomationManager.isActive` which OR's this with
     /// IAP ownership.
