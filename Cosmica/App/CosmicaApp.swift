@@ -11,7 +11,7 @@ struct CosmicaApp: App {
     @State private var iap = IAPManager()
     @State private var haptics = HapticsManager()
     @State private var gameCenter = GameCenterManager()
-    @State private var cloud = CloudSync()
+    @State private var cloud = CloudSync.shared
     @State private var offlineSummary: OfflineAccrual.Result?
     @State private var showSplash = true
     @State private var reviewPrompter = ReviewPrompter()

@@ -9,6 +9,12 @@ struct SettingsView: View {
     @Environment(AutomationManager.self) var automation
     @Environment(NotificationManager.self) var notif
     @State private var showResetConfirm = false
+    // v3.0.2 — iCloud backup restore + developer tools gate
+    @State private var devToolsAvailable = false
+    @State private var loadingPrevious = false
+    @State private var pendingPrevious: CloudSync.Snapshot?
+    @State private var showPreviousConfirm = false
+    @State private var cloudMessage: String?
     @State private var showGameCenter = false
 
     var body: some View {
@@ -109,6 +115,23 @@ struct SettingsView: View {
                     }
                 }
 
+                Section {
+                    Button {
+                        Task { await loadPrevious() }
+                    } label: {
+                        HStack {
+                            Text("Restore previous save")
+                            Spacer()
+                            if loadingPrevious { ProgressView() }
+                        }
+                    }
+                    .disabled(loadingPrevious)
+                } header: {
+                    Text("iCloud Save")
+                } footer: {
+                    Text("Cosmica keeps one earlier copy of your iCloud save (refreshed about once a day, and before any reset or restore). Restoring swaps it with your current progress, so you can undo it.")
+                }
+
                 Section("About") {
                     HStack {
                         Text("Version")
@@ -122,6 +145,12 @@ struct SettingsView: View {
                     }
                 }
 
+                if devToolsAvailable {
+                    Section("Developer") {
+                        NavigationLink("Developer Restore") { DeveloperRestoreView() }
+                    }
+                }
+
                 Section("Danger Zone") {
                     Button("Reset Game", role: .destructive) {
                         showResetConfirm = true
@@ -129,6 +158,24 @@ struct SettingsView: View {
                 }
             }
             .navigationTitle("Settings")
+            .task { devToolsAvailable = await DevTools.isAvailable() }
+            .confirmationDialog("Restore previous save?",
+                                isPresented: $showPreviousConfirm,
+                                titleVisibility: .visible,
+                                presenting: pendingPrevious) { snapshot in
+                Button("Restore", role: .destructive) { restore(snapshot) }
+                Button("Cancel", role: .cancel) {}
+            } message: { snapshot in
+                Text(previousSummary(snapshot))
+            }
+            .alert("iCloud Save", isPresented: Binding(
+                get: { cloudMessage != nil },
+                set: { if !$0 { cloudMessage = nil } }
+            )) {
+                Button("OK", role: .cancel) { cloudMessage = nil }
+            } message: {
+                Text(cloudMessage ?? "")
+            }
             .confirmationDialog(
                 "Reset all progress?",
                 isPresented: $showResetConfirm,
@@ -137,10 +184,15 @@ struct SettingsView: View {
                 Button("Reset Everything", role: .destructive) {
                     engine.state = GameState()
                     engine.save()
+                    // v3.0.2 — force the reset to iCloud too; otherwise the sync
+                    // would treat the old (further-along) cloud save as newer and
+                    // restore it. The old save is checkpointed as the backup.
+                    let fresh = engine.state
+                    Task { _ = try? await CloudSync.shared.push(state: fresh, force: true) }
                 }
                 Button("Cancel", role: .cancel) {}
             } message: {
-                Text("This wipes local progress. CloudKit may sync the cloud save back on next launch.")
+                Text("This wipes your progress on this device and in iCloud. Your current save is kept as the iCloud backup, restorable from Settings → Restore previous save.")
             }
             .sheet(isPresented: $showGameCenter) {
                 GameCenterDashboard()
@@ -294,6 +346,50 @@ struct SettingsView: View {
         if iap.automationCoreOwned { return .green }
         if automation.trialActive   { return .orange }
         return .secondary
+    }
+
+    // MARK: - iCloud backup restore (v3.0.2)
+
+    private func loadPrevious() async {
+        loadingPrevious = true
+        defer { loadingPrevious = false }
+        guard await CloudSync.shared.accountAvailable() else {
+            cloudMessage = "Sign in to iCloud in the Settings app to use your iCloud save."
+            return
+        }
+        do {
+            if let snapshot = try await CloudSync.shared.pullPrevious() {
+                pendingPrevious = snapshot
+                showPreviousConfirm = true
+            } else {
+                cloudMessage = "No earlier save yet. Cosmica creates one about once a day while you play, and before any reset or restore."
+            }
+        } catch {
+            cloudMessage = "Couldn't reach iCloud. Check your connection and try again."
+        }
+    }
+
+    private func previousSummary(_ snapshot: CloudSync.Snapshot) -> String {
+        let s = snapshot.state
+        let when = snapshot.savedAt.map {
+            $0.formatted(.relative(presentation: .named))
+        } ?? "at an unknown time"
+        return "Saved \(when): \(s.cosmosCount) True Cosmos, \(s.prestigeCount) Big Bangs this cosmos, \(s.unlockedAchievementIds.count) achievements. Your current progress becomes the new backup."
+    }
+
+    private func restore(_ snapshot: CloudSync.Snapshot) {
+        var restored = snapshot.state
+        restored.lastSeen = Date()   // no offline windfall for the gap
+        engine.state = restored
+        engine.save()
+        Task {
+            do {
+                _ = try await CloudSync.shared.push(state: restored, force: true)
+                cloudMessage = "Previous save restored."
+            } catch {
+                cloudMessage = "Restored on this device. iCloud will update the next time you leave the app."
+            }
+        }
     }
 
     private var versionString: String {

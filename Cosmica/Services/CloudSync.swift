@@ -5,9 +5,25 @@ import CloudKit
 /// One record per user (`recordName == "primary"`), payload is the JSON-encoded GameState
 /// plus a denormalized `lifetimeStardust` for cheap conflict resolution.
 actor CloudSync {
+    /// Shared instance so Settings (reset / restore) and CosmicaApp (launch /
+    /// background sync) talk to the same actor.
+    static let shared = CloudSync()
+
     private let container: CKContainer
     private let recordType = "CosmicaState"
     private let recordId = CKRecord.ID(recordName: "primary")
+    /// v3.0.2 — one-level undo. Same record type and fields as "primary", so no
+    /// CloudKit schema change / Production deploy is needed.
+    private let previousId = CKRecord.ID(recordName: "previous")
+    /// Normal pushes refresh the backup at most once a day, so it stays a
+    /// meaningfully older checkpoint instead of trailing the live save by minutes.
+    private let checkpointInterval: TimeInterval = 24 * 3600
+
+    /// A save plus when it was written — for the Settings restore confirmation.
+    struct Snapshot {
+        let state: GameState
+        let savedAt: Date?
+    }
 
     init(container: CKContainer = .default()) {
         self.container = container
@@ -26,14 +42,22 @@ actor CloudSync {
     /// v3.0.2 — never blindly overwrite. Before v3.0.2 this saved unconditionally,
     /// so a fresh install on a new phone uploaded its empty save the first time it
     /// was backgrounded and destroyed the player's real cloud copy.
-    func push(state: GameState) async throws -> PushResult {
+    ///
+    /// `force: true` skips the "is the cloud ahead?" check — used only for
+    /// deliberate player actions (Reset Game, Restore previous save, Developer
+    /// Restore). Every forced push checkpoints the save it replaces first, so
+    /// those actions are always undoable via "Restore previous save".
+    func push(state: GameState, force: Bool = false) async throws -> PushResult {
         let record: CKRecord
         do {
             record = try await privateDB.record(for: recordId)
-            if let data = record["state"] as? Data,
-               let remote = try? JSONDecoder().decode(GameState.self, from: data),
-               remote.isAhead(of: state) {
-                return .remoteAhead(remote)
+            if let data = record["state"] as? Data {
+                if !force,
+                   let remote = try? JSONDecoder().decode(GameState.self, from: data),
+                   remote.isAhead(of: state) {
+                    return .remoteAhead(remote)
+                }
+                await checkpoint(record, always: force)
             }
         } catch let error as CKError where error.code == .unknownItem {
             record = CKRecord(recordType: recordType, recordID: recordId)
@@ -50,6 +74,41 @@ actor CloudSync {
     /// freshly set-up phone this is often false for the first few seconds/minutes.
     func accountAvailable() async -> Bool {
         (try? await container.accountStatus()) == .available
+    }
+
+    /// Copy the save that's about to be replaced into the "previous" record.
+    /// Forced pushes always checkpoint; normal pushes only when the existing
+    /// backup is more than a day old. Best-effort — a failed backup never blocks
+    /// the real save.
+    private func checkpoint(_ primary: CKRecord, always: Bool) async {
+        guard let data = primary["state"] as? Data else { return }
+        let backup: CKRecord
+        if let existing = try? await privateDB.record(for: previousId) {
+            if !always,
+               let savedAt = existing["updatedAt"] as? Date,
+               Date().timeIntervalSince(savedAt) < checkpointInterval {
+                return
+            }
+            backup = existing
+        } else {
+            backup = CKRecord(recordType: recordType, recordID: previousId)
+        }
+        backup["state"] = data as CKRecordValue
+        backup["lifetimeStardust"] = primary["lifetimeStardust"]
+        backup["updatedAt"] = (primary["updatedAt"] as? Date ?? Date()) as CKRecordValue
+        _ = try? await privateDB.save(backup)
+    }
+
+    /// The one-level backup, or nil if this iCloud account doesn't have one yet.
+    func pullPrevious() async throws -> Snapshot? {
+        do {
+            let rec = try await privateDB.record(for: previousId)
+            guard let data = rec["state"] as? Data else { return nil }
+            let state = try JSONDecoder().decode(GameState.self, from: data)
+            return Snapshot(state: state, savedAt: rec["updatedAt"] as? Date)
+        } catch let error as CKError where error.code == .unknownItem {
+            return nil
+        }
     }
 
     func pull() async throws -> GameState? {
