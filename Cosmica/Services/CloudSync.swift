@@ -66,8 +66,61 @@ actor CloudSync {
         record["state"] = data as CKRecordValue
         record["lifetimeStardust"] = state.lifetimeStardust as CKRecordValue
         record["updatedAt"] = Date() as CKRecordValue
-        _ = try await privateDB.save(record)
+        do {
+            _ = try await privateDB.save(record)
+        } catch let error as CKError where error.code == .serverRecordChanged {
+            // Another device (or an overlapping push) wrote between our fetch and
+            // save. Re-check against the server's copy, then write onto it once.
+            guard let server = error.serverRecord else { throw error }
+            if !force,
+               let serverData = server["state"] as? Data,
+               let serverState = try? JSONDecoder().decode(GameState.self, from: serverData),
+               serverState.isAhead(of: state) {
+                return .remoteAhead(serverState)
+            }
+            server["state"] = data as CKRecordValue
+            server["lifetimeStardust"] = state.lifetimeStardust as CKRecordValue
+            server["updatedAt"] = Date() as CKRecordValue
+            _ = try await privateDB.save(server)
+        }
         return .saved
+    }
+
+    /// Human-readable iCloud account state, for diagnostics in the UI.
+    func accountStatusText() async -> String {
+        do {
+            switch try await container.accountStatus() {
+            case .available:               return "available"
+            case .noAccount:               return "not signed in to iCloud"
+            case .restricted:              return "restricted (parental controls / MDM)"
+            case .couldNotDetermine:       return "could not determine"
+            case .temporarilyUnavailable:  return "temporarily unavailable"
+            @unknown default:              return "unknown"
+            }
+        } catch {
+            return "error: \(error.localizedDescription)"
+        }
+    }
+
+    /// v3.0.2 — surface the real reason a CloudKit call failed instead of a
+    /// generic message. Names the common CKError codes a player can act on.
+    static func describe(_ error: Error) -> String {
+        guard let ck = error as? CKError else { return error.localizedDescription }
+        let name: String
+        switch ck.code {
+        case .quotaExceeded:            name = "iCloud storage is full"
+        case .notAuthenticated:         name = "not signed in to iCloud (or iCloud is off for Cosmica)"
+        case .networkUnavailable, .networkFailure: name = "no network connection"
+        case .serviceUnavailable, .zoneBusy, .requestRateLimited: name = "iCloud is busy, try again shortly"
+        case .accountTemporarilyUnavailable: name = "iCloud account temporarily unavailable"
+        case .permissionFailure:        name = "permission failure"
+        case .serverRecordChanged:      name = "save conflict"
+        case .invalidArguments:         name = "invalid arguments (possible schema mismatch)"
+        case .limitExceeded:            name = "save too large"
+        case .badContainer, .missingEntitlement: name = "iCloud container / entitlement problem"
+        default:                        name = "CloudKit error"
+        }
+        return "\(name) [code \(ck.code.rawValue)] \(ck.localizedDescription)"
     }
 
     /// True when the device is signed into iCloud and CloudKit is usable. On a

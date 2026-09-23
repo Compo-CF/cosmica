@@ -365,7 +365,7 @@ struct SettingsView: View {
                 cloudMessage = "No earlier save yet. Cosmica creates one about once a day while you play, and before any reset or restore."
             }
         } catch {
-            cloudMessage = "Couldn't reach iCloud. Check your connection and try again."
+            cloudMessage = "Couldn't read your iCloud save: \(CloudSync.describe(error))"
         }
     }
 
@@ -387,7 +387,7 @@ struct SettingsView: View {
                 _ = try await CloudSync.shared.push(state: restored, force: true)
                 cloudMessage = "Previous save restored."
             } catch {
-                cloudMessage = "Restored on this device. iCloud will update the next time you leave the app."
+                cloudMessage = "Restored on this device, but the iCloud upload failed: \(CloudSync.describe(error)). It will retry the next time you leave the app."
             }
         }
     }

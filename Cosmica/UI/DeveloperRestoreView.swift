@@ -80,6 +80,7 @@ struct DeveloperRestoreView: View {
 
             Section {
                 Button("Apply to this save", role: .destructive) { confirmApply = true }
+                Button("Retry iCloud upload") { upload(engine.state) }
                 if let status {
                     Text(status).font(.caption).foregroundStyle(.secondary)
                 }
@@ -153,13 +154,20 @@ struct DeveloperRestoreView: View {
 
         engine.state = s
         engine.save()
+        upload(s)
+    }
+
+    /// Force-push to iCloud and report the real outcome, including the iCloud
+    /// account state and the CloudKit error code if it fails.
+    private func upload(_ state: GameState) {
         status = "Saved on this phone. Uploading to iCloud…"
         Task {
+            let account = await CloudSync.shared.accountStatusText()
             do {
-                _ = try await CloudSync.shared.push(state: s, force: true)
-                status = "Restored and uploaded to iCloud."
+                _ = try await CloudSync.shared.push(state: state, force: true)
+                status = "Saved on this phone and uploaded to iCloud."
             } catch {
-                status = "Saved on this phone. iCloud upload failed — it retries when you leave the app."
+                status = "Saved on this phone. iCloud upload failed: \(CloudSync.describe(error)). iCloud account: \(account)."
             }
         }
     }
