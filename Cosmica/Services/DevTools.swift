@@ -12,7 +12,7 @@ import StoreKit
 ///      Store installs never see them, even if lock 1 were left on by mistake.
 enum DevTools {
     /// Flip to `false` before archiving any build you will submit to App Review.
-    static let buildFlag = true
+    static let buildFlag = false
 
     static func isAvailable() async -> Bool {
         guard buildFlag else { return false }
