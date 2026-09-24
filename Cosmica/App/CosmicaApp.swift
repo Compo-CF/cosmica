@@ -80,6 +80,12 @@ struct CosmicaApp: App {
                     try? await Task.sleep(nanoseconds: 1_500_000_000)
                     await requestTrackingPermissionIfNeeded()
                 }
+            // v3.0.3 — widget tap (cosmica://observatory). Reuses the notification
+            // deep-link path; RootView switches tabs and clears it.
+            .onOpenURL { url in
+                guard url.scheme == "cosmica", url.host == "observatory" else { return }
+                notif.pendingTab = .observatory
+            }
             .onChange(of: iap.removeAdsOwned) { _, owned in
                 ads.configure(removeAdsOwned: owned)
                 engine.state.removeAdsOwned = owned
@@ -89,6 +95,10 @@ struct CosmicaApp: App {
             switch phase {
             case .background, .inactive:
                 engine.save()
+                // v3.0.3 — offline accrual starts now; hand the widget its baseline.
+                // Background only: .inactive also fires for Control Center pulls,
+                // and each publish costs a widget reload.
+                if phase == .background { WidgetSnapshotWriter.publish(engine.state) }
                 pushToCloud()
                 Task { await gameCenter.report(state: engine.state) }
                 // v3.0 Phase 5 — schedule "reactor ready" + "daily reward"
@@ -151,6 +161,7 @@ struct CosmicaApp: App {
             if case .remoteAhead(let remote)? = try? await cloud.push(state: snapshot) {
                 engine.state = remote
                 engine.save()
+                WidgetSnapshotWriter.publish(engine.state)
             }
         }
     }
