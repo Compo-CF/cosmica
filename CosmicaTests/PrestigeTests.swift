@@ -45,4 +45,18 @@ final class PrestigeTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(p0, 0)
         XCTAssertLessThanOrEqual(p1, 1)
     }
+
+    /// Review 2026-09-26: at 5B lifetime the Big Bang tab said "next shard 44.44M"
+    /// (threshold / 150²) while the real unlock is 1T.
+    func test_beforeUnlock_nextThresholdIsTheUnlockFloor() {
+        XCTAssertEqual(PrestigeCalculator.nextShardThreshold(lifetimeStardust: 5e9), PrestigeCalculator.threshold)
+        XCTAssertEqual(PrestigeCalculator.nextShardThreshold(lifetimeStardust: 0), PrestigeCalculator.threshold)
+        XCTAssertEqual(PrestigeCalculator.progressToNextShard(lifetimeStardust: 5e9), 5e9 / PrestigeCalculator.threshold, accuracy: 1e-12)
+        XCTAssertEqual(PrestigeCalculator.progressToNextShard(lifetimeStardust: 0), 0)
+    }
+
+    func test_afterUnlock_nextThresholdIsAboveCurrent() {
+        let lifetime = PrestigeCalculator.threshold
+        XCTAssertGreaterThan(PrestigeCalculator.nextShardThreshold(lifetimeStardust: lifetime), lifetime)
+    }
 }

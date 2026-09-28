@@ -29,14 +29,24 @@ enum PrestigeCalculator {
     }
 
     /// Lifetime needed to earn the very next shard above what would currently be awarded.
+    ///
+    /// v3.0.3: below the unlock floor the answer is the floor itself. The raw
+    /// curve says 1 shard at threshold/150² (~44.4M), but nothing pays out
+    /// until `threshold`, and the first Big Bang jumps straight to 150. Showing
+    /// 44.4M told players at 5B they were past the goal (review, 2026-09-26).
     static func nextShardThreshold(lifetimeStardust: Double) -> Double {
         let current = shardsEarned(lifetimeStardust: lifetimeStardust)
+        guard current > 0 else { return threshold }
         return lifetimeRequired(forShards: current + 1)
     }
 
-    /// Progress in [0, 1] toward the next shard.
+    /// Progress in [0, 1] toward the next shard (toward unlock, before the first).
     static func progressToNextShard(lifetimeStardust: Double) -> Double {
         let current = shardsEarned(lifetimeStardust: lifetimeStardust)
+        guard current > 0 else {
+            guard lifetimeStardust.isFinite else { return 0 }
+            return min(max(lifetimeStardust / threshold, 0), 1)
+        }
         let lower = lifetimeRequired(forShards: current)
         let upper = lifetimeRequired(forShards: current + 1)
         guard upper > lower else { return 0 }

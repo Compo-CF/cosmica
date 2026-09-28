@@ -114,7 +114,8 @@ struct BigBangView: View {
             ProgressView(value: progress)
                 .tint(.cyan)
             HStack {
-                Text("Next shard:").font(.caption).foregroundStyle(.secondary)
+                Text(engine.canPrestige ? "Next shard:" : "Big Bang unlocks at:")
+                    .font(.caption).foregroundStyle(.secondary)
                 Spacer()
                 Text(Formatter.short(PrestigeCalculator.nextShardThreshold(lifetimeStardust: lifetime)) + " ✦ lifetime")
                     .font(.caption).foregroundStyle(.secondary).monospacedDigit()
