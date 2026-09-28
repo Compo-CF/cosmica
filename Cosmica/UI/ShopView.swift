@@ -296,10 +296,10 @@ struct ShopView: View {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Automation Core").font(.headline).foregroundStyle(.white)
                         Text(owned
-                             ? "Automation unlocked. Set your toggles in the Cosmic Tree, Big Bang tab, and Settings."
+                             ? "Automation unlocked. Tap the gear on a generator to auto-buy it; auto-Big-Bang is on the Big Bang tab."
                              : (trialing
-                                ? "Trial · \(Formatter.duration(automation.trialRemaining)) left. Purchase to keep it forever."
-                                : "Unlock auto-buy, auto-Big-Bang, and auto-collect events. Try 4 hours free."))
+                                ? "Trial · \(Formatter.duration(automation.trialRemaining)) left. Tap the gear on a generator to auto-buy it."
+                                : "Auto-buy generators and auto-Big-Bang. Works on your first generators right away. Try 4 hours free."))
                             .font(.caption).foregroundStyle(.secondary)
                     }
                     Spacer()

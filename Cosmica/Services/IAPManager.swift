@@ -25,8 +25,8 @@ final class IAPManager {
     static let shardsLargeProductId    = "com.centricfiber.cosmica.shards_pack_large"
 
     // v3.0: Automation Core — one-time non-consumable that unlocks the whole
-    // automation feature set (auto-buy generators, auto-Big-Bang, auto-collect
-    // events, auto-spend Cosmic Tree). Rewarded ad grants a 4-hour trial that
+    // automation feature set (auto-buy generators, auto-Big-Bang, auto-spend
+    // Cosmic Tree). Rewarded ad grants a 4-hour trial that
     // sets `GameState.automationTrialExpiresAt` instead of setting this flag.
     static let automationCoreProductId = "com.centricfiber.cosmica.automation_core"
 

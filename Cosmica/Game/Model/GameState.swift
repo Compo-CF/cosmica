@@ -135,6 +135,14 @@ struct GameState: Codable {
         autoBigBangThreshold = try c.decodeIfPresent(Double.self,       forKey: .autoBigBangThreshold) ?? 100
         lastAutoBangAt      = try c.decodeIfPresent(Date.self,          forKey: .lastAutoBangAt)
         autoBuyCosmicTreeEnabled = try c.decodeIfPresent(Bool.self,     forKey: .autoBuyCosmicTreeEnabled) ?? false
+
+        // v3.0.4 — the Autonomous Reactor node was retired (automation now covers
+        // its cluster). Give back the 25 ◈ it cost. Removing the key makes this
+        // run once per save: the next save/upload no longer carries it.
+        // lifetimeCosmicShards is untouched — a refund isn't new progress.
+        if (cosmicSkillLevels.removeValue(forKey: CosmicTree.reactorSkillId) ?? 0) > 0 {
+            cosmicShards += CosmicTree.reactorRefund
+        }
     }
 
     /// Convenience — true once the player has crossed Absolute at any point in their save.

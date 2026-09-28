@@ -178,7 +178,8 @@ final class GameEngine {
     /// The .nextDown clamp is gone — it was only there because of the Int
     /// conversion, which no longer happens. Keep isFinite/>0 for defense.
     var availableShards: Double {
-        let base = PrestigeCalculator.shardsEarned(lifetimeStardust: state.lifetimeStardust)
+        let base = PrestigeCalculator.shardsEarned(lifetimeStardust: state.lifetimeStardust,
+                                                   floor: bigBangUnlockAt)
         let treeMult = CosmicTree.bigBangYieldMultiplier(state.cosmicSkillLevels)
         let eventMult = CosmicEventScheduler.bigBangYieldMultiplier(state.activeEvent)
         let wonderMult = state.wonderBigBangYieldMultiplier
@@ -188,6 +189,12 @@ final class GameEngine {
     }
 
     var canPrestige: Bool { availableShards > 0 }
+
+    /// v3.0.4 — lifetime stardust this run needs before Big Bang unlocks
+    /// (10B / 100B / 1T ramp in the first cosmos; see `PrestigeCalculator.unlockFloor`).
+    var bigBangUnlockAt: Double {
+        PrestigeCalculator.unlockFloor(prestigeCount: state.prestigeCount, cosmosCount: state.cosmosCount)
+    }
 
     @discardableResult
     func bigBang() -> Double {

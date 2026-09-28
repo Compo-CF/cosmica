@@ -38,7 +38,12 @@ enum CosmicTree {
         // v3.0 — Autonomy branch. Each is a one-shot unlock (maxLevel 1) that
         // opens auto-buy on a widening slice of generators. Gated behind
         // Automation Core (checked by AutomationManager.isActive at tick time).
-        CosmicSkill(id: "autonomy_reactor",  name: "Autonomous Reactor",  detail: "Unlock auto-buy on Backyard→Orbital generators",  symbol: "gearshape.2.fill",                       baseCost: 25,  growth: 1.0, maxLevel: 1),
+        //
+        // v3.0.4 — the first cluster (Backyard→Orbital) no longer needs a node:
+        // the old 25-shard "Autonomous Reactor" could only be bought after a Big
+        // Bang, so a day-one trial or purchase did nothing for days. Automation
+        // now covers that cluster on its own; `GameState` refunds anyone who
+        // bought Reactor (see `reactorSkillId`).
         CosmicSkill(id: "autonomy_nexus",    name: "Autonomous Nexus",    detail: "Extend auto-buy through the Wormhole cluster",     symbol: "gearshape.arrow.triangle.2.circlepath",  baseCost: 100, growth: 1.0, maxLevel: 1),
         CosmicSkill(id: "autonomy_absolute", name: "Autonomous Absolute", detail: "Auto-buy on every generator — Multiverse + Chronal", symbol: "infinity",                            baseCost: 500, growth: 1.0, maxLevel: 1),
     ]
@@ -82,13 +87,17 @@ enum CosmicTree {
     /// handles that gate at tick time.
     static func isGeneratorAutoBuyUnlocked(index: Int, levels: [String: Int]) -> Bool {
         // Cluster boundaries match `generatorTierMultiplier` above.
-        // 0-3 (Deep Field) needs Reactor.
+        // 0-3 (Deep Field) comes with automation itself (v3.0.4).
         // 4-7 (Wormhole) needs Nexus.
         // 8+  (Multiverse + Chronal) needs Absolute.
         switch index {
-        case 0...3:  return level("autonomy_reactor",  levels) >= 1
+        case 0...3:  return true
         case 4...7:  return level("autonomy_nexus",    levels) >= 1
         default:     return level("autonomy_absolute", levels) >= 1
         }
     }
+
+    /// v3.0.4 — retired node. Kept only so saves that bought it can be refunded.
+    static let reactorSkillId = "autonomy_reactor"
+    static let reactorRefund: Double = 25
 }

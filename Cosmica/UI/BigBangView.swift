@@ -99,7 +99,8 @@ struct BigBangView: View {
 
     private var statsCard: some View {
         let lifetime = engine.state.lifetimeStardust
-        let progress = PrestigeCalculator.progressToNextShard(lifetimeStardust: lifetime)
+        let floor = engine.bigBangUnlockAt
+        let progress = PrestigeCalculator.progressToNextShard(lifetimeStardust: lifetime, floor: floor)
         return VStack(alignment: .leading, spacing: 10) {
             Text("Prestige Reward")
                 .font(.headline)
@@ -117,7 +118,7 @@ struct BigBangView: View {
                 Text(engine.canPrestige ? "Next shard:" : "Big Bang unlocks at:")
                     .font(.caption).foregroundStyle(.secondary)
                 Spacer()
-                Text(Formatter.short(PrestigeCalculator.nextShardThreshold(lifetimeStardust: lifetime)) + " ✦ lifetime")
+                Text(Formatter.short(PrestigeCalculator.nextShardThreshold(lifetimeStardust: lifetime, floor: floor)) + " ✦ lifetime")
                     .font(.caption).foregroundStyle(.secondary).monospacedDigit()
             }
         }
@@ -358,7 +359,7 @@ struct BigBangView: View {
 
     private var requirementCard: some View {
         VStack(spacing: 6) {
-            Text("Reach \(Formatter.short(PrestigeCalculator.threshold)) ✦ lifetime to unlock Big Bang")
+            Text("Reach \(Formatter.short(engine.bigBangUnlockAt)) ✦ lifetime to unlock Big Bang")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)

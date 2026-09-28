@@ -25,7 +25,7 @@ struct WhatsNewSheet: View {
             icon: "gearshape.2.fill",
             tintGradient: [.orange, .yellow],
             bullets: [
-                Bullet(icon: "circle.grid.3x3.fill", text: "Auto-buy generators — unlock the Autonomy branch on the Cosmic Tree, then toggle the gear on any generator."),
+                Bullet(icon: "circle.grid.3x3.fill", text: "Auto-buy generators — toggle the gear on any of your first four generators right away. The Autonomy branch on the Cosmic Tree extends it to the rest."),
                 Bullet(icon: "burst.fill",           text: "Auto-Big-Bang — pick a shard threshold in the Big Bang tab, and prestige runs itself."),
                 Bullet(icon: "circle.hexagongrid.fill", text: "Auto-spend Cosmic Shards — banked shards flow into your cheapest tree node after every Big Bang."),
                 Bullet(icon: "bell.badge.fill",      text: "Optional local notifications when your reactor is ready.")
@@ -54,7 +54,7 @@ struct WhatsNewSheet: View {
             bullets: [
                 Bullet(icon: "sparkles",              text: "Levels persist across every Big Bang — permanent power."),
                 Bullet(icon: "scope",                 text: "Cluster nodes buff whole tiers of generators at once."),
-                Bullet(icon: "gearshape.2.fill",      text: "The new Autonomy branch unlocks auto-buy per generator cluster.")
+                Bullet(icon: "gearshape.2.fill",      text: "The Autonomy branch extends auto-buy to your higher generator clusters.")
             ],
             footnote: "Unspent Cosmic Shards ALSO grant +2% earnings each — a real invest-or-hoard choice."
         ),

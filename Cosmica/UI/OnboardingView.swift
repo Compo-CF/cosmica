@@ -25,7 +25,7 @@ struct OnboardingView: View {
             symbol: "burst.fill",
             color: Color(red: 0.95, green: 0.55, blue: 0.30),
             title: "Big Bang to Ascend",
-            body: "When you reach 1T lifetime Stardust, you can trigger the Big Bang — reset your generators in exchange for Cosmic Shards ◈, each granting permanent +2% earnings forever."
+            body: "Your first Big Bang unlocks at 10B lifetime Stardust — reset your generators in exchange for Cosmic Shards ◈, each granting permanent +2% earnings forever. The longer you wait, the more shards you get."
         ),
         OnboardingPage(
             symbol: "cart.fill",
