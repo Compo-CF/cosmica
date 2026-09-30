@@ -30,6 +30,13 @@ struct BigBangView: View {
                         achievementsLink
                         if engine.state.hasAbsoluteAscended {
                             trueCosmosLink
+                        } else if engine.state.prestigeCount >= 1 {
+                            // v3.0.4 — before Absolute, show the layer as a goal
+                            // instead of hiding it (players read the endgame
+                            // screenshots and thought they were missing something).
+                            // Waits for the first Big Bang so brand-new players
+                            // aren't handed a second layer before the first.
+                            trueCosmosLockedCard
                         }
                         if engine.state.cosmosCount >= 1 {
                             wondersLink
@@ -257,6 +264,38 @@ struct BigBangView: View {
             .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
             .padding(.horizontal)
         }
+    }
+
+    /// v3.0.4 — locked preview of True Cosmos, shown until the player first
+    /// crosses Absolute. Names both requirements: Absolute tier within one run,
+    /// then enough unspent shards for the collapse to yield Reality Fragments.
+    private var trueCosmosLockedCard: some View {
+        let tier = engine.state.currentTier
+        let tierCount = Tier.allCases.count
+        return VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Image(systemName: "lock.fill").foregroundStyle(.secondary)
+                Text("True Cosmos").font(.headline).foregroundStyle(.white)
+                Spacer()
+                Text("LOCKED")
+                    .font(.caption2.weight(.bold))
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(Color.white.opacity(0.1), in: Capsule())
+            }
+            Text("The second prestige layer. Unlocks at the \(Tier.absolute.title) tier: \(Formatter.short(Tier.absolute.threshold)) ✦ lifetime in a single run.")
+                .font(.caption).foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+            ProgressView(value: Double(tier.rawValue), total: Double(tierCount - 1))
+                .tint(tier.color)
+            Text("You're at \(tier.title), tier \(tier.rawValue + 1) of \(tierCount). Then hold \(Formatter.short(CosmosCalculator.firstCosmosThreshold)) ◈ unspent to collapse the universe for Reality Fragments.")
+                .font(.caption2).foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding()
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
+        .padding(.horizontal)
     }
 
     // v3.0 Phase 3 — Auto-Big-Bang panel. Only visible when Automation Core is
