@@ -5,6 +5,7 @@ struct RootView: View {
     @Environment(IAPManager.self) private var iap
     @Environment(ReviewPrompter.self) private var reviewPrompter
     @Environment(NotificationManager.self) private var notif
+    @Environment(AutomationManager.self) private var automation
     @Binding var offlineSummary: OfflineAccrual.Result?
     /// True while the cold-launch splash is still on-screen. All auto-presenting
     /// sheets (offline, daily reward, tip) and full-screen covers (Absolute
@@ -19,6 +20,7 @@ struct RootView: View {
     @State private var tipDismissed: Bool = false
     @State private var showTipReminder: Bool = false
     @State private var showWhatsNew: Bool = false
+    @State private var showTrialOffer: Bool = false
 
     enum Tab: Hashable { case observatory, upgrades, prestige, shop, settings }
 
@@ -65,6 +67,11 @@ struct RootView: View {
         }
         .sheet(isPresented: $showTipReminder) {
             TipReminderView()
+        }
+        // v3.0.5 — automation trial just ran out: offer the bundle once.
+        .sheet(isPresented: $showTrialOffer) {
+            TrialEndOfferSheet { showTrialOffer = false }
+                .presentationDetents([.medium, .large])
         }
         // Absolute Ascension — highest-priority full-screen moment. Engine flips
         // showAbsoluteCelebration the first time lifetime crosses 1e36 ✦; the sheet
@@ -143,6 +150,14 @@ struct RootView: View {
             try? await Task.sleep(nanoseconds: 800_000_000)
             maybeShowWhatsNew()
         }
+        // v3.0.5 — a trial can run out mid-session or while the app was closed,
+        // so check on a slow loop rather than only at launch.
+        .task {
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: 20_000_000_000)
+                maybeShowTrialOffer()
+            }
+        }
         // Fire the gentle tip reminder at most once per cold launch, after any
         // higher-priority sheet has had its chance (onboarding, offline sheet,
         // daily reward). Gating lives in IAPManager.tipReminderEligible; we
@@ -179,6 +194,37 @@ struct RootView: View {
               !engine.showAbsoluteCelebration
         else { return }
         showWhatsNew = true
+    }
+
+    /// v3.0.5 — present the trial-end offer when `TrialEndOffer` says so, nothing
+    /// else is on screen, and the product it leads with has actually loaded.
+    private func maybeShowTrialOffer() {
+        let now = Date()
+        guard !showSplash,
+              hasSeenOnboarding,
+              !showOnboarding, !showTipReminder, !showWhatsNew, !showTrialOffer,
+              offlineSummary == nil,
+              (dailyDismissed || !engine.dailyRewardAvailable),
+              !engine.showAbsoluteCelebration,
+              // Another view's sheet (boost nudge, generator detail) or a
+              // full-screen ad is up: try again on the next pass.
+              // (nil top = app not in the foreground; also wait.)
+              let top = UIApplication.shared.topMostViewController(),
+              top.presentingViewController == nil,
+              TrialEndOffer.shouldShow(
+                  trialExpiresAt: engine.state.automationTrialExpiresAt,
+                  automationOwned: iap.automationCoreOwned,
+                  lastOfferedExpiry: TrialEndOffer.lastOfferedExpiry(),
+                  lastShownAt: TrialEndOffer.lastShownAt(),
+                  now: now),
+              let expiry = engine.state.automationTrialExpiresAt
+        else { return }
+        // Never show a price that can't be bought.
+        let leadId = iap.removeAdsOwned ? IAPManager.automationCoreProductId
+                                        : IAPManager.everythingBundleProductId
+        guard iap.displayPrice(for: leadId) != nil else { return }
+        TrialEndOffer.recordShown(forExpiry: expiry, at: now)
+        showTrialOffer = true
     }
 }
 

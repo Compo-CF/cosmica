@@ -12,8 +12,8 @@ settings:
     # v3.0.3 — version lives HERE, once, for both the app and the widget
     # extension (App Store rejects an extension whose version differs from
     # its app). Bump CURRENT_PROJECT_VERSION for every upload.
-    MARKETING_VERSION: "3.0.4"
-    CURRENT_PROJECT_VERSION: "33"
+    MARKETING_VERSION: "3.0.5"
+    CURRENT_PROJECT_VERSION: "34"
     TARGETED_DEVICE_FAMILY: "1"
     ALWAYS_SEARCH_USER_PATHS: NO
     ENABLE_USER_SCRIPT_SANDBOXING: NO
