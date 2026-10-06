@@ -48,9 +48,10 @@ struct CosmicaApp: App {
             }
             .preferredColorScheme(.dark)
             .task {
-                // Cold-launch splash. Long enough to read the version, short enough
-                // to stay out of the way. Only fires on the first mount per launch.
-                try? await Task.sleep(nanoseconds: 1_500_000_000)
+                // Cold-launch splash. Long enough for the Big Bang animation to
+                // settle (v3.0.5), short enough to stay out of the way. Only fires
+                // on the first mount per launch.
+                try? await Task.sleep(nanoseconds: 1_700_000_000)
                 withAnimation(.easeInOut(duration: 0.45)) { showSplash = false }
             }
             .task {
