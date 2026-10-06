@@ -13,6 +13,7 @@ struct TrialEndOfferSheet: View {
     @Environment(AutomationManager.self) private var automation
     @Environment(AdManager.self) private var ads
     @Environment(HapticsManager.self) private var haptics
+    @Environment(ReviewPrompter.self) private var reviewPrompter
     let onDismiss: () -> Void
 
     @State private var errorText: String?
@@ -107,6 +108,10 @@ struct TrialEndOfferSheet: View {
         if await iap.purchase(productId) {
             haptics.purchase()
             onDismiss()
+            // Same happy-moment review ask as the Shop, after the sheet is gone.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                reviewPrompter.maybePrompt(reason: "purchase_\(productId)")
+            }
         } else if let msg = iap.lastError, !msg.isEmpty {
             // User cancels leave lastError empty, and stay quiet.
             errorText = msg

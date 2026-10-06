@@ -6,6 +6,7 @@ struct ShopView: View {
     @Environment(IAPManager.self) var iap
     @Environment(HapticsManager.self) var haptics
     @Environment(AutomationManager.self) var automation
+    @Environment(ReviewPrompter.self) var reviewPrompter
 
     @State private var adUnavailableAlert = false
     @State private var purchaseErrorAlert = false
@@ -375,6 +376,11 @@ struct ShopView: View {
         let ok = await iap.purchase(productId)
         if ok {
             onSuccess()
+            // v3.0.5 — a buyer who just got what they paid for is the happiest
+            // player we have. Wait for the StoreKit sheet to finish closing.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                reviewPrompter.maybePrompt(reason: "purchase_\(productId)")
+            }
             return
         }
         // Purchase didn't complete. If it was a user cancel there's no lastError set,
