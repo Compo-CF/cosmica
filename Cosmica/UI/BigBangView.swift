@@ -68,7 +68,9 @@ struct BigBangView: View {
                 }
                 Button("Cancel", role: .cancel) {}
             } message: {
-                Text("Resets generators and stardust. Cosmic Shards, tier, and achievements are kept.")
+                // Tier is earned per run (it comes from this run's stardust), so it
+                // resets too. The old text said it was kept (App Store review, Sep 19).
+                Text("Resets generators, stardust and your tier. Cosmic Shards, Cosmic Tree upgrades and achievements are kept.")
             }
             .sheet(isPresented: $showBoostNudge) {
                 BoostNudgeSheet()
