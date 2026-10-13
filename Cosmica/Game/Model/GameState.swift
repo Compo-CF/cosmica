@@ -89,6 +89,11 @@ struct GameState: Codable {
     var autoBigBangEnabled: Bool = false
     var autoBigBangThreshold: Double = 100
     var lastAutoBangAt: Date? = nil
+    /// v3.1 — pause auto-Big-Bang until the first Absolute Ascension. Absolute
+    /// needs 1e36 lifetime in ONE run, and an auto-Big-Bang firing every 30s
+    /// keeps resetting that run (Reddit, Oct 2026: a player at 600T shards
+    /// couldn't reach it). Switches itself off once ascended.
+    var autoBigBangHoldForAbsolute: Bool = false
 
     /// v3.0 Phase 4 — auto-buy Cosmic Tree upgrades. After each Big Bang (manual
     /// or auto), spend banked shards on the cheapest available NON-Autonomy node,
@@ -134,6 +139,7 @@ struct GameState: Codable {
         autoBigBangEnabled  = try c.decodeIfPresent(Bool.self,          forKey: .autoBigBangEnabled)  ?? false
         autoBigBangThreshold = try c.decodeIfPresent(Double.self,       forKey: .autoBigBangThreshold) ?? 100
         lastAutoBangAt      = try c.decodeIfPresent(Date.self,          forKey: .lastAutoBangAt)
+        autoBigBangHoldForAbsolute = try c.decodeIfPresent(Bool.self,   forKey: .autoBigBangHoldForAbsolute) ?? false
         autoBuyCosmicTreeEnabled = try c.decodeIfPresent(Bool.self,     forKey: .autoBuyCosmicTreeEnabled) ?? false
 
         // v3.0.4 — the Autonomous Reactor node was retired (automation now covers

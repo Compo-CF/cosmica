@@ -13,8 +13,10 @@ struct BigBangView: View {
     @State private var showBoostNudge = false
 
     /// v3.0 Phase 3 — Auto-Big-Bang threshold options. Double to match the
-    /// post-v2.1.1 shard type.
-    private let autoBangThresholdOptions: [Double] = [10, 100, 1_000, 10_000, 100_000, 1_000_000]
+    /// post-v2.1.1 shard type. v3.1: extended past 1M — late-game players earn
+    /// trillions of shards per Big Bang, so a 1M ceiling fired every 30s.
+    private let autoBangThresholdOptions: [Double] = [10, 100, 1_000, 10_000, 100_000,
+                                                      1e6, 1e8, 1e10, 1e12, 1e14, 1e16, 1e18]
 
     var body: some View {
         NavigationStack {
@@ -134,6 +136,14 @@ struct BigBangView: View {
         .padding(.horizontal)
     }
 
+    /// v3.1 — fraction of the way from `lo` to `hi` measured in powers of ten.
+    static func logProgress(_ value: Double, from lo: Double, to hi: Double) -> Double {
+        guard value.isFinite, hi > 1 else { return 0 }
+        let l = log10(max(lo, 1)), h = log10(hi), v = log10(max(value, 1))
+        guard h > l else { return 0 }
+        return min(max((v - l) / (h - l), 0), 1)
+    }
+
     private var tierCard: some View {
         let tier = engine.state.currentTier
         return VStack(alignment: .leading, spacing: 10) {
@@ -152,10 +162,18 @@ struct BigBangView: View {
                 Spacer()
             }
             if let next = tier.next() {
-                let progress = (engine.state.lifetimeStardust - tier.threshold) / (next.threshold - tier.threshold)
-                ProgressView(value: min(max(progress, 0), 1)).tint(tier.color)
+                // v3.1 — progress in powers of ten. Tiers are ~1000× apart
+                // (Absolute 10,000×), so a linear bar sat near zero for most of
+                // the climb: at 1e35 a player was 90% of the way in ×10 steps
+                // but the bar showed 10% (Reddit, Oct 2026).
+                ProgressView(value: Self.logProgress(engine.state.lifetimeStardust,
+                                                     from: tier.threshold, to: next.threshold))
+                    .tint(tier.color)
                 Text("Next: \(next.title) at \(Formatter.short(next.threshold)) ✦ lifetime")
                     .font(.caption)
+                    .foregroundStyle(.secondary)
+                Text("This run: \(Formatter.short(engine.state.lifetimeStardust)) ✦. Tier progress resets on Big Bang.")
+                    .font(.caption2)
                     .foregroundStyle(.secondary)
             } else {
                 HStack(spacing: 6) {
@@ -351,6 +369,24 @@ struct BigBangView: View {
                     .padding(.horizontal, 10)
                     .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 10))
                 }
+                // v3.1 — only meaningful before the first Absolute: it lets one
+                // run reach 1e36, which frequent auto-fires otherwise prevent.
+                if !engine.state.hasAbsoluteAscended {
+                    Toggle(isOn: Binding(
+                        get: { engine.state.autoBigBangHoldForAbsolute },
+                        set: { engine.setAutoBigBangHoldForAbsolute($0); haptics.purchase() }
+                    )) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Hold until Absolute")
+                                .font(.subheadline)
+                                .foregroundStyle(.white)
+                            Text("Pauses auto-Big-Bang so one run can reach the Absolute tier and unlock True Cosmos. Turns itself off after.")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    .tint(.orange)
+                }
                 Text(autoBangStatusText)
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -370,6 +406,9 @@ struct BigBangView: View {
     private var autoBangStatusText: String {
         let available = engine.availableShards
         let threshold = engine.state.autoBigBangThreshold
+        if engine.state.autoBigBangHoldForAbsolute && !engine.state.hasAbsoluteAscended {
+            return "Holding for Absolute. This run: \(Formatter.short(engine.state.lifetimeStardust)) of \(Formatter.short(Tier.absolute.threshold)) ✦."
+        }
         if available >= threshold {
             return "Ready — firing on the next tick."
         }

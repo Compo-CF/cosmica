@@ -86,6 +86,18 @@ final class PrestigeTests: XCTestCase {
         XCTAssertGreaterThan(PrestigeCalculator.nextShardThreshold(lifetimeStardust: 1e10, floor: 1e10), 1e10)
     }
 
+    // MARK: - v3.1 tier bar in powers of ten
+
+    func test_tierBar_isLogarithmic() {
+        // Transcendent (1e32) -> Absolute (1e36): 1e35 is three of four ×10 steps.
+        XCTAssertEqual(BigBangView.logProgress(1e35, from: 1e32, to: 1e36), 0.75, accuracy: 1e-9)
+        XCTAssertEqual(BigBangView.logProgress(1e32, from: 1e32, to: 1e36), 0, accuracy: 1e-9)
+        XCTAssertEqual(BigBangView.logProgress(5e36, from: 1e32, to: 1e36), 1, accuracy: 1e-9)
+        // Stargazer starts at 0: no log of zero, no NaN.
+        XCTAssertEqual(BigBangView.logProgress(0, from: 0, to: 1e5), 0, accuracy: 1e-9)
+        XCTAssertFalse(BigBangView.logProgress(.infinity, from: 0, to: 1e5).isNaN)
+    }
+
     // MARK: - v3.0.4 Autonomous Reactor retired
 
     func test_firstClusterAutoBuy_needsNoNode() {

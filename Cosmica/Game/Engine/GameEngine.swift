@@ -447,6 +447,12 @@ final class GameEngine {
         save()
     }
 
+    /// v3.1 — see `GameState.autoBigBangHoldForAbsolute`.
+    func setAutoBigBangHoldForAbsolute(_ hold: Bool) {
+        state.autoBigBangHoldForAbsolute = hold
+        save()
+    }
+
     /// v3.0 Phase 4 — flip the auto-buy Cosmic Tree toggle. Setter only; the
     /// actual step runs at the end of `bigBang()`.
     func setAutoBuyCosmicTree(_ enabled: Bool) {

@@ -105,6 +105,12 @@ final class AutomationManager {
     func autoBigBangStep() {
         guard isActive, let engine else { return }
         guard engine.state.autoBigBangEnabled else { return }
+        // v3.1 — "Hold until Absolute": let one run climb to 1e36 instead of
+        // resetting it every 30 seconds. Releases itself after ascending.
+        if engine.state.autoBigBangHoldForAbsolute {
+            guard engine.state.hasAbsoluteAscended else { return }
+            engine.setAutoBigBangHoldForAbsolute(false)
+        }
         guard engine.canPrestige else { return }
         // engine.availableShards is Double post-v2.1.1 — direct comparison.
         guard engine.availableShards >= engine.state.autoBigBangThreshold else { return }
