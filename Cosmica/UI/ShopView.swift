@@ -330,11 +330,14 @@ struct ShopView: View {
     @ViewBuilder
     private func timeWarpButton(_ productId: String, hours: Double, color: Color) -> some View {
         if let price = iap.displayPrice(for: productId) {
+            // Never sell a warp worth nothing: with no production yet (a fresh
+            // game) the button waits until the first generator is running.
+            let amount = engine.timeWarpAmount(hours: hours)
             actionButton(
                 title: price,
-                subtitle: "\(Int(hours))h · +\(Formatter.short(engine.timeWarpAmount(hours: hours))) ✦",
+                subtitle: amount > 0 ? "\(Int(hours))h · +\(Formatter.short(amount)) ✦" : "Buy a generator first",
                 color: color,
-                disabled: iap.purchaseInFlight
+                disabled: iap.purchaseInFlight || amount <= 0
             ) {
                 Task {
                     await attemptPurchase(productId) {
