@@ -203,6 +203,7 @@ final class GameEngine {
         state.cosmicShards += shards
         state.lifetimeCosmicShards += shards
         state.prestigeCount += 1
+        state.lastBigBangShards = shards
         state.stardust = CosmicTree.startingStardust(state.cosmicSkillLevels)
         state.lifetimeStardust = 0
         // Reset generators/upgrades (also resets specialization to nil per default).
@@ -467,12 +468,43 @@ final class GameEngine {
 
     /// Direct grant of Cosmic Shards (paid IAP, daily reward, cosmic event).
     /// Applies the active-event shard multiplier if any.
-    func grantShards(_ amount: Int) {
+    func grantShards(_ amount: Double) {
         let mult = CosmicEventScheduler.shardGrantMultiplier(state.activeEvent)
-        let gain = Double(amount) * mult
+        let gain = amount * mult
+        guard gain.isFinite, gain > 0 else { return }
         state.cosmicShards += gain
         state.lifetimeCosmicShards += gain
         save()
+    }
+
+    /// v3.1 — what a Cosmic Shard pack grants: never less than its original
+    /// fixed amount, and otherwise `multiple` × the player's latest Big Bang
+    /// (or what a Big Bang would pay right now, if that's more). Keeps the
+    /// packs meaningful at every stage instead of rounding to nothing late game.
+    func shardPackAmount(base: Double, multiple: Double) -> Double {
+        let reference = max(state.lastBigBangShards, availableShards)
+        let scaled = multiple * reference
+        return scaled.isFinite ? max(base, scaled) : base
+    }
+
+    /// v3.1 Time Warp — `hours` of production at the full online rate, right
+    /// now. Scales with the player, unlike a fixed-amount pack. Counts toward
+    /// this run's lifetime (tier, Big Bang reward, Absolute) like any earning.
+    func timeWarpAmount(hours: Double) -> Double {
+        let amount = state.stardustPerSecond * hours * 3600
+        return amount.isFinite ? max(0, amount) : 0
+    }
+
+    @discardableResult
+    func applyTimeWarp(hours: Double) -> Double {
+        let amount = timeWarpAmount(hours: hours)
+        guard amount > 0 else { return 0 }
+        state.stardust += amount
+        state.lifetimeStardust += amount
+        checkAbsoluteAscension()
+        checkAchievements()
+        save()
+        return amount
     }
 
     /// Offline catch-up with an explicit cap (paid IAPs can pay for longer windows).

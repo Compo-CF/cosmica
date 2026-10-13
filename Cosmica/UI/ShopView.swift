@@ -23,15 +23,28 @@ struct ShopView: View {
                             bundleCard
                         }
                         removeAdsCard
+                        // v3.1 — only shown once the App Store has loaded at
+                        // least one Time Warp product (never an unbuyable price).
+                        if iap.product(for: IAPManager.timeWarp8hProductId) != nil
+                            || iap.product(for: IAPManager.timeWarp24hProductId) != nil {
+                            sectionHeader("Time Warp")
+                            timeWarpCard
+                        }
                         sectionHeader("Earnings Boost")
                         boost2xCard
                         sectionHeader("Offline Catch-Up")
                         offlineCatchUpCard
                         sectionHeader("Cosmic Shards")
-                        shardsPackCard(productId: IAPManager.shardsSmallProductId, amount: 250, icon: "diamond", color: .cyan, fallbackPrice: "$1.99")
-                        shardsPackCard(productId: IAPManager.shardsLargeProductId, amount: 2500, icon: "diamond.fill", color: .teal, fallbackPrice: "$9.99")
+                        // v3.1 — packs scale with the player: the larger of the
+                        // original fixed amount and 1× / 10× the last Big Bang.
+                        shardsPackCard(productId: IAPManager.shardsSmallProductId, base: 250, multiple: 1, bigBangs: "1 Big Bang", icon: "diamond", color: .cyan, fallbackPrice: "$1.99")
+                        shardsPackCard(productId: IAPManager.shardsLargeProductId, base: 2500, multiple: 10, bigBangs: "10 Big Bangs", icon: "diamond.fill", color: .teal, fallbackPrice: "$9.99")
                         sectionHeader("Automation")
                         automationCard
+                        if iap.supporterOwned || iap.product(for: IAPManager.supporterProductId) != nil {
+                            sectionHeader("Support the Developer")
+                            supporterCard
+                        }
                         restoreButton
                         BannerAdSlot()
                     }
@@ -252,8 +265,10 @@ struct ShopView: View {
         }
     }
 
-    private func shardsPackCard(productId: String, amount: Int, icon: String, color: Color, fallbackPrice: String) -> some View {
+    private func shardsPackCard(productId: String, base: Double, multiple: Double, bigBangs: String,
+                                icon: String, color: Color, fallbackPrice: String) -> some View {
         let price = iap.displayPrice(for: productId) ?? fallbackPrice
+        let amount = engine.shardPackAmount(base: base, multiple: multiple)
         return cardBackground {
             HStack(spacing: 14) {
                 Image(systemName: icon)
@@ -261,13 +276,19 @@ struct ShopView: View {
                     .foregroundStyle(color)
                     .frame(width: 50)
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("+\(amount) Cosmic Shards ◈").font(.headline).foregroundStyle(.white)
-                    Text("Each shard grants +2% permanent earnings forever.")
+                    Text("+\(Formatter.short(amount)) Cosmic Shards ◈").font(.headline).foregroundStyle(.white)
+                    Text("Worth \(bigBangs) at your current progress (at least \(Formatter.short(base))). Each shard is +2% earnings.")
                         .font(.caption).foregroundStyle(.secondary)
                 }
                 Spacer()
                 Button {
-                    Task { await attemptPurchase(productId) { engine.grantShards(amount); haptics.purchase() } }
+                    Task {
+                        await attemptPurchase(productId) {
+                            // Sized at the moment of purchase, so it matches the card.
+                            engine.grantShards(engine.shardPackAmount(base: base, multiple: multiple))
+                            haptics.purchase()
+                        }
+                    }
                 } label: {
                     Text(price)
                         .font(.headline)
@@ -276,6 +297,85 @@ struct ShopView: View {
                         .foregroundStyle(.white)
                 }
                 .disabled(iap.purchaseInFlight)
+            }
+        }
+    }
+
+    // v3.1: Time Warp. Shows exactly what each warp would add right now (it's
+    // N hours at the current full rate), so the price is easy to judge. A
+    // button only appears for a product the App Store has actually loaded.
+    private var timeWarpCard: some View {
+        cardBackground {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(spacing: 14) {
+                    Image(systemName: "clock.arrow.2.circlepath")
+                        .font(.title)
+                        .foregroundStyle(.mint)
+                        .frame(width: 50)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Time Warp").font(.headline).foregroundStyle(.white)
+                        Text("Get hours of production instantly, at your full rate. Grows with you.")
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                }
+                HStack(spacing: 10) {
+                    timeWarpButton(IAPManager.timeWarp8hProductId, hours: 8, color: .mint)
+                    timeWarpButton(IAPManager.timeWarp24hProductId, hours: 24, color: .teal)
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func timeWarpButton(_ productId: String, hours: Double, color: Color) -> some View {
+        if let price = iap.displayPrice(for: productId) {
+            actionButton(
+                title: price,
+                subtitle: "\(Int(hours))h · +\(Formatter.short(engine.timeWarpAmount(hours: hours))) ✦",
+                color: color,
+                disabled: iap.purchaseInFlight
+            ) {
+                Task {
+                    await attemptPurchase(productId) {
+                        engine.applyTimeWarp(hours: hours)
+                        haptics.purchase()
+                    }
+                }
+            }
+        }
+    }
+
+    // v3.1: Supporter Pack. A non-consumable thank-you (golden orb + badge);
+    // the tip jar sold nothing in 60 days, players buy things rather than donate.
+    private var supporterCard: some View {
+        let owned = iap.supporterOwned
+        return cardBackground {
+            HStack(spacing: 14) {
+                Image(systemName: owned ? "star.circle.fill" : "star.circle")
+                    .font(.title)
+                    .foregroundStyle(LinearGradient(colors: [.yellow, .orange], startPoint: .top, endPoint: .bottom))
+                    .frame(width: 50)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Supporter Pack").font(.headline).foregroundStyle(.white)
+                    Text(owned
+                         ? "Thank you! Your golden orb and Supporter badge are on (switch the orb in Settings)."
+                         : "Cosmica is made by one person. Support it and get a golden tap orb and a Supporter badge.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+                Spacer()
+                if !owned, let price = iap.displayPrice(for: IAPManager.supporterProductId) {
+                    Button {
+                        Task { await attemptPurchase(IAPManager.supporterProductId) { haptics.upgrade() } }
+                    } label: {
+                        Text(price)
+                            .font(.headline)
+                            .padding(.vertical, 8).padding(.horizontal, 14)
+                            .background(Color.orange, in: RoundedRectangle(cornerRadius: 10))
+                            .foregroundStyle(.black)
+                    }
+                    .disabled(iap.purchaseInFlight)
+                }
             }
         }
     }

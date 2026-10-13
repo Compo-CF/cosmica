@@ -8,7 +8,13 @@ struct ObservatoryView: View {
     /// landscape, or very small portrait). We shrink further there so the
     /// generator list has room to breathe.
     @Environment(\.verticalSizeClass) private var vSizeClass
+    @Environment(IAPManager.self) private var iap
+    /// v3.1 Supporter Pack perk; switchable in Settings.
+    @AppStorage("cosmica.supporter.goldenOrb") private var goldenOrb = true
     @State private var floats: [Floater] = []
+
+    private var golden: Bool { iap.supporterOwned && goldenOrb }
+    private static let gold = Color(red: 1.0, green: 0.80, blue: 0.32)
 
     struct Floater: Identifiable { let id = UUID(); let value: Double; let x: CGFloat }
 
@@ -91,6 +97,13 @@ struct ObservatoryView: View {
         return HStack {
             Image(systemName: tier.symbol).foregroundStyle(tier.color)
             Text(tier.title).font(.subheadline.weight(.semibold)).foregroundStyle(.white)
+            if iap.supporterOwned {
+                Label("Supporter", systemImage: "star.fill")
+                    .font(.caption2.weight(.bold))
+                    .foregroundStyle(.black)
+                    .padding(.horizontal, 7).padding(.vertical, 2)
+                    .background(Self.gold, in: Capsule())
+            }
             Spacer()
             Text("×\(String(format: "%.2f", tier.multiplier))").font(.caption.bold()).foregroundStyle(tier.color)
         }
@@ -106,18 +119,22 @@ struct ObservatoryView: View {
 
     private var tapZone: some View {
         ZStack {
+            // v3.1: supporters get a golden orb in place of the tier colour.
+            let orbColor = golden ? Self.gold : engine.state.currentTier.color
             Circle()
                 .fill(RadialGradient(
-                    colors: [engine.state.currentTier.color.opacity(0.9),
-                             engine.state.currentTier.color.opacity(0.2),
+                    colors: [orbColor.opacity(0.9),
+                             orbColor.opacity(0.2),
                              .clear],
                     center: .center, startRadius: 5, endRadius: orbSize * 0.57))
                 .frame(width: orbSize, height: orbSize)
                 .overlay {
                     Image(systemName: "sparkles")
                         .font(.system(size: orbSymbolSize))
-                        .foregroundStyle(.white)
-                        .shadow(color: engine.state.currentTier.color, radius: 14)
+                        .foregroundStyle(golden ? AnyShapeStyle(LinearGradient(colors: [.white, Self.gold],
+                                                                               startPoint: .top, endPoint: .bottom))
+                                                : AnyShapeStyle(Color.white))
+                        .shadow(color: orbColor, radius: golden ? 20 : 14)
                 }
 
             ForEach(floats) { f in

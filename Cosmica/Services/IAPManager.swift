@@ -3,8 +3,9 @@ import Observation
 import StoreKit
 
 /// StoreKit 2 wrapper covering all of Cosmica's in-app purchases:
-/// - One non-consumable: `removeads` (the original)
-/// - Four consumables: boost_2x_24hr, offline_7day, shards_pack_small, shards_pack_large
+/// - Non-consumables: `removeads`, automation_core, everything_bundle, supporter (v3.1)
+/// - Consumables: boost_2x_24hr, offline_7day, shards_pack_small, shards_pack_large,
+///   timewarp_8h / timewarp_24h (v3.1)
 /// - Three consumable tips (v1.2): tip.small, tip.medium, tip.large
 ///
 /// Consumable purchases return a success flag via `purchase(productId:)`; the caller
@@ -46,6 +47,17 @@ final class IAPManager {
         tipSmallProductId, tipMediumProductId, tipLargeProductId,
     ]
 
+    // v3.1 Time Warp — consumables that grant N hours of production at the
+    // full online rate, instantly. Scale with progress, so they stay worth
+    // buying late game where fixed shard packs had stopped mattering.
+    static let timeWarp8hProductId     = "com.centricfiber.cosmica.timewarp_8h"
+    static let timeWarp24hProductId    = "com.centricfiber.cosmica.timewarp_24h"
+
+    // v3.1 Supporter Pack — non-consumable. Unlocks the golden tap orb and a
+    // Supporter badge; counts as a tip. Zero tips sold in the 60 days before
+    // it: players buy things rather than donate, so the thank-you is a thing.
+    static let supporterProductId      = "com.centricfiber.cosmica.supporter"
+
     static let allProductIds: [String] = [
         removeAdsProductId,
         boost2x24hrProductId,
@@ -54,6 +66,9 @@ final class IAPManager {
         shardsLargeProductId,
         automationCoreProductId,
         everythingBundleProductId,
+        timeWarp8hProductId,
+        timeWarp24hProductId,
+        supporterProductId,
     ] + tipProductIds
 
     static let consumableIds: Set<String> = [
@@ -61,6 +76,8 @@ final class IAPManager {
         offline7dayProductId,
         shardsSmallProductId,
         shardsLargeProductId,
+        timeWarp8hProductId,
+        timeWarp24hProductId,
         tipSmallProductId, tipMediumProductId, tipLargeProductId,
     ]
 
@@ -84,6 +101,8 @@ final class IAPManager {
     /// trial lives on `GameState.automationTrialExpiresAt` and is checked by
     /// `AutomationManager.isActive` together with this flag.
     var automationCoreOwned: Bool = false
+    /// v3.1: owns the Supporter Pack (golden orb + badge).
+    var supporterOwned: Bool = false
     var purchaseInFlight: Bool = false
     /// Briefly true after a successful tip so the UI can show a thank-you beat.
     var didTip: Bool = false
@@ -169,7 +188,10 @@ final class IAPManager {
                     removeAdsOwned = true
                     automationCoreOwned = true
                 }
-                if Self.tipProductIds.contains(productId) {
+                if productId == Self.supporterProductId {
+                    supporterOwned = true
+                }
+                if Self.tipProductIds.contains(productId) || productId == Self.supporterProductId {
                     markTipped()
                 }
                 await txn.finish()
@@ -211,17 +233,22 @@ final class IAPManager {
         // individual purchases both settle to the right flags in one pass.
         var removeAds = false
         var automation = false
+        var supporter = false
         for await result in Transaction.currentEntitlements {
             guard case .verified(let txn) = result else { continue }
             switch txn.productID {
             case Self.removeAdsProductId:        removeAds = true
             case Self.automationCoreProductId:   automation = true
             case Self.everythingBundleProductId: removeAds = true; automation = true
+            case Self.supporterProductId:        supporter = true
             default: break
             }
         }
         removeAdsOwned = removeAds
         automationCoreOwned = automation
+        supporterOwned = supporter
+        // A supporter has already said thank you; stop the tip reminder.
+        if supporter && !hasEverTipped { markTipped() }
     }
 
     private func listenForTransactions() -> Task<Void, Never> {

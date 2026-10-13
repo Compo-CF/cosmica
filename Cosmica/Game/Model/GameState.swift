@@ -95,6 +95,11 @@ struct GameState: Codable {
     /// couldn't reach it). Switches itself off once ascended.
     var autoBigBangHoldForAbsolute: Bool = false
 
+    /// v3.1 — shards granted by the most recent Big Bang (manual or auto).
+    /// Sizes the Cosmic Shard packs so they stay worth buying late game: a
+    /// fixed 250 is nothing to a player earning trillions per Big Bang.
+    var lastBigBangShards: Double = 0
+
     /// v3.0 Phase 4 — auto-buy Cosmic Tree upgrades. After each Big Bang (manual
     /// or auto), spend banked shards on the cheapest available NON-Autonomy node,
     /// stopping when either nothing's affordable OR the next purchase would drop
@@ -140,6 +145,7 @@ struct GameState: Codable {
         autoBigBangThreshold = try c.decodeIfPresent(Double.self,       forKey: .autoBigBangThreshold) ?? 100
         lastAutoBangAt      = try c.decodeIfPresent(Date.self,          forKey: .lastAutoBangAt)
         autoBigBangHoldForAbsolute = try c.decodeIfPresent(Bool.self,   forKey: .autoBigBangHoldForAbsolute) ?? false
+        lastBigBangShards   = try c.decodeIfPresent(Double.self,        forKey: .lastBigBangShards)   ?? 0
         autoBuyCosmicTreeEnabled = try c.decodeIfPresent(Bool.self,     forKey: .autoBuyCosmicTreeEnabled) ?? false
 
         // v3.0.4 — the Autonomous Reactor node was retired (automation now covers

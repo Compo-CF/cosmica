@@ -26,11 +26,43 @@ struct TipReminderView: View {
                     Text("Enjoying Cosmica?")
                         .font(.title.weight(.bold))
                         .multilineTextAlignment(.center)
-                    Text("It's free and built by one person. If it's earned a spot in your day, a small tip keeps it going — no pressure, and I won't ask often.")
+                    Text("It's free and built by one person. If it's earned a spot in your day, a little support keeps it going — no pressure, and I won't ask often.")
                         .font(.callout)
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, 20)
+                }
+
+                // v3.1 — lead with the Supporter Pack: a thank-you you can see
+                // (golden orb + badge). Plain tips stay underneath.
+                if !iap.supporterOwned, let price = iap.displayPrice(for: IAPManager.supporterProductId) {
+                    Button {
+                        Task {
+                            let ok = await iap.purchase(IAPManager.supporterProductId)
+                            if ok { haptics.upgrade() }
+                            dismiss()
+                        }
+                    } label: {
+                        VStack(spacing: 3) {
+                            Text("Supporter Pack · \(price)")
+                                .font(.headline)
+                            Text("Golden tap orb + Supporter badge")
+                                .font(.caption)
+                                .opacity(0.8)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                        .foregroundStyle(.black)
+                        .background(LinearGradient(colors: [.yellow, .orange], startPoint: .leading, endPoint: .trailing),
+                                    in: RoundedRectangle(cornerRadius: 12))
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(iap.purchaseInFlight)
+                    .padding(.horizontal, 24)
+
+                    Text("Or leave a tip")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
 
                 HStack(spacing: 10) {

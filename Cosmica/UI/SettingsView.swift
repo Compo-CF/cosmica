@@ -16,6 +16,7 @@ struct SettingsView: View {
     @State private var showPreviousConfirm = false
     @State private var cloudMessage: String?
     @State private var showGameCenter = false
+    @AppStorage("cosmica.supporter.goldenOrb") private var goldenOrb = true
 
     var body: some View {
         NavigationStack {
@@ -84,6 +85,16 @@ struct SettingsView: View {
                 notificationsSection
 
                 tipJarSection
+
+                // v3.1 — Supporter Pack perk switch.
+                if iap.supporterOwned {
+                    Section("Supporter") {
+                        Toggle(isOn: $goldenOrb) {
+                            Label("Golden tap orb", systemImage: "star.circle.fill")
+                        }
+                        .tint(.orange)
+                    }
+                }
 
                 Section("Support Cosmica") {
                     // Manual Rate button — bypasses the ReviewPrompter's 3/year
