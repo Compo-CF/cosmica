@@ -11,7 +11,8 @@ settings:
     IPHONEOS_DEPLOYMENT_TARGET: "17.0"
     # v3.0.3 — version lives HERE, once, for both the app and the widget
     # extension (App Store rejects an extension whose version differs from
-    # its app). Bump CURRENT_PROJECT_VERSION for every upload.
+    # its app). scripts/testflight.sh overrides CURRENT_PROJECT_VERSION with the git
+    # commit count; the value here only matters for manual Xcode archives.
     MARKETING_VERSION: "3.1.1"
     CURRENT_PROJECT_VERSION: "40"
     TARGETED_DEVICE_FAMILY: "1"
@@ -26,6 +27,10 @@ targets:
   Cosmica:
     type: application
     platform: iOS
+    # scripts/testflight.sh runs `xcodebuild test -scheme Cosmica`, so the scheme must include the tests.
+    scheme:
+      testTargets:
+        - CosmicaTests
     sources:
       - path: Cosmica
         excludes:
