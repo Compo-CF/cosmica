@@ -51,7 +51,8 @@ struct BannerAdSlot: View {
     private let hiddenWindow: TimeInterval = 45
 
     var body: some View {
-        if ads.removeAdsOwned {
+        // v3.1.2 — also wait for consent: a BannerView requests an ad as soon as it's created.
+        if ads.removeAdsOwned || !ads.sdkStarted {
             EmptyView()
         } else {
             BannerAdView(unitId: ads.bannerUnitId)

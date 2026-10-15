@@ -17,6 +17,9 @@ struct CosmicaApp: App {
     @State private var reviewPrompter = ReviewPrompter()
     @State private var automation = AutomationManager()
     @State private var notif = NotificationManager()
+    /// v3.1.2 — Google consent (EEA/UK/CH) → ATT → Mobile Ads, in that order.
+    @State private var consent = ConsentManager()
+    @AppStorage("hasSeenOnboarding") private var hasSeenOnboarding: Bool = false
     /// v3.0.2 — true once this device has successfully consulted iCloud (account
     /// available + pull returned). Uploads are blocked until then, so a fresh
     /// install can never push its empty save over the player's real cloud copy.
@@ -40,6 +43,7 @@ struct CosmicaApp: App {
                     .environment(reviewPrompter)
                     .environment(automation)
                     .environment(notif)
+                    .environment(consent)
                 if showSplash {
                     SplashView()
                         .transition(.opacity)
@@ -71,16 +75,18 @@ struct CosmicaApp: App {
                     engine.start()
                     await syncFromCloud()
 
-                    // Fallback ATT request for users who already dismissed
-                    // onboarding on an older build (their .notDetermined status
-                    // was never resolved because the previous placement in the
-                    // launch flow got suppressed by the fullScreenCover). New
-                    // installs get the prompt inside OnboardingView.finish().
-                    // Delay so this only fires once the main UI is settled and
-                    // no modal is presenting.
+                    // v3.1.2 — consent → ATT → ads. Players who've finished onboarding
+                    // run it here, once the main UI has settled and no modal is up
+                    // (same timing the old ATT fallback used). New installs run it when
+                    // onboarding finishes (onChange below), so nothing stacks on the cover.
                     try? await Task.sleep(nanoseconds: 1_500_000_000)
-                    await requestTrackingPermissionIfNeeded()
+                    if hasSeenOnboarding {
+                        await startAdsFlow()
+                    }
                 }
+            .onChange(of: hasSeenOnboarding) { _, done in
+                if done { Task { await startAdsFlow() } }
+            }
             // v3.0.3 — widget tap (cosmica://observatory). Reuses the notification
             // deep-link path; RootView switches tabs and clears it.
             .onOpenURL { url in
@@ -122,12 +128,16 @@ struct CosmicaApp: App {
         }
     }
 
-    private func requestTrackingPermissionIfNeeded() async {
-        // Only request on the first launch after install / after user resets tracking.
-        // Subsequent statuses (.authorized / .denied / .restricted) mean the user has
-        // already answered and we must not prompt again.
-        guard ATTrackingManager.trackingAuthorizationStatus == .notDetermined else { return }
-        _ = await ATTrackingManager.requestTrackingAuthorization()
+    /// v3.1.2 — Google's required order: consent form (only where regulations apply), then
+    /// Apple's ATT prompt (asked once), then start the Mobile Ads SDK only if consent allows.
+    /// Safe to call repeatedly: the form shows only when needed, ATT asks once, ads start once.
+    @MainActor
+    private func startAdsFlow() async {
+        await consent.gather()
+        await consent.requestTrackingIfNeeded()
+        if consent.canRequestAds {
+            ads.startAfterConsent(removeAdsOwned: iap.removeAdsOwned)
+        }
     }
 
     /// v3.0.2 — adopt the iCloud save when it holds more lasting progress than

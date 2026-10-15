@@ -7,6 +7,7 @@ struct SettingsView: View {
     @Environment(HapticsManager.self) var haptics
     @Environment(GameCenterManager.self) var gameCenter
     @Environment(AutomationManager.self) var automation
+    @Environment(ConsentManager.self) var consent
     @Environment(NotificationManager.self) var notif
     @State private var showResetConfirm = false
     // v3.0.2 — iCloud backup restore + developer tools gate
@@ -120,6 +121,12 @@ struct SettingsView: View {
                 Section("Legal") {
                     NavigationLink("Privacy Policy") {
                         PrivacyPolicyView()
+                    }
+                    // v3.1.2 — required where GDPR-style rules apply: reopen the ad consent form.
+                    if consent.privacyOptionsRequired {
+                        Button("Privacy choices") {
+                            Task { await consent.presentPrivacyOptions() }
+                        }
                     }
                     NavigationLink("Terms of Service") {
                         TermsOfServiceView()

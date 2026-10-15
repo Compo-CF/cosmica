@@ -120,18 +120,13 @@ struct OnboardingView: View {
         }
     }
 
-    /// Dismisses onboarding and, on the way out, requests App Tracking
-    /// Transparency permission. Firing the prompt in direct response to the
-    /// "Start Playing" tap satisfies iOS's requirement that the app be active
-    /// and no other modal be presenting — the previous placement in
-    /// RootView.task collided with the .fullScreenCover appearing and the
-    /// system quietly suppressed the alert.
+    /// Dismisses onboarding. v3.1.2 — the ATT prompt moved out of here: setting
+    /// `hasSeenOnboarding` triggers CosmicaApp.startAdsFlow(), which shows Google's
+    /// consent form first (where required), then ATT, then starts ads — once this
+    /// cover is gone, so no prompt collides with it.
     @MainActor
     private func finish() async {
         hasSeenOnboarding = true
-        if ATTrackingManager.trackingAuthorizationStatus == .notDetermined {
-            _ = await ATTrackingManager.requestTrackingAuthorization()
-        }
         dismiss()
     }
 }

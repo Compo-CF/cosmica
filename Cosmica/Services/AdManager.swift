@@ -43,17 +43,32 @@ final class AdManager: NSObject {
     private var lastInterstitialShownAt: Date?
     private let interstitialMinInterval: TimeInterval = 180  // 3 min
 
+    /// v3.1.2 — false until the consent flow allows ads; nothing is requested before then
+    /// (BannerAdSlot also waits on this, since a banner loads itself when it appears).
+    private(set) var sdkStarted = false
+
     func configure(removeAdsOwned: Bool) {
         self.removeAdsOwned = removeAdsOwned
+        guard sdkStarted else { return }   // remembered; loads happen in startAfterConsent
         Task {
             await loadRewarded()
             if !removeAdsOwned { await loadInterstitial() }
         }
     }
 
+    /// v3.1.2 — called once ConsentManager reports `canRequestAds`: starts the SDK, then loads.
+    func startAfterConsent(removeAdsOwned: Bool) {
+        if !sdkStarted {
+            sdkStarted = true
+            MobileAds.shared.start(completionHandler: nil)
+        }
+        configure(removeAdsOwned: removeAdsOwned)
+    }
+
     // MARK: - Rewarded
 
     func loadRewarded() async {
+        guard sdkStarted else { return }   // v3.1.2 — never request before consent
         do {
             let ad = try await RewardedAd.load(with: rewardedUnitId, request: Request())
             rewardedAd = ad
@@ -92,6 +107,7 @@ final class AdManager: NSObject {
     // MARK: - Interstitial
 
     func loadInterstitial() async {
+        guard sdkStarted else { return }   // v3.1.2 — never request before consent
         do {
             let ad = try await InterstitialAd.load(with: interstitialUnitId, request: Request())
             interstitialAd = ad

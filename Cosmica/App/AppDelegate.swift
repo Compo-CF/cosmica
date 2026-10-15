@@ -12,7 +12,8 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
         // to every ad request (banner, rewarded, interstitial) for the
         // lifetime of the process.
         MobileAds.shared.requestConfiguration.maxAdContentRating = .general
-        MobileAds.shared.start(completionHandler: nil)
+        // v3.1.2 — the SDK is no longer started here. AdManager.startAfterConsent() starts it
+        // once Google's consent flow (ConsentManager) says ads may be requested.
         return true
     }
 }

@@ -1,6 +1,6 @@
 # Cosmica — Privacy Policy
 
-*Last updated: June 25, 2026*
+*Last updated: October 15, 2026*
 
 ## TL;DR
 
@@ -22,6 +22,7 @@ You can opt out of personalized ads at any time:
 
 - Settings → Privacy & Security → Tracking — disable "Allow Apps to Request to Track" or revoke this app's permission specifically.
 - Settings → Privacy & Security → Apple Advertising — disable Personalized Ads.
+- **EEA, UK and Switzerland:** Cosmica shows Google’s consent form before any ads load. Change your choices any time with **Privacy choices** in Cosmica’s Settings.
 
 Google AdMob's privacy policy: <https://policies.google.com/privacy>
 
