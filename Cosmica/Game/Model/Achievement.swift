@@ -16,15 +16,18 @@ struct Achievement: Identifiable, Codable, Hashable {
 /// Bonuses stack additively (see `AchievementCatalog.multiplier`).
 enum AchievementTier: String, Codable, CaseIterable {
     case bronze, silver, gold, platinum
+    /// v3.2 — endgame goals for long-running saves (beyond the original 25).
+    case mythic
 
-    /// Flat additive contribution to `totalMultiplier`. 25 achievements, mostly bronze/silver,
-    /// cap the fully-cleared bonus around ×1.35 — meaningful without eclipsing shard/tree math.
+    /// Flat additive contribution to `totalMultiplier`. The original 25 cap around
+    /// ×1.35; the v3.2 mythic set adds about +1.2 more for players who clear it.
     var bonus: Double {
         switch self {
         case .bronze:   return 0.005
         case .silver:   return 0.010
         case .gold:     return 0.020
         case .platinum: return 0.050
+        case .mythic:   return 0.100
         }
     }
 
@@ -34,6 +37,7 @@ enum AchievementTier: String, Codable, CaseIterable {
         case .silver:   return "Silver"
         case .gold:     return "Gold"
         case .platinum: return "Platinum"
+        case .mythic:   return "Mythic"
         }
     }
 }
@@ -52,6 +56,10 @@ enum AchievementGoal: Codable, Hashable {
     case ownAllGenerators(count: Int)
     case treeLevelsTotal(Int)
     case specializationsChosen(Int)
+    // v3.2 — counted across every cosmos (prestigeCount resets on True Cosmos).
+    case totalBigBangs(Int)
+    case challengeStars(Int)
+    case wondersBuilt(Int)
 
     func isMet(state: GameState) -> Bool {
         switch self {
@@ -71,6 +79,9 @@ enum AchievementGoal: Codable, Hashable {
             return state.cosmicSkillLevels.values.reduce(0, +) >= n
         case .specializationsChosen(let n):
             return state.generators.filter { $0.specialization != nil }.count >= n
+        case .totalBigBangs(let n):          return state.totalBigBangs >= n
+        case .challengeStars(let n):         return state.challengeStars >= n
+        case .wondersBuilt(let n):           return state.builtWonderIds.count >= n
         }
     }
 
@@ -78,12 +89,15 @@ enum AchievementGoal: Codable, Hashable {
     func progress(state: GameState) -> Double {
         switch self {
         case .taps(let n):                   return clamped(Double(state.totalTaps), Double(n))
-        case .lifetimeStardust(let v):       return clamped(state.lifetimeStardust, v)
-        case .cosmicShards(let v):           return clamped(state.cosmicShards, v)
-        case .lifetimeCosmicShards(let v):   return clamped(state.lifetimeCosmicShards, v)
+        case .lifetimeStardust(let v):       return scaled(state.lifetimeStardust, v)
+        case .cosmicShards(let v):           return scaled(state.cosmicShards, v)
+        case .lifetimeCosmicShards(let v):   return scaled(state.lifetimeCosmicShards, v)
         case .prestigeCount(let n):          return clamped(Double(state.prestigeCount), Double(n))
         case .cosmosCount(let n):            return clamped(Double(state.cosmosCount), Double(n))
-        case .realityFragments(let v):       return clamped(state.realityFragments, v)
+        case .realityFragments(let v):       return scaled(state.realityFragments, v)
+        case .totalBigBangs(let n):          return clamped(Double(state.totalBigBangs), Double(n))
+        case .challengeStars(let n):         return clamped(Double(state.challengeStars), Double(n))
+        case .wondersBuilt(let n):           return clamped(Double(state.builtWonderIds.count), Double(n))
         case .ownGenerator(let i, let c):
             guard i < state.generators.count else { return 0 }
             return clamped(Double(state.generators[i].count), Double(c))
@@ -101,6 +115,14 @@ enum AchievementGoal: Codable, Hashable {
     private func clamped(_ current: Double, _ target: Double) -> Double {
         guard target > 0 else { return current > 0 ? 1 : 0 }
         return min(1, max(0, current / target))
+    }
+
+    /// v3.2 — huge targets (1e100 Stardust, 1e24 shards) on a log scale, so the
+    /// bar moves with every ×10 instead of sitting at 0% until the last step.
+    /// Small targets stay linear, matching how they read before.
+    private func scaled(_ current: Double, _ target: Double) -> Double {
+        guard target >= 1e6 else { return clamped(current, target) }
+        return min(1, max(0, log10(max(1, current)) / log10(target)))
     }
 }
 
@@ -151,6 +173,42 @@ enum AchievementCatalog {
         // ─── Specializations ─────────────────────────────────────────
         Achievement(id: "spec_1", title: "Specialist",        detail: "Choose one generator specialization",   symbol: "gearshape.2.fill", tier: .silver,   goal: .specializationsChosen(1)),
         Achievement(id: "spec_5", title: "Master Specialist", detail: "Choose 5 generator specializations",    symbol: "gearshape.2.fill", tier: .platinum, goal: .specializationsChosen(5)),
+
+        // ═══ v3.2 — the long game ═══════════════════════════════════
+        // The original fragment goals stopped at 100 while late saves earn
+        // hundreds of thousands per collapse. These carry on from there.
+
+        // ─── Weekly challenges ───────────────────────────────────────
+        Achievement(id: "ch_1",  title: "Challenger",           detail: "Complete a weekly challenge",  symbol: "star.circle.fill", tier: .silver, goal: .challengeStars(1)),
+        Achievement(id: "ch_10", title: "Ten Weeks Strong",     detail: "Earn 10 Challenge Stars",      symbol: "star.circle.fill", tier: .gold,   goal: .challengeStars(10)),
+        Achievement(id: "ch_52", title: "A Year of Challenges", detail: "Earn 52 Challenge Stars",      symbol: "star.circle.fill", tier: .mythic, goal: .challengeStars(52)),
+
+        // ─── Taps and Big Bangs, across every cosmos ─────────────────
+        Achievement(id: "tap_100k",  title: "Tireless",         detail: "Tap 100,000 times",                     symbol: "hand.tap.fill", tier: .platinum, goal: .taps(100_000)),
+        Achievement(id: "bb_250",    title: "Perpetual Motion", detail: "Big Bang 250 times, across every cosmos", symbol: "burst.fill",  tier: .platinum, goal: .totalBigBangs(250)),
+        Achievement(id: "bb_1000",   title: "A Thousand Dawns", detail: "Big Bang 1,000 times, across every cosmos", symbol: "burst.fill", tier: .mythic, goal: .totalBigBangs(1_000)),
+
+        // ─── Single-run Stardust past Absolute ───────────────────────
+        Achievement(id: "sd_1qad",   title: "Past the Ladder",    detail: "Reach 1Qad ✦ in a single run",            symbol: "sparkles", tier: .mythic, goal: .lifetimeStardust(1e45)),
+        Achievement(id: "sd_1nvd",   title: "Edge of the Names",  detail: "Reach 1Nvd ✦ in a single run",            symbol: "sparkles", tier: .mythic, goal: .lifetimeStardust(1e60)),
+        Achievement(id: "sd_googol", title: "A Googol",           detail: "Reach a googol (10¹⁰⁰) ✦ in a single run", symbol: "sparkles", tier: .mythic, goal: .lifetimeStardust(1e100)),
+
+        // ─── Cosmic Shards earned ────────────────────────────────────
+        Achievement(id: "lcs_1t",    title: "Shard Tycoon",      detail: "Earn 1T lifetime ◈",  symbol: "diamond.fill", tier: .platinum, goal: .lifetimeCosmicShards(1e12)),
+        Achievement(id: "lcs_1sp",   title: "Shard Singularity", detail: "Earn 1Sp lifetime ◈", symbol: "diamond.fill", tier: .mythic,   goal: .lifetimeCosmicShards(1e24)),
+
+        // ─── True Cosmos ─────────────────────────────────────────────
+        Achievement(id: "cosmos_50",  title: "Cartographer of Cosmoi", detail: "Collapse 50 cosmoi",  symbol: "infinity.circle.fill", tier: .mythic, goal: .cosmosCount(50)),
+        Achievement(id: "cosmos_100", title: "Eternal Return",         detail: "Collapse 100 cosmoi", symbol: "infinity.circle.fill", tier: .mythic, goal: .cosmosCount(100)),
+
+        // ─── Reality Fragments ───────────────────────────────────────
+        Achievement(id: "rf_1k",   title: "Fragment Storm",    detail: "Hold 1,000 Reality Fragments", symbol: "sparkle", tier: .platinum, goal: .realityFragments(1_000)),
+        Achievement(id: "rf_100k", title: "Shattered Reality", detail: "Hold 100K Reality Fragments",  symbol: "sparkle", tier: .mythic,   goal: .realityFragments(1e5)),
+        Achievement(id: "rf_10m",  title: "Reality Engine",    detail: "Hold 10M Reality Fragments",   symbol: "sparkle", tier: .mythic,   goal: .realityFragments(1e7)),
+        Achievement(id: "rf_1b",   title: "Beyond Counting",   detail: "Hold 1B Reality Fragments",    symbol: "sparkle", tier: .mythic,   goal: .realityFragments(1e9)),
+
+        // ─── Wonders ─────────────────────────────────────────────────
+        Achievement(id: "wonders_all", title: "Wonder of Wonders", detail: "Build every Cosmic Wonder", symbol: "building.columns.fill", tier: .mythic, goal: .wondersBuilt(WondersCatalog.all.count)),
     ]
 
     static func achievement(id: String) -> Achievement? {

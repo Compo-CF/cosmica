@@ -9,11 +9,15 @@ struct ObservatoryView: View {
     /// generator list has room to breathe.
     @Environment(\.verticalSizeClass) private var vSizeClass
     @Environment(IAPManager.self) private var iap
-    /// v3.1 Supporter Pack perk; switchable in Settings.
-    @AppStorage("cosmica.supporter.goldenOrb") private var goldenOrb = true
+    /// v3.2 — orb skin picked in Settings (3.1's golden orb is one of them).
+    @AppStorage(OrbSkin.storageKey) private var pickedSkin = ""
+    @AppStorage(OrbSkin.legacyGoldenKey) private var legacyGolden = true
     @State private var floats: [Floater] = []
 
-    private var golden: Bool { iap.supporterOwned && goldenOrb }
+    private var skin: OrbSkin {
+        OrbSkin.resolve(picked: pickedSkin, legacyGolden: legacyGolden,
+                        state: engine.state, supporter: iap.supporterOwned)
+    }
     private static let gold = Color(red: 1.0, green: 0.80, blue: 0.32)
 
     struct Floater: Identifiable { let id = UUID(); let value: Double; let x: CGFloat }
@@ -119,22 +123,24 @@ struct ObservatoryView: View {
 
     private var tapZone: some View {
         ZStack {
-            // v3.1: supporters get a golden orb in place of the tier colour.
-            let orbColor = golden ? Self.gold : engine.state.currentTier.color
+            // v3.2: the picked skin's colour, or the tier colour by default.
+            let skin = self.skin
+            let orbColor = skin.core ?? engine.state.currentTier.color
+            let skinned = skin != .tier
             Circle()
                 .fill(RadialGradient(
                     colors: [orbColor.opacity(0.9),
-                             orbColor.opacity(0.2),
+                             (skinned ? skin.accent : orbColor).opacity(0.2),
                              .clear],
                     center: .center, startRadius: 5, endRadius: orbSize * 0.57))
                 .frame(width: orbSize, height: orbSize)
                 .overlay {
                     Image(systemName: "sparkles")
                         .font(.system(size: orbSymbolSize))
-                        .foregroundStyle(golden ? AnyShapeStyle(LinearGradient(colors: [.white, Self.gold],
-                                                                               startPoint: .top, endPoint: .bottom))
-                                                : AnyShapeStyle(Color.white))
-                        .shadow(color: orbColor, radius: golden ? 20 : 14)
+                        .foregroundStyle(skinned ? AnyShapeStyle(LinearGradient(colors: [.white, skin.accent],
+                                                                                startPoint: .top, endPoint: .bottom))
+                                                 : AnyShapeStyle(Color.white))
+                        .shadow(color: orbColor, radius: skinned ? 20 : 14)
                 }
 
             ForEach(floats) { f in

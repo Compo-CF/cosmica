@@ -40,7 +40,7 @@ struct TrueCosmosView: View {
             isPresented: $showConfirm,
             titleVisibility: .visible
         ) {
-            Button("Collapse (\(engine.availableFragments) fragments)", role: .destructive) {
+            Button("Collapse (\(Formatter.count(engine.availableFragments)) fragments)", role: .destructive) {
                 triggerCollapse()
             }
             Button("Cancel", role: .cancel) {}
@@ -111,7 +111,7 @@ struct TrueCosmosView: View {
             HStack {
                 Text("If you Cosmos now").foregroundStyle(.secondary).font(.subheadline)
                 Spacer()
-                Text("+\(fragments)")
+                Text("+\(Formatter.count(fragments))")
                     .font(.title2.bold())
                     .foregroundStyle(
                         LinearGradient(
@@ -151,11 +151,11 @@ struct TrueCosmosView: View {
                     )
                     .frame(width: 40)
                 VStack(alignment: .leading) {
-                    Text("×\(String(format: "%.2f", mult))")
+                    Text(Formatter.multiplier(mult))
                         .font(.title3.bold())
                         .foregroundStyle(.white)
                         .monospacedDigit()
-                    Text("from \(Int(engine.state.realityFragments)) Reality Fragments")
+                    Text("from \(Formatter.count(engine.state.realityFragments)) Reality Fragments")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -233,7 +233,7 @@ struct TrueCosmosView: View {
 
     private var collapseButton: some View {
         Button { showConfirm = true } label: {
-            Text("Collapse the Cosmos — claim \(engine.availableFragments) fragments")
+            Text("Collapse the Cosmos — claim \(Formatter.count(engine.availableFragments)) fragments")
                 .font(.headline)
                 .frame(maxWidth: .infinity, minHeight: 54)
                 .background(

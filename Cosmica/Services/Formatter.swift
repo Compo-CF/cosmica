@@ -10,6 +10,7 @@ enum Formatter {
     /// endgame numbers LOOK stuck as they climbed from one to the other — the
     /// value was growing, the label just wasn't.
     private static let ladder: [(threshold: Double, suffix: String)] = [
+        (1e63, "Vg"),  // Vigintillion (v3.2)
         (1e60, "Nvd"), // Novemdecillion
         (1e57, "Ocd"), // Octodecillion
         (1e54, "Spd"), // Septendecillion
@@ -40,6 +41,14 @@ enum Formatter {
         if abs < 1000 {
             return "\(sign)\(Int(abs.rounded()))"
         }
+        // v3.2 — past the named suffixes, scientific ("4.82e71") instead of an
+        // ever-growing "48213Vg" that reads as if the number had stopped.
+        if abs >= scientificFrom {
+            var exponent = Int(log10(abs).rounded(.down))
+            var mantissa = abs / pow(10, Double(exponent))
+            if mantissa >= 9.995 { mantissa /= 10; exponent += 1 }
+            return String(format: "%@%.2fe%d", sign, mantissa, exponent)
+        }
         for (threshold, suffix) in ladder {
             if abs >= threshold {
                 let scaled = abs / threshold
@@ -53,6 +62,26 @@ enum Formatter {
             }
         }
         return String(format: "%@%.0f", sign, abs)
+    }
+
+    /// First value shown in scientific notation (1000 × the top suffix).
+    static let scientificFrom: Double = 1e66
+
+    /// "×1.25" for everyday multipliers; "×4.51Qa" once they get large, so a
+    /// late-game shard or fragment multiplier never prints 20 digits.
+    static func multiplier(_ value: Double) -> String {
+        guard value.isFinite else { return "×∞" }
+        return value < 1000 ? String(format: "×%.2f", value) : "×" + short(value)
+    }
+
+    /// Whole-number count with grouping ("1,000"), switching to `short` at a million.
+    static func count(_ value: Double) -> String {
+        guard value.isFinite else { return "∞" }
+        guard Swift.abs(value) < 1e6 else { return short(value) }
+        let f = NumberFormatter()
+        f.numberStyle = .decimal
+        f.maximumFractionDigits = 0
+        return f.string(from: NSNumber(value: value.rounded())) ?? "\(Int(value.rounded()))"
     }
 
     /// Duration like "8h 23m" / "47m 12s" / "1d 4h".

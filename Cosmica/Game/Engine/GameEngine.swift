@@ -39,6 +39,7 @@ final class GameEngine {
     func start() {
         timer?.invalidate()
         lastTickAt = Date()
+        refreshChallenge(now: lastTickAt)
         let interval = 1.0 / tickHz
         timer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { [weak self] _ in
             Task { @MainActor in self?.tickFromTimer() }
@@ -60,13 +61,14 @@ final class GameEngine {
 
         // Retire expired events, roll a new one if the cooldown has passed.
         updateCosmicEvent(now: now)
+        // v3.2 — start the new week's challenge if the week turned over.
+        refreshChallenge(now: now)
 
-        let earned = state.stardustPerSecond * dt
-        state.stardust += earned
-        state.lifetimeStardust += earned
+        addStardust(state.stardustPerSecond * dt)
 
         checkAbsoluteAscension()
         checkAchievements()
+        checkChallenge()
 
         // v3.0 Phase 2 — cheap no-op when automation is off. When on, spends up to
         // half the current budget on the cheapest eligible generator on this tick.
@@ -124,10 +126,25 @@ final class GameEngine {
     @discardableResult
     func manualTap() -> Double {
         let v = state.tapValue
-        state.stardust += v
-        state.lifetimeStardust += v
+        addStardust(v)
         state.totalTaps += 1
         return v
+    }
+
+    // MARK: - Number ceiling (v3.2)
+
+    /// Highest value Stardust is allowed to reach. Far beyond any real save, but
+    /// short of infinity: once a balance is ∞, costs subtract to ∞ and ∞ × 0 is
+    /// NaN, which would freeze the save for good.
+    static let ceiling: Double = 1e300
+
+    /// Every Stardust gain goes through here (tick, tap, offline, Time Warp,
+    /// daily reward). A non-finite gain from a runaway multiplier stack lands
+    /// on the ceiling instead of turning the balance into ∞.
+    private func addStardust(_ amount: Double) {
+        guard !amount.isNaN, amount > 0 else { return }
+        state.stardust = min(state.stardust + amount, Self.ceiling)
+        state.lifetimeStardust = min(state.lifetimeStardust + amount, Self.ceiling)
     }
 
     // MARK: - Purchases
@@ -142,6 +159,7 @@ final class GameEngine {
         guard state.stardust >= total else { return false }
         state.stardust -= total
         state.generators[idx].count += amount
+        state.totalGeneratorsBought += Double(amount)
         save()
         return true
     }
@@ -200,9 +218,13 @@ final class GameEngine {
     func bigBang() -> Double {
         let shards = availableShards
         guard shards > 0 else { return 0 }
+        // v3.2 — latch a single-run challenge and record the run before it resets.
+        checkChallenge()
+        state.bestRunStardust = state.bestRunSoFar
         state.cosmicShards += shards
         state.lifetimeCosmicShards += shards
         state.prestigeCount += 1
+        state.totalBigBangs += 1
         state.lastBigBangShards = shards
         state.stardust = CosmicTree.startingStardust(state.cosmicSkillLevels)
         state.lifetimeStardust = 0
@@ -222,9 +244,13 @@ final class GameEngine {
 
     /// Reality Fragments the player would earn if they True Cosmoi'd right now.
     /// Absolute Aperture Wonder adds +25%.
-    var availableFragments: Int {
+    /// v3.2: `Double` (was `Int`, which trapped past Int64.max — see
+    /// `CosmosCalculator.fragmentsEarned`). This is read every time the Big
+    /// Bang tab draws, so the old conversion would crash on open, not on tap.
+    var availableFragments: Double {
         let base = CosmosCalculator.fragmentsEarned(cosmicShards: state.cosmicShards)
-        return Int(floor(Double(base) * state.wonderFragmentMultiplier))
+        let raw = (base * state.wonderFragmentMultiplier).rounded(.down)
+        return raw.isFinite ? raw : 0
     }
 
     /// True Cosmos unlocks after Absolute Ascension AND when the shard balance yields
@@ -239,11 +265,13 @@ final class GameEngine {
     /// Fragment multiplier that stacks across all future Cosmoi. Keeps the Absolute
     /// Observer title.
     @discardableResult
-    func trueCosmos() -> Int {
+    func trueCosmos() -> Double {
         let fragments = availableFragments
         guard fragments > 0 else { return 0 }
-        state.realityFragments += Double(fragments)
-        state.lifetimeRealityFragments += Double(fragments)
+        checkChallenge()
+        state.bestRunStardust = state.bestRunSoFar
+        state.realityFragments += fragments
+        state.lifetimeRealityFragments += fragments
         state.cosmosCount += 1
 
         // Full reset — everything a Big Bang resets, plus Cosmic Shards and the tree.
@@ -351,8 +379,8 @@ final class GameEngine {
     func claimDaily() -> DailyReward {
         let streak = nextDailyStreak()
         let r = reward(forStreak: streak)
-        state.stardust += r.stardust
-        state.lifetimeStardust += r.stardust
+        addStardust(r.stardust)
+        state.totalDailyClaims += 1
         let shardGain = Double(r.cosmicShards) * CosmicEventScheduler.shardGrantMultiplier(state.activeEvent)
         state.cosmicShards += shardGain
         state.lifetimeCosmicShards += shardGain
@@ -499,10 +527,10 @@ final class GameEngine {
     func applyTimeWarp(hours: Double) -> Double {
         let amount = timeWarpAmount(hours: hours)
         guard amount > 0 else { return 0 }
-        state.stardust += amount
-        state.lifetimeStardust += amount
+        addStardust(amount)
         checkAbsoluteAscension()
         checkAchievements()
+        checkChallenge()
         save()
         return amount
     }
@@ -513,9 +541,9 @@ final class GameEngine {
         let secs = max(0, Date().timeIntervalSince(state.lastSeen))
         let counted = min(secs, cap)
         let earned = state.stardustPerSecond * counted * OfflineAccrual.offlineRate
-        state.stardust += earned
-        state.lifetimeStardust += earned
+        addStardust(earned)
         state.lastSeen = Date()
+        checkChallenge()
         save()
         return OfflineAccrual.Result(
             stardustEarned: earned,
@@ -537,11 +565,11 @@ final class GameEngine {
             extended: extended,
             extraCap: CosmicTree.offlineCapBonus(state.cosmicSkillLevels) + state.wonderOfflineCapBonus
         )
-        state.stardust += result.stardustEarned
-        state.lifetimeStardust += result.stardustEarned
+        addStardust(result.stardustEarned)
         state.lastSeen = Date()
         checkAbsoluteAscension()
         checkAchievements()
+        checkChallenge()
         save()
         return result
     }
@@ -561,6 +589,62 @@ final class GameEngine {
         state.builtWonderIds.insert(id)
         save()
         return true
+    }
+
+    // MARK: - Weekly Cosmic Challenge (v3.2)
+
+    /// This week's challenge, or nil before the first `refreshChallenge`.
+    var challenge: WeeklyChallenge? { WeeklyChallenge.stored(in: state) }
+
+    var challengeClaimable: Bool { state.challengeCompleted && !state.challengeClaimed }
+
+    /// Shards a challenge pays on top of its star: half a Big Bang at the
+    /// player's level, never less than 25 (same sizing rule as the shard packs).
+    var challengeRewardShards: Double { shardPackAmount(base: 25, multiple: 0.5) }
+
+    /// When the week has changed, pay out any unclaimed reward from the week
+    /// that ended, then set this week's challenge. An Int compare when nothing
+    /// changed, so it's safe to call every tick.
+    func refreshChallenge(now: Date = Date()) {
+        let week = WeeklyChallenge.week(for: now)
+        guard week != state.challengeWeek else { return }
+        if challengeClaimable { grantChallengeReward(week: state.challengeWeek) }
+        let c = WeeklyChallenge.make(week: week, state: state, now: now)
+        state.challengeWeek = c.week
+        state.challengeKindRaw = c.kind.rawValue
+        state.challengeBaseline = c.baseline
+        state.challengeTarget = c.target
+        state.challengeCompleted = false
+        state.challengeClaimed = false
+        save()
+    }
+
+    /// Latch completion the moment the goal is met. Called from the tick and
+    /// just before anything that resets a run. Internal (not private) for tests.
+    func checkChallenge() {
+        guard !state.challengeCompleted, let c = challenge, c.isMet(state) else { return }
+        state.challengeCompleted = true
+        save()
+    }
+
+    /// Claim a completed challenge: +1 Challenge Star and the shard reward.
+    /// Returns the shards granted (0 if there was nothing to claim).
+    @discardableResult
+    func claimChallenge() -> Double {
+        guard challengeClaimable else { return 0 }
+        return grantChallengeReward(week: state.challengeWeek)
+    }
+
+    @discardableResult
+    private func grantChallengeReward(week: Int) -> Double {
+        let shards = challengeRewardShards
+        state.challengeStars += 1
+        state.challengeStreak = state.lastChallengeClaimWeek == week - 1 ? state.challengeStreak + 1 : 1
+        state.lastChallengeClaimWeek = week
+        state.challengeClaimed = true
+        grantShards(shards)   // saves
+        checkAchievements()
+        return shards
     }
 
     // MARK: - Persistence

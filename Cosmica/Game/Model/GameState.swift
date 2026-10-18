@@ -107,6 +107,32 @@ struct GameState: Codable {
     /// hoard for a targeted purchase without wrestling the automator.
     var autoBuyCosmicTreeEnabled: Bool = false
 
+    // ───────── Lifetime counters (v3.2) ─────────
+    // Never reset by Big Bang or True Cosmos (prestigeCount and lifetimeStardust
+    // both do). The weekly challenge measures against these as deltas, so saves
+    // from before 3.2 simply start counting at 0.
+    var totalBigBangs: Int = 0
+    var totalGeneratorsBought: Double = 0
+    var totalDailyClaims: Int = 0
+    /// Highest lifetime Stardust reached in any single run (recorded as a run
+    /// ends; `bestRunSoFar` folds in the run in progress).
+    var bestRunStardust: Double = 0
+
+    // ───────── Weekly Cosmic Challenge (v3.2) ─────────
+    /// Week index (`WeeklyChallenge.week(for:)`) the current challenge belongs to; -1 = none yet.
+    var challengeWeek: Int = -1
+    var challengeKindRaw: String = ""
+    /// Counter value when the week's challenge was set (unused by single-run goals).
+    var challengeBaseline: Double = 0
+    var challengeTarget: Double = 0
+    /// Latched once the goal is met, so a later Big Bang can't un-complete it.
+    var challengeCompleted: Bool = false
+    var challengeClaimed: Bool = false
+    /// Permanent: each claimed challenge adds +10% earnings. Never reset.
+    var challengeStars: Int = 0
+    var challengeStreak: Int = 0
+    var lastChallengeClaimWeek: Int = -1
+
     // ───────── Codable: lenient decode so v1.0.x saves migrate to v2 ─────────
 
     init() {}   // memberwise-equivalent default init for fresh saves.
@@ -147,6 +173,21 @@ struct GameState: Codable {
         autoBigBangHoldForAbsolute = try c.decodeIfPresent(Bool.self,   forKey: .autoBigBangHoldForAbsolute) ?? false
         lastBigBangShards   = try c.decodeIfPresent(Double.self,        forKey: .lastBigBangShards)   ?? 0
         autoBuyCosmicTreeEnabled = try c.decodeIfPresent(Bool.self,     forKey: .autoBuyCosmicTreeEnabled) ?? false
+        // A pre-3.2 save has no lifetime count; this cosmos's prestiges are a
+        // fair lower bound, so "Big Bang 250 times" isn't a full restart.
+        totalBigBangs       = try c.decodeIfPresent(Int.self,           forKey: .totalBigBangs)       ?? prestigeCount
+        totalGeneratorsBought = try c.decodeIfPresent(Double.self,      forKey: .totalGeneratorsBought) ?? 0
+        totalDailyClaims    = try c.decodeIfPresent(Int.self,           forKey: .totalDailyClaims)    ?? 0
+        bestRunStardust     = try c.decodeIfPresent(Double.self,        forKey: .bestRunStardust)     ?? 0
+        challengeWeek       = try c.decodeIfPresent(Int.self,           forKey: .challengeWeek)       ?? -1
+        challengeKindRaw    = try c.decodeIfPresent(String.self,        forKey: .challengeKindRaw)    ?? ""
+        challengeBaseline   = try c.decodeIfPresent(Double.self,        forKey: .challengeBaseline)   ?? 0
+        challengeTarget     = try c.decodeIfPresent(Double.self,        forKey: .challengeTarget)     ?? 0
+        challengeCompleted  = try c.decodeIfPresent(Bool.self,          forKey: .challengeCompleted)  ?? false
+        challengeClaimed    = try c.decodeIfPresent(Bool.self,          forKey: .challengeClaimed)    ?? false
+        challengeStars      = try c.decodeIfPresent(Int.self,           forKey: .challengeStars)      ?? 0
+        challengeStreak     = try c.decodeIfPresent(Int.self,           forKey: .challengeStreak)     ?? 0
+        lastChallengeClaimWeek = try c.decodeIfPresent(Int.self,        forKey: .lastChallengeClaimWeek) ?? -1
 
         // v3.0.4 — the Autonomous Reactor node was retired (automation now covers
         // its cluster). Give back the 25 ◈ it cost. Removing the key makes this
@@ -174,13 +215,15 @@ struct GameState: Codable {
     ///   3. achievements unlocked    — never removed
     ///   4. cosmosCount              — only increases
     ///   5. totalTaps                — never reset
-    ///   6. lifetimeStardust         — current-run tiebreaker only
+    ///   6. challengeStars           — v3.2, never reset
+    ///   7. lifetimeStardust         — current-run tiebreaker only
     var progressRank: [Double] {
         [lifetimeRealityFragments,
          lifetimeCosmicShards,
          Double(unlockedAchievementIds.count),
          Double(cosmosCount),
          Double(totalTaps),
+         Double(challengeStars),
          lifetimeStardust]
     }
 
@@ -267,6 +310,14 @@ struct GameState: Codable {
         CosmosCalculator.multiplier(fragments: realityFragments)
     }
 
+    /// v3.2 — permanent +10% per claimed weekly challenge (additive, like fragments).
+    var challengeMultiplier: Double {
+        1.0 + Double(challengeStars) * WeeklyChallenge.starBonus
+    }
+
+    /// v3.2 — best single run including the one in progress.
+    var bestRunSoFar: Double { max(bestRunStardust, lifetimeStardust) }
+
     /// Full multiplier stack on Stardust production.
     var totalMultiplier: Double {
         currentTier.multiplier
@@ -277,6 +328,7 @@ struct GameState: Codable {
         * eventStardustMultiplier
         * realityFragmentMultiplier
         * achievementMultiplier
+        * challengeMultiplier
     }
 
     /// Base stardust per second across all generators, with each generator's tier-cluster

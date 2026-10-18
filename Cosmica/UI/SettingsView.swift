@@ -17,7 +17,8 @@ struct SettingsView: View {
     @State private var showPreviousConfirm = false
     @State private var cloudMessage: String?
     @State private var showGameCenter = false
-    @AppStorage("cosmica.supporter.goldenOrb") private var goldenOrb = true
+    @AppStorage(OrbSkin.storageKey) private var pickedSkin = ""
+    @AppStorage(OrbSkin.legacyGoldenKey) private var legacyGolden = true
 
     var body: some View {
         NavigationStack {
@@ -87,15 +88,7 @@ struct SettingsView: View {
 
                 tipJarSection
 
-                // v3.1 — Supporter Pack perk switch.
-                if iap.supporterOwned {
-                    Section("Supporter") {
-                        Toggle(isOn: $goldenOrb) {
-                            Label("Golden tap orb", systemImage: "star.circle.fill")
-                        }
-                        .tint(.orange)
-                    }
-                }
+                orbSection
 
                 Section("Support Cosmica") {
                     // Manual Rate button — bypasses the ReviewPrompter's 3/year
@@ -225,6 +218,54 @@ struct SettingsView: View {
                 Text("Your tip genuinely helps keep Cosmica free and shipping updates. It means a lot.")
             }
         }
+    }
+
+    // MARK: - Tap orb (v3.2)
+
+    /// Orb skins: tier colour by default, the Supporter Pack's golden orb, and
+    /// skins earned through play. Locked ones show what unlocks them.
+    private var orbSection: some View {
+        let current = OrbSkin.resolve(picked: pickedSkin, legacyGolden: legacyGolden,
+                                      state: engine.state, supporter: iap.supporterOwned)
+        return Section {
+            ForEach(OrbSkin.allCases) { skin in
+                orbRow(skin, selected: skin == current,
+                       unlocked: skin.isUnlocked(state: engine.state, supporter: iap.supporterOwned))
+            }
+        } header: {
+            Text("Tap Orb")
+        } footer: {
+            Text("Earn new orbs by reaching Absolute, collapsing cosmoi and completing weekly challenges.")
+        }
+    }
+
+    private func orbRow(_ skin: OrbSkin, selected: Bool, unlocked: Bool) -> some View {
+        Button {
+            guard unlocked else { return }
+            pickedSkin = skin.rawValue
+            haptics.tap()
+        } label: {
+            HStack(spacing: 12) {
+                Circle()
+                    .fill(RadialGradient(colors: [(skin.core ?? engine.state.currentTier.color), skin.accent.opacity(0.35)],
+                                         center: .center, startRadius: 1, endRadius: 14))
+                    .frame(width: 26, height: 26)
+                    .opacity(unlocked ? 1 : 0.35)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(skin.title).foregroundStyle(unlocked ? .primary : .secondary)
+                    if !unlocked || skin == .tier {
+                        Text(skin.requirement).font(.caption).foregroundStyle(.secondary)
+                    }
+                }
+                Spacer()
+                if selected {
+                    Image(systemName: "checkmark").foregroundStyle(.purple)
+                } else if !unlocked {
+                    Image(systemName: "lock.fill").foregroundStyle(.secondary)
+                }
+            }
+        }
+        .disabled(!unlocked)
     }
 
     // MARK: - Tip jar (always-accessible)

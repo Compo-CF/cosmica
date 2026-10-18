@@ -17,15 +17,20 @@ enum CosmosCalculator {
 
     /// Reality Fragments a player would earn if they True Cosmoi'd right now.
     /// Formula: floor(50 · √(shards / 1M)). Requires ≥ 1M shards to yield any.
-    static func fragmentsEarned(cosmicShards: Double) -> Int {
+    ///
+    /// v3.2: `Double` (was `Int`). Converting a Double above Int64.max (~9.2e18)
+    /// to Int traps, and that point is ~3.4e40 shards — within reach of the
+    /// longest-running saves. Same fix 2.1.1 made for Big Bang shards.
+    static func fragmentsEarned(cosmicShards: Double) -> Double {
         guard cosmicShards >= firstCosmosThreshold else { return 0 }
-        return Int(scaleFactor * sqrt(cosmicShards / firstCosmosThreshold))
+        let raw = (scaleFactor * sqrt(cosmicShards / firstCosmosThreshold)).rounded(.down)
+        return raw.isFinite ? raw : 0
     }
 
     /// Cosmic Shards required to earn at least `target` fragments.
-    static func shardsRequired(forFragments target: Int) -> Double {
+    static func shardsRequired(forFragments target: Double) -> Double {
         guard target > 0 else { return firstCosmosThreshold }
-        let ratio = pow(Double(target) / scaleFactor, 2.0)
+        let ratio = pow(target / scaleFactor, 2.0)
         return firstCosmosThreshold * ratio
     }
 

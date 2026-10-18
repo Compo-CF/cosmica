@@ -34,7 +34,7 @@ struct CosmicTreeView: View {
                 Text("\(Formatter.short(engine.state.cosmicShards)) ◈ Cosmic Shards")
                     .font(.headline).foregroundStyle(.white).monospacedDigit()
                 Spacer()
-                Text("Passive: ×\(String(format: "%.2f", engine.state.shardMultiplier))")
+                Text("Passive: \(Formatter.multiplier(engine.state.shardMultiplier))")
                     .font(.caption).foregroundStyle(.secondary)
             }
             Text("Each un-spent Shard gives +2% earnings. Spending them here reduces that passive bonus.")

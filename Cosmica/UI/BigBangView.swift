@@ -29,6 +29,7 @@ struct BigBangView: View {
                         statsCard
                         tierCard
                         cosmicTreeLink
+                        WeeklyChallengeCard()
                         achievementsLink
                         if engine.state.hasAbsoluteAscended {
                             trueCosmosLink
@@ -270,7 +271,7 @@ struct BigBangView: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("True Cosmos").font(.headline).foregroundStyle(.white)
                     if engine.state.cosmosCount > 0 {
-                        Text("\(engine.state.cosmosCount) cosmos collapsed  ·  ×\(String(format: "%.2f", engine.state.realityFragmentMultiplier)) permanent")
+                        Text("\(engine.state.cosmosCount) cosmos collapsed  ·  \(Formatter.multiplier(engine.state.realityFragmentMultiplier)) permanent")
                             .font(.caption).foregroundStyle(.secondary)
                     } else {
                         Text("Collapse the universe for permanent Reality Fragments")

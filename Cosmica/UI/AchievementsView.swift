@@ -56,7 +56,7 @@ struct AchievementsView: View {
                 VStack(alignment: .leading) {
                     Text("\(unlocked) of \(total) unlocked")
                         .font(.headline).foregroundStyle(.white)
-                    Text("Every achievement adds a small permanent bonus.")
+                    Text("Every achievement adds a permanent bonus. Mythic ones add the most.")
                         .font(.caption).foregroundStyle(.secondary)
                 }
                 Spacer()
@@ -129,6 +129,7 @@ private struct AchievementRow: View {
         case .silver:   return Color(red: 0.85, green: 0.87, blue: 0.92)
         case .gold:     return Color(red: 1.00, green: 0.82, blue: 0.30)
         case .platinum: return Color(red: 0.75, green: 0.90, blue: 1.00)
+        case .mythic:   return Color(red: 1.00, green: 0.55, blue: 0.90)
         }
     }
 

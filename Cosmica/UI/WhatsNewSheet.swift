@@ -7,7 +7,7 @@ import SwiftUI
 /// Wonders.
 ///
 /// Shown once per install per major version, gated in `RootView` by
-/// `@AppStorage("hasSeenWhatsNew_3_0")`. Update the copy AND rename the
+/// `@AppStorage("hasSeenWhatsNew_3_2")`. Update the copy AND rename the
 /// AppStorage key each major-version release so a new "what's new" fires
 /// exactly once after that version installs.
 struct WhatsNewSheet: View {
@@ -18,6 +18,22 @@ struct WhatsNewSheet: View {
     /// Cards in order. Automation first (the thing they'll open the app to
     /// explore), then three system reminders that compound with automation.
     private let cards: [Card] = [
+        // v3.2 — the long game. Shown first to upgrading players; the 3.0
+        // cards after it still work as a primer for new installs.
+        Card(
+            eyebrow: "New in 3.2",
+            title: "The Long Game",
+            subtitle: "New goals for every stage, and a reason to come back each week.",
+            icon: "star.circle.fill",
+            tintGradient: [.yellow, .orange],
+            bullets: [
+                Bullet(icon: "calendar",             text: "Weekly Challenge — a new goal every Monday on the Big Bang tab. Each one earns a Challenge Star: +10% earnings, forever."),
+                Bullet(icon: "rosette",              text: "18 new achievements, including Mythic goals for the longest-running universes."),
+                Bullet(icon: "circle.fill",          text: "Earn new tap orbs — Aurora, Nebula, Pulsar and Void. Pick yours in Settings."),
+                Bullet(icon: "number",               text: "Numbers past 1Vg now read clearly instead of looking stuck.")
+            ],
+            footnote: "Unclaimed challenge rewards are added automatically when the week ends."
+        ),
         Card(
             eyebrow: "New in 3.0",
             title: "Automation",
