@@ -78,6 +78,12 @@ struct SettingsView: View {
                             .foregroundStyle(automationStatusColor)
                             .monospacedDigit()
                     }
+                    HStack {
+                        Text("Stardust Doubler")
+                        Spacer()
+                        Text(iap.doublerOwned ? "Owned · ×2 forever" : "Not owned")
+                            .foregroundStyle(iap.doublerOwned ? .green : .secondary)
+                    }
                     Button("Restore Purchases") {
                         Task { await iap.restore() }
                     }

@@ -67,6 +67,9 @@ struct CosmicaApp: App {
                     sound.start()
                     await iap.start()
                     ads.configure(removeAdsOwned: iap.removeAdsOwned)
+                    // v3.3 — StoreKit decides; this also clears it after a refund.
+                    // Before applyOffline below, so offline earnings use the right rate.
+                    engine.state.doublerOwned = iap.doublerOwned
                     // v3.0: wire the automation façade once both services exist.
                     // Refs are set once and never rebound (App @State holds strong).
                     // The engine.automation back-ref is `weak` — no cycle.
@@ -102,6 +105,10 @@ struct CosmicaApp: App {
             .onChange(of: iap.removeAdsOwned) { _, owned in
                 ads.configure(removeAdsOwned: owned)
                 engine.state.removeAdsOwned = owned
+            }
+            .onChange(of: iap.doublerOwned) { _, owned in
+                engine.state.doublerOwned = owned
+                engine.save()
             }
         }
         .onChange(of: scenePhase) { _, phase in
@@ -155,6 +162,7 @@ struct CosmicaApp: App {
         do {
             if let remote = try await cloud.pull(), remote.isAhead(of: engine.state) {
                 engine.state = remote
+                engine.state.doublerOwned = iap.doublerOwned   // v3.3 — ownership is per Apple ID, not per save
                 engine.save()
                 // Credit the time since that save was last active on the other device.
                 offlineSummary = engine.applyOffline()
@@ -179,6 +187,7 @@ struct CosmicaApp: App {
             defer { UIApplication.shared.endBackgroundTask(bgTask) }
             if case .remoteAhead(let remote)? = try? await cloud.push(state: snapshot) {
                 engine.state = remote
+                engine.state.doublerOwned = iap.doublerOwned
                 engine.save()
                 WidgetSnapshotWriter.publish(engine.state)
             }

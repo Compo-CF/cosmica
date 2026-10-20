@@ -58,6 +58,12 @@ final class IAPManager {
     // it: players buy things rather than donate, so the thank-you is a thing.
     static let supporterProductId      = "com.centricfiber.cosmica.supporter"
 
+    // v3.3 Stardust Doubler — non-consumable: all Stardust earnings ×2,
+    // forever. Spend per paying player was bottom-quartile ($3.10 vs a $9.83
+    // median, Sep 2026): most buyers took the Bundle and had nothing left to
+    // want. A permanent multiplier is the idle genre's standard second buy.
+    static let stardustDoublerProductId = "com.centricfiber.cosmica.stardust_doubler"
+
     static let allProductIds: [String] = [
         removeAdsProductId,
         boost2x24hrProductId,
@@ -69,6 +75,7 @@ final class IAPManager {
         timeWarp8hProductId,
         timeWarp24hProductId,
         supporterProductId,
+        stardustDoublerProductId,
     ] + tipProductIds
 
     static let consumableIds: Set<String> = [
@@ -103,6 +110,9 @@ final class IAPManager {
     var automationCoreOwned: Bool = false
     /// v3.1: owns the Supporter Pack (golden orb + badge).
     var supporterOwned: Bool = false
+    /// v3.3: owns the Stardust Doubler (permanent ×2 earnings). Mirrored onto
+    /// `GameState.doublerOwned` by CosmicaApp, where the earnings math reads it.
+    var doublerOwned: Bool = false
     var purchaseInFlight: Bool = false
     /// Briefly true after a successful tip so the UI can show a thank-you beat.
     var didTip: Bool = false
@@ -191,6 +201,9 @@ final class IAPManager {
                 if productId == Self.supporterProductId {
                     supporterOwned = true
                 }
+                if productId == Self.stardustDoublerProductId {
+                    doublerOwned = true
+                }
                 if Self.tipProductIds.contains(productId) || productId == Self.supporterProductId {
                     markTipped()
                 }
@@ -234,6 +247,7 @@ final class IAPManager {
         var removeAds = false
         var automation = false
         var supporter = false
+        var doubler = false
         for await result in Transaction.currentEntitlements {
             guard case .verified(let txn) = result else { continue }
             switch txn.productID {
@@ -241,12 +255,14 @@ final class IAPManager {
             case Self.automationCoreProductId:   automation = true
             case Self.everythingBundleProductId: removeAds = true; automation = true
             case Self.supporterProductId:        supporter = true
+            case Self.stardustDoublerProductId:  doubler = true
             default: break
             }
         }
         removeAdsOwned = removeAds
         automationCoreOwned = automation
         supporterOwned = supporter
+        doublerOwned = doubler
         // A supporter has already said thank you; stop the tip reminder.
         if supporter && !hasEverTipped { markTipped() }
     }

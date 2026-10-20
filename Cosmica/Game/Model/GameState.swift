@@ -38,6 +38,11 @@ struct GameState: Codable {
     // ───────── Boosts ─────────
     var adBoostExpiresAt: Date? = nil
     var removeAdsOwned: Bool = false
+    /// v3.3 — owns the Stardust Doubler (permanent ×2 earnings). StoreKit is the
+    /// source of truth: CosmicaApp copies `IAPManager.doublerOwned` here at launch,
+    /// on purchase/refund, and after adopting an iCloud save. Lives on the state
+    /// so the earnings math (and the widget's offline projection) can read it.
+    var doublerOwned: Bool = false
 
     // ───────── Absolute Ascension (v1.3) ─────────
     /// The moment the player's lifetime Stardust first crossed the Absolute threshold.
@@ -157,6 +162,7 @@ struct GameState: Codable {
         lastEventEndedAt    = try c.decodeIfPresent(Date.self,          forKey: .lastEventEndedAt)
         adBoostExpiresAt    = try c.decodeIfPresent(Date.self,          forKey: .adBoostExpiresAt)
         removeAdsOwned      = try c.decodeIfPresent(Bool.self,          forKey: .removeAdsOwned)      ?? false
+        doublerOwned        = try c.decodeIfPresent(Bool.self,          forKey: .doublerOwned)        ?? false
         absoluteAscendedAt  = try c.decodeIfPresent(Date.self,          forKey: .absoluteAscendedAt)
         absoluteCelebrationShown = try c.decodeIfPresent(Bool.self,     forKey: .absoluteCelebrationShown) ?? false
         realityFragments    = try c.decodeIfPresent(Double.self,        forKey: .realityFragments)    ?? 0
@@ -315,6 +321,9 @@ struct GameState: Codable {
         1.0 + Double(challengeStars) * WeeklyChallenge.starBonus
     }
 
+    /// v3.3 — Stardust Doubler: ×2 forever. Stacks with the 24-hour 2× boost.
+    var doublerMultiplier: Double { doublerOwned ? 2.0 : 1.0 }
+
     /// v3.2 — best single run including the one in progress.
     var bestRunSoFar: Double { max(bestRunStardust, lifetimeStardust) }
 
@@ -329,6 +338,7 @@ struct GameState: Codable {
         * realityFragmentMultiplier
         * achievementMultiplier
         * challengeMultiplier
+        * doublerMultiplier
     }
 
     /// Base stardust per second across all generators, with each generator's tier-cluster

@@ -31,6 +31,10 @@ struct ShopView: View {
                             timeWarpCard
                         }
                         sectionHeader("Earnings Boost")
+                        // v3.3 — permanent ×2; only shown once StoreKit has it (or it's owned).
+                        if iap.doublerOwned || iap.product(for: IAPManager.stardustDoublerProductId) != nil {
+                            doublerCard
+                        }
                         boost2xCard
                         sectionHeader("Offline Catch-Up")
                         offlineCatchUpCard
@@ -168,6 +172,46 @@ struct ShopView: View {
                             .padding(.vertical, 8).padding(.horizontal, 14)
                             .background(.purple, in: RoundedRectangle(cornerRadius: 10))
                             .foregroundStyle(.white)
+                    }
+                    .disabled(iap.purchaseInFlight)
+                }
+            }
+        }
+    }
+
+    /// v3.3 — Stardust Doubler: ×2 earnings forever. Shows what it's worth to
+    /// this player right now (their current rate again, per second), so the
+    /// price is judged against something concrete.
+    private var doublerCard: some View {
+        let owned = iap.doublerOwned
+        let rate = engine.state.stardustPerSecond
+        return cardBackground {
+            HStack(spacing: 14) {
+                Image(systemName: owned ? "checkmark.seal.fill" : "infinity.circle.fill")
+                    .font(.title)
+                    .foregroundStyle(owned ? .green : .orange)
+                    .frame(width: 50)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Stardust Doubler").font(.headline).foregroundStyle(.white)
+                    Text(owned
+                         ? "Owned: every Stardust you earn is doubled, forever ✨"
+                         : "All Stardust earnings ×2, forever. Stacks with boosts and survives every Big Bang and True Cosmos.")
+                        .font(.caption).foregroundStyle(.secondary)
+                    if !owned && rate > 0 {
+                        Text("Right now that's +\(Formatter.short(rate)) ✦/s")
+                            .font(.caption.bold()).foregroundStyle(.orange)
+                    }
+                }
+                Spacer()
+                if !owned, let price = iap.displayPrice(for: IAPManager.stardustDoublerProductId) {
+                    Button {
+                        Task { await attemptPurchase(IAPManager.stardustDoublerProductId) { haptics.purchase() } }
+                    } label: {
+                        Text(price)
+                            .font(.headline)
+                            .padding(.vertical, 8).padding(.horizontal, 14)
+                            .background(.orange, in: RoundedRectangle(cornerRadius: 10))
+                            .foregroundStyle(.black)
                     }
                     .disabled(iap.purchaseInFlight)
                 }
