@@ -9,6 +9,7 @@ struct SettingsView: View {
     @Environment(AutomationManager.self) var automation
     @Environment(ConsentManager.self) var consent
     @Environment(NotificationManager.self) var notif
+    @Environment(SoundManager.self) var sound
     @State private var showResetConfirm = false
     // v3.0.2 — iCloud backup restore + developer tools gate
     @State private var devToolsAvailable = false
@@ -87,6 +88,8 @@ struct SettingsView: View {
                 notificationsSection
 
                 tipJarSection
+
+                soundSection
 
                 orbSection
 
@@ -218,6 +221,34 @@ struct SettingsView: View {
                 Text("Your tip genuinely helps keep Cosmica free and shipping updates. It means a lot.")
             }
         }
+    }
+
+    // MARK: - Sound (v3.2)
+
+    /// Effects and music. Both follow the ringer/silent switch and mix with the
+    /// player's own audio (see `SoundManager`).
+    private var soundSection: some View {
+        Section {
+            Toggle(isOn: Binding(get: { sound.effectsEnabled }, set: { sound.setEffectsEnabled($0) })) {
+                Label("Sound effects", systemImage: "speaker.wave.2.fill")
+            }
+            Toggle(isOn: Binding(get: { sound.musicEnabled }, set: { sound.setMusicEnabled($0) })) {
+                Label("Music", systemImage: "music.note")
+            }
+            if sound.musicEnabled {
+                HStack(spacing: 10) {
+                    Image(systemName: "speaker.fill").foregroundStyle(.secondary)
+                    Slider(value: Binding(get: { sound.musicVolume }, set: { sound.setMusicVolume($0) }), in: 0...1)
+                    Image(systemName: "speaker.wave.3.fill").foregroundStyle(.secondary)
+                }
+                .accessibilityLabel("Music volume")
+            }
+        } header: {
+            Text("Sound")
+        } footer: {
+            Text("Sound follows your ringer switch and plays alongside your own music or podcasts.")
+        }
+        .tint(.purple)
     }
 
     // MARK: - Tap orb (v3.2)

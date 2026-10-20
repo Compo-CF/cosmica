@@ -30,7 +30,7 @@ struct WhatsNewSheet: View {
                 Bullet(icon: "calendar",             text: "Weekly Challenge — a new goal every Monday on the Big Bang tab. Each one earns a Challenge Star: +10% earnings, forever."),
                 Bullet(icon: "rosette",              text: "18 new achievements, including Mythic goals for the longest-running universes."),
                 Bullet(icon: "circle.fill",          text: "Earn new tap orbs — Aurora, Nebula, Pulsar and Void. Pick yours in Settings."),
-                Bullet(icon: "number",               text: "Numbers past 1Vg now read clearly instead of looking stuck.")
+                Bullet(icon: "music.note",           text: "Sound and music — soft effects and an ambient soundtrack. Switch either off in Settings.")
             ],
             footnote: "Unclaimed challenge rewards are added automatically when the week ends."
         ),

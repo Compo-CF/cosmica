@@ -10,6 +10,7 @@ struct CosmicaApp: App {
     @State private var ads = AdManager()
     @State private var iap = IAPManager()
     @State private var haptics = HapticsManager()
+    @State private var sound = SoundManager()
     @State private var gameCenter = GameCenterManager()
     @State private var cloud = CloudSync.shared
     @State private var offlineSummary: OfflineAccrual.Result?
@@ -39,6 +40,7 @@ struct CosmicaApp: App {
                     .environment(ads)
                     .environment(iap)
                     .environment(haptics)
+                    .environment(sound)
                     .environment(gameCenter)
                     .environment(reviewPrompter)
                     .environment(automation)
@@ -59,6 +61,10 @@ struct CosmicaApp: App {
                 withAnimation(.easeInOut(duration: 0.45)) { showSplash = false }
             }
             .task {
+                    // v3.2 — sound effects ride on the haptics calls; music pauses for ads.
+                    haptics.sound = sound
+                    ads.onFullScreenAd = { showing in sound.setAdShowing(showing) }
+                    sound.start()
                     await iap.start()
                     ads.configure(removeAdsOwned: iap.removeAdsOwned)
                     // v3.0: wire the automation façade once both services exist.
@@ -101,6 +107,7 @@ struct CosmicaApp: App {
         .onChange(of: scenePhase) { _, phase in
             switch phase {
             case .background, .inactive:
+                if phase == .background { sound.suspend() }
                 engine.save()
                 // v3.0.3 — offline accrual starts now; hand the widget its baseline.
                 // Background only: .inactive also fires for Control Center pulls,
@@ -113,6 +120,7 @@ struct CosmicaApp: App {
                 // player has opted in AND the OS has granted permission.
                 notif.scheduleAll(engine: engine)
             case .active:
+                sound.resume()
                 engine.start()
                 // Coming back — nothing to remind them about now that they're here.
                 notif.cancelAll()

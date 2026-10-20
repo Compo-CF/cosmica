@@ -47,6 +47,16 @@ final class AdManager: NSObject {
     /// (BannerAdSlot also waits on this, since a banner loads itself when it appears).
     private(set) var sdkStarted = false
 
+    /// v3.2 — called with `true` as a full-screen ad opens and `false` when it
+    /// closes (or fails to show), so the music can step aside. Set by CosmicaApp.
+    @ObservationIgnored var onFullScreenAd: ((Bool) -> Void)?
+    @ObservationIgnored private let adWatcher = FullScreenAdWatcher()
+
+    private func watchFullScreenAd() {
+        adWatcher.onDismiss = { [weak self] in self?.onFullScreenAd?(false) }
+        onFullScreenAd?(true)
+    }
+
     func configure(removeAdsOwned: Bool) {
         self.removeAdsOwned = removeAdsOwned
         guard sdkStarted else { return }   // remembered; loads happen in startAfterConsent
@@ -94,6 +104,8 @@ final class AdManager: NSObject {
             return
         }
         rewardedReady = false
+        ad.fullScreenContentDelegate = adWatcher
+        watchFullScreenAd()
         ad.present(from: root) {
             onReward()
         }
@@ -131,9 +143,22 @@ final class AdManager: NSObject {
             Task { await loadInterstitial() }
             return
         }
+        ad.fullScreenContentDelegate = adWatcher
+        watchFullScreenAd()
         ad.present(from: root)
         lastInterstitialShownAt = Date()
         interstitialReady = false
         Task { await loadInterstitial() }
     }
+}
+
+/// v3.2 — reports when a full-screen ad closes or fails to show. A plain
+/// NSObject (not main-actor isolated) so it can be the SDK's delegate; the SDK
+/// calls it on the main thread.
+final class FullScreenAdWatcher: NSObject, FullScreenContentDelegate {
+    var onDismiss: (() -> Void)?
+
+    func adDidDismissFullScreenContent(_ ad: FullScreenPresentingAd) { onDismiss?() }
+
+    func ad(_ ad: FullScreenPresentingAd, didFailToPresentFullScreenContentWithError error: Error) { onDismiss?() }
 }
