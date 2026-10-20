@@ -13,7 +13,7 @@ settings:
     # extension (App Store rejects an extension whose version differs from
     # its app). scripts/testflight.sh overrides CURRENT_PROJECT_VERSION with the git
     # commit count; the value here only matters for manual Xcode archives.
-    MARKETING_VERSION: "3.3.0"
+    MARKETING_VERSION: "3.2.0"
     CURRENT_PROJECT_VERSION: "40"
     TARGETED_DEVICE_FAMILY: "1"
     ALWAYS_SEARCH_USER_PATHS: NO
