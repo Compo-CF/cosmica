@@ -196,7 +196,7 @@ struct ShopView: View {
                 HStack(spacing: 10) {
                     actionButton(
                         title: ads.rewardedReady ? "Watch Ad" : "Loading…",
-                        subtitle: "1 hour",
+                        subtitle: engine.boostLabel(3600),
                         color: .orange,
                         disabled: false
                     ) {
@@ -204,7 +204,7 @@ struct ShopView: View {
                     }
                     actionButton(
                         title: iap.displayPrice(for: IAPManager.boost2x24hrProductId) ?? "$1.99",
-                        subtitle: "24 hours",
+                        subtitle: engine.boostLabel(24 * 3600),
                         color: .purple,
                         disabled: iap.purchaseInFlight
                     ) {

@@ -422,6 +422,16 @@ final class GameEngine {
     /// Extend the 2× boost. If a boost is already active, the new duration stacks
     /// on top of the current expiry instead of overwriting it. Cosmic-tree "Boost
     /// Extension" adds a flat bonus to every extension.
+    /// v3.2 — what a boost of `duration` actually lasts, Boost Extension
+    /// included ("1h", "1h 40m", "24h 40m"). The Shop used to print a fixed
+    /// "1 hour", so a maxed extension looked like it did nothing (App Store
+    /// review, 12 Oct 2026).
+    func boostLabel(_ duration: TimeInterval) -> String {
+        let total = Int((duration + CosmicTree.boostExtensionSeconds(state.cosmicSkillLevels)) / 60)
+        let h = total / 60, m = total % 60
+        return m > 0 ? "\(h)h \(m)m" : "\(h)h"
+    }
+
     func grantBoost(duration: TimeInterval) {
         let bonus = CosmicTree.boostExtensionSeconds(state.cosmicSkillLevels)
         let base = max(Date(), state.adBoostExpiresAt ?? .distantPast)

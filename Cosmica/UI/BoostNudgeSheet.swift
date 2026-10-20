@@ -32,7 +32,7 @@ struct BoostNudgeSheet: View {
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 28)
 
-            Text("Supercharge it 2× for 24 hours.")
+            Text("Supercharge it 2× for \(engine.boostLabel(24 * 3600)).")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
 
@@ -51,7 +51,7 @@ struct BoostNudgeSheet: View {
                         }
                     } label: {
                         VStack(spacing: 3) {
-                            Text("Buy — 2× for 24 hours")
+                            Text("Buy — 2× for \(engine.boostLabel(24 * 3600))")
                                 .font(.headline)
                             Text(product.displayPrice)
                                 .font(.subheadline)
@@ -80,7 +80,7 @@ struct BoostNudgeSheet: View {
                 } label: {
                     HStack {
                         Image(systemName: "play.rectangle.fill")
-                        Text(ads.rewardedReady ? "Watch Ad — 1 hour free" : "Ad loading…")
+                        Text(ads.rewardedReady ? "Watch Ad — \(engine.boostLabel(3600)) free" : "Ad loading…")
                     }
                     .font(.subheadline.bold())
                     .frame(maxWidth: .infinity, minHeight: 46)
