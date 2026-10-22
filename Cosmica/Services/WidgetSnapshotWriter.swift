@@ -19,7 +19,7 @@ extension WidgetSnapshot {
         let adMult = state.adBoostMultiplier
         let eventMult = state.eventStardustMultiplier
         let transient = adMult * eventMult
-        let rate = state.stardustPerSecond
+        let rate = state.offlineStardustPerSecond   // v3.3 — the widget shows away-from-game earnings
         self.init(
             savedAt: state.lastSeen,
             baseRate: transient > 0 ? rate / transient : rate,

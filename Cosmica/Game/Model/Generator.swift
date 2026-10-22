@@ -17,16 +17,19 @@ struct Generator: Codable, Identifiable, Hashable {
     /// Optional-with-default keeps existing v1.0.x saves Codable-compatible.
     var specialization: String? = nil
 
+    /// v3.3 — Overcharged doubles the price, Thrifty halves it.
+    var costMultiplier: Double { specializationDetail?.costMultiplier ?? 1 }
+
     var nextCost: Double {
-        CostCurve.cost(base: baseCost, growth: costGrowth, owned: count)
+        CostCurve.cost(base: baseCost, growth: costGrowth, owned: count) * costMultiplier
     }
 
     func bulkCost(amount: Int) -> Double {
-        CostCurve.bulkCost(base: baseCost, growth: costGrowth, owned: count, buying: amount)
+        CostCurve.bulkCost(base: baseCost, growth: costGrowth, owned: count, buying: amount) * costMultiplier
     }
 
     func maxAffordable(budget: Double) -> Int {
-        CostCurve.maxAffordable(base: baseCost, growth: costGrowth, owned: count, budget: budget)
+        CostCurve.maxAffordable(base: baseCost, growth: costGrowth, owned: count, budget: budget / costMultiplier)
     }
 
     // MARK: - Specialization
@@ -41,23 +44,28 @@ struct Generator: Codable, Identifiable, Hashable {
         count >= GeneratorSpecCatalog.ownershipRequirement && specialization == nil
     }
 
-    /// Multiplier applied to raw rate from the current specialization (1.0 if none).
-    var specializationMultiplier: Double {
-        1.0 + (specializationDetail?.rateBoost ?? 0)
+    /// Multiplier on this generator's own output from its specialization (1.0 if
+    /// none). `offline` picks the away-from-the-game value (Night Shift).
+    func specializationMultiplier(offline: Bool = false) -> Double {
+        guard let spec = specializationDetail else { return 1 }
+        return offline ? spec.offlineMultiplier : spec.onlineMultiplier
     }
+
+    /// Bonus this generator gives every other generator (Resonant).
+    var resonance: Double { specializationDetail?.resonance ?? 0 }
 
     // MARK: - Rate
 
     /// Per-unit rate after applying purchased upgrades and any specialization.
-    func unitRate(with upgrades: [Upgrade]) -> Double {
+    func unitRate(with upgrades: [Upgrade], offline: Bool = false) -> Double {
         let upgradeMult = upgrades
             .filter { $0.purchased && $0.targetGeneratorId == id }
             .reduce(1.0) { $0 * $1.multiplier }
-        return baseRate * upgradeMult * specializationMultiplier
+        return baseRate * upgradeMult * specializationMultiplier(offline: offline)
     }
 
     /// Total contribution per second from this generator (all units).
-    func ratePerSecond(with upgrades: [Upgrade]) -> Double {
-        unitRate(with: upgrades) * Double(count)
+    func ratePerSecond(with upgrades: [Upgrade], offline: Bool = false) -> Double {
+        unitRate(with: upgrades, offline: offline) * Double(count)
     }
 }

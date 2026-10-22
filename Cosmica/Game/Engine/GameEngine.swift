@@ -299,11 +299,11 @@ final class GameEngine {
 
     func cosmicSkillLevel(_ id: String) -> Int { state.cosmicSkillLevels[id] ?? 0 }
 
-    /// Cosmic-shard cost of the next level, or nil if maxed / unknown.
-    func cosmicSkillCost(_ id: String) -> Int? {
+    /// Cosmic-shard cost of the next level or Stellar rank, or nil if maxed / unknown.
+    func cosmicSkillCost(_ id: String) -> Double? {
         guard let skill = CosmicTree.skill(id) else { return nil }
         let lvl = cosmicSkillLevel(id)
-        guard lvl < skill.maxLevel else { return nil }
+        guard skill.canLevel(from: lvl) else { return nil }
         return skill.cost(atLevel: lvl)
     }
 
@@ -311,10 +311,10 @@ final class GameEngine {
     func buyCosmicSkill(_ id: String) -> Bool {
         guard let skill = CosmicTree.skill(id) else { return false }
         let lvl = cosmicSkillLevel(id)
-        guard lvl < skill.maxLevel else { return false }
+        guard skill.canLevel(from: lvl) else { return false }
         let cost = skill.cost(atLevel: lvl)
-        guard state.cosmicShards >= Double(cost) else { return false }
-        state.cosmicShards -= Double(cost)
+        guard cost.isFinite, state.cosmicShards >= cost else { return false }
+        state.cosmicShards -= cost
         state.cosmicSkillLevels[id] = lvl + 1
         save()
         return true
@@ -402,7 +402,9 @@ final class GameEngine {
             state.lastEventEndedAt = exp
         }
         guard state.activeEventId == nil else { return }
-        guard CosmicEventScheduler.canRoll(now: now, lastEventEnd: state.lastEventEndedAt) else { return }
+        // v3.3 — Event Horizon Wonder: no cooldown, so a new event starts the moment one ends.
+        guard state.hasEventHorizon
+                || CosmicEventScheduler.canRoll(now: now, lastEventEnd: state.lastEventEndedAt) else { return }
         // Simple: once past cooldown, roll deterministically from `now`.
         let event = CosmicEventScheduler.rollEvent(now: now)
         state.activeEventId = event.id
@@ -550,7 +552,7 @@ final class GameEngine {
     func applyOfflineCatchUp(cap: TimeInterval) -> OfflineAccrual.Result {
         let secs = max(0, Date().timeIntervalSince(state.lastSeen))
         let counted = min(secs, cap)
-        let earned = state.stardustPerSecond * counted * OfflineAccrual.offlineRate
+        let earned = state.offlineStardustPerSecond * counted * OfflineAccrual.offlineRate
         addStardust(earned)
         state.lastSeen = Date()
         checkChallenge()
@@ -571,7 +573,7 @@ final class GameEngine {
         let result = OfflineAccrual.compute(
             now: Date(),
             lastSeen: state.lastSeen,
-            ratePerSecond: state.stardustPerSecond,
+            ratePerSecond: state.offlineStardustPerSecond,   // v3.3 — Night Shift + Time Lens
             extended: extended,
             extraCap: CosmicTree.offlineCapBonus(state.cosmicSkillLevels) + state.wonderOfflineCapBonus
         )
@@ -586,16 +588,24 @@ final class GameEngine {
 
     // MARK: - Cosmic Wonders (v2.0)
 
-    /// Attempt to build the wonder with `id`. Fails silently if already built, unknown id,
-    /// insufficient Cosmos count, or insufficient Cosmic Shards. Shards spent do NOT
+    /// Shards to build (level 0 → 1) or upgrade a Wonder; nil if it's at its max level.
+    func wonderCost(_ id: String) -> Double? {
+        guard let wonder = WondersCatalog.wonder(id: id) else { return nil }
+        let level = state.wonderLevel(id)
+        guard wonder.maxLevel == 0 || level < wonder.maxLevel else { return nil }
+        return wonder.cost(toReachLevel: level + 1)
+    }
+
+    /// Build a Wonder, or (v3.3) raise it a level. Fails silently if maxed, unknown,
+    /// short of the Cosmos requirement, or short of shards. Shards spent do NOT
     /// reduce `lifetimeCosmicShards` — that's an earn-track, not a balance.
     @discardableResult
     func buildWonder(id: String) -> Bool {
-        guard let wonder = WondersCatalog.wonder(id: id) else { return false }
-        guard !state.builtWonderIds.contains(id) else { return false }
+        guard let wonder = WondersCatalog.wonder(id: id), let cost = wonderCost(id) else { return false }
         guard state.cosmosCount >= wonder.cosmosRequired else { return false }
-        guard state.cosmicShards >= wonder.shardCost else { return false }
-        state.cosmicShards -= wonder.shardCost
+        guard cost.isFinite, state.cosmicShards >= cost else { return false }
+        state.cosmicShards -= cost
+        state.wonderLevels[id] = state.wonderLevel(id) + 1
         state.builtWonderIds.insert(id)
         save()
         return true

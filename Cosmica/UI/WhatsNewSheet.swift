@@ -7,7 +7,7 @@ import SwiftUI
 /// Wonders.
 ///
 /// Shown once per install per major version, gated in `RootView` by
-/// `@AppStorage("hasSeenWhatsNew_3_2")`. Update the copy AND rename the
+/// `@AppStorage("hasSeenWhatsNew_3_3")`. Update the copy AND rename the
 /// AppStorage key each major-version release so a new "what's new" fires
 /// exactly once after that version installs.
 struct WhatsNewSheet: View {
@@ -18,6 +18,20 @@ struct WhatsNewSheet: View {
     /// Cards in order. Automation first (the thing they'll open the app to
     /// explore), then three system reminders that compound with automation.
     private let cards: [Card] = [
+        // v3.3 — depth for long-running universes (from an Oct 2026 App Store review).
+        Card(
+            eyebrow: "New in 3.3",
+            title: "Deeper Cosmos",
+            subtitle: "More to build, and real choices to make.",
+            icon: "hammer.circle.fill",
+            tintGradient: [.orange, .pink],
+            bullets: [
+                Bullet(icon: "flame.circle.fill",    text: "Specializations are real choices now: Overcharged, Resonant, Night Shift or Thrifty. Each wins in a different situation."),
+                Bullet(icon: "star.fill",            text: "Stellar ranks — Cosmic Tree production nodes keep going past their max, multiplying their effect."),
+                Bullet(icon: "building.columns.fill", text: "Wonders level up, and three new ones: Time Lens, Event Horizon and the Stellar Forge.")
+            ],
+            footnote: "Unspent shards still boost earnings, so every rank and Wonder level is an invest-or-hoard choice."
+        ),
         // v3.2 — the long game. Shown first to upgrading players; the 3.0
         // cards after it still work as a primer for new installs.
         Card(

@@ -48,28 +48,37 @@ struct CosmicTreeView: View {
 
     private func skillRow(_ skill: CosmicSkill) -> some View {
         let level = engine.cosmicSkillLevel(skill.id)
-        let maxed = level >= skill.maxLevel
+        let ranks = max(0, level - skill.maxLevel)
+        let regularDone = level >= skill.maxLevel
+        let maxed = regularDone && !skill.hasRanks
         let cost = engine.cosmicSkillCost(skill.id)
-        let canAfford = (cost.map { Double($0) <= engine.state.cosmicShards }) ?? false
+        let canAfford = (cost.map { $0 <= engine.state.cosmicShards }) ?? false
+        // v3.3 — past max, production nodes keep going as Stellar ranks (gold).
+        let tint: Color = regularDone && skill.hasRanks ? Self.stellar : .cyan
 
         return HStack(spacing: 14) {
             Image(systemName: skill.symbol)
                 .font(.title2)
                 .frame(width: 40, height: 40)
-                .foregroundStyle(.cyan)
-                .background(Color.cyan.opacity(0.18), in: RoundedRectangle(cornerRadius: 10))
+                .foregroundStyle(tint)
+                .background(tint.opacity(0.18), in: RoundedRectangle(cornerRadius: 10))
 
             VStack(alignment: .leading, spacing: 3) {
                 HStack {
                     Text(skill.name).font(.subheadline.bold()).foregroundStyle(.white)
                     Spacer()
-                    Text("Lv \(level)/\(skill.maxLevel)")
+                    Text(ranks > 0 ? "Lv \(skill.maxLevel) · ★\(ranks)" : "Lv \(min(level, skill.maxLevel))/\(skill.maxLevel)")
                         .font(.caption.bold())
-                        .foregroundStyle(maxed ? .green : .secondary)
+                        .foregroundStyle(maxed ? .green : (ranks > 0 ? Self.stellar : .secondary))
                         .monospacedDigit()
                 }
                 Text(skill.detail).font(.caption).foregroundStyle(.secondary)
-                ProgressView(value: Double(level), total: Double(skill.maxLevel)).tint(.cyan)
+                if regularDone, let rank = skill.rankMultiplier {
+                    Text("Stellar rank: ×\(String(format: "%.2f", rank)) per rank (4× the cost each time)")
+                        .font(.caption2).foregroundStyle(Self.stellar)
+                } else {
+                    ProgressView(value: Double(min(level, skill.maxLevel)), total: Double(skill.maxLevel)).tint(.cyan)
+                }
             }
 
             if maxed {
@@ -78,10 +87,10 @@ struct CosmicTreeView: View {
                 Button {
                     if engine.buyCosmicSkill(skill.id) { haptics.skillUnlock() } else { haptics.error() }
                 } label: {
-                    Text("\(cost ?? 0) ◈")
+                    Text("\(Formatter.short(cost ?? 0)) ◈")
                         .font(.caption.bold())
                         .padding(.vertical, 6).padding(.horizontal, 10)
-                        .background(canAfford ? Color.cyan : Color.gray.opacity(0.3),
+                        .background(canAfford ? tint : Color.gray.opacity(0.3),
                                     in: RoundedRectangle(cornerRadius: 8))
                         .foregroundStyle(.black)
                 }
@@ -91,4 +100,6 @@ struct CosmicTreeView: View {
         .padding(12)
         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
     }
+
+    private static let stellar = Color(red: 1.0, green: 0.80, blue: 0.32)
 }

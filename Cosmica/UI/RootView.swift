@@ -14,7 +14,7 @@ struct RootView: View {
     @State private var selectedTab: Tab = .observatory
     @AppStorage("hasSeenOnboarding") private var hasSeenOnboarding: Bool = false
     /// v3.0: one-shot "here's what's new" flag. Rename the key when v4.0 ships.
-    @AppStorage("hasSeenWhatsNew_3_2") private var hasSeenWhatsNew_3_2: Bool = false
+    @AppStorage("hasSeenWhatsNew_3_3") private var hasSeenWhatsNew_3_3: Bool = false
     @State private var showOnboarding: Bool = false
     @State private var dailyDismissed: Bool = false
     @State private var tipDismissed: Bool = false
@@ -89,11 +89,11 @@ struct RootView: View {
         }
         // v3.0: one-shot "What's New" sheet for players upgrading from v2.x.
         // Brand new installs skip because prestigeCount/lifetimeStardust are 0
-        // and hasSeenWhatsNew_3_2 will get seeded when they finish onboarding
+        // and hasSeenWhatsNew_3_3 will get seeded when they finish onboarding
         // (see the .onChange below).
         .sheet(isPresented: $showWhatsNew) {
             WhatsNewSheet {
-                hasSeenWhatsNew_3_2 = true
+                hasSeenWhatsNew_3_3 = true
                 showWhatsNew = false
             }
         }
@@ -187,7 +187,7 @@ struct RootView: View {
     private func maybeShowWhatsNew() {
         guard !showSplash,
               hasSeenOnboarding,
-              !hasSeenWhatsNew_3_2,
+              !hasSeenWhatsNew_3_3,
               !showOnboarding,
               !showTipReminder,
               !showWhatsNew,

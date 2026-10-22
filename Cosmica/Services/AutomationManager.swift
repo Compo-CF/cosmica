@@ -147,12 +147,14 @@ final class AutomationManager {
             safety += 1
             let candidates = CosmicTree.skills
                 .filter { !$0.id.hasPrefix("autonomy_") }
-                .compactMap { skill -> (id: String, cost: Int)? in
+                .compactMap { skill -> (id: String, cost: Double)? in
                     let lvl = engine.state.cosmicSkillLevels[skill.id] ?? 0
+                    // Regular levels only. v3.3 Stellar ranks are a deliberate
+                    // invest-or-hoard choice; auto-spend would pour every shard into them.
                     guard lvl < skill.maxLevel else { return nil }
                     return (skill.id, skill.cost(atLevel: lvl))
                 }
-                .filter { engine.state.cosmicShards - Double($0.cost) >= autoTreeReserve }
+                .filter { engine.state.cosmicShards - $0.cost >= autoTreeReserve }
                 .sorted { $0.cost < $1.cost }
             guard let hit = candidates.first else { return }
             guard engine.buyCosmicSkill(hit.id) else { return }

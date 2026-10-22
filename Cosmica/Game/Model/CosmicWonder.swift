@@ -1,6 +1,6 @@
 import Foundation
 
-/// A one-time permanent unlock the player commits to at extreme cost. Each Wonder is
+/// A permanent unlock the player commits to at extreme cost (v3.3: and keeps leveling). Each Wonder is
 /// gated on both a Cosmos count and a Cosmic-Shard price, and its effect folds into
 /// existing systems (offline cap, event ✦ multiplier, Big-Bang yield, tap value,
 /// Reality-Fragment yield) via `GameState` computed properties.
@@ -15,7 +15,31 @@ struct CosmicWonder: Identifiable, Codable, Hashable {
     let symbol: String
     let colorHex: String        // stored as hex so Codable stays simple
     let cosmosRequired: Int
+    /// Cost of level 1 (building it). v3.3: each further level costs 10× the last.
     let shardCost: Double
+    /// v3.3 — highest level (0 = no limit). One-shot Wonders are 1.
+    var maxLevel: Int = 0
+
+    /// Each level costs this many times the previous one.
+    static let levelCostGrowth: Double = 10
+
+    func cost(toReachLevel level: Int) -> Double {
+        shardCost * pow(Self.levelCostGrowth, Double(max(0, level - 1)))
+    }
+
+    /// What the Wonder does at `level` (level 0 describes level 1, for unbuilt rows).
+    func effect(atLevel level: Int) -> String {
+        let l = max(1, level)
+        switch id {
+        case "chronosphere":      return "+\(12 * l) hours to offline earnings cap"
+        case "nexus_lattice":     return "×\(1 + 2 * l) Stardust while any Cosmic Event is active"
+        case "voidkeeper":        return "+\(50 * l)% Cosmic Shards from every Big Bang"
+        case "multiverse_engine": return "Manual taps are worth ×\(Formatter.count(pow(2, Double(l))))"
+        case "absolute_aperture": return "+\(25 * l)% Reality Fragments per True Cosmos"
+        case "stellar_forge":     return "All generators ×\(Formatter.count(pow(2, Double(l))))"
+        default:                  return effect
+        }
+    }
 }
 
 enum WondersCatalog {
@@ -70,6 +94,40 @@ enum WondersCatalog {
             colorHex: "FF8CE6",
             cosmosRequired: 10,
             shardCost: 2_500_000
+        ),
+        // v3.3 — late Wonders that change how the game plays, for players whose
+        // shard balance had nothing left to buy.
+        CosmicWonder(
+            id: "time_lens",
+            title: "Time Lens",
+            flavor: "Hold it up to the dark and the hours you were gone come back whole.",
+            effect: "Offline earnings at your full online rate, not half",
+            symbol: "camera.aperture",
+            colorHex: "7CF5C8",
+            cosmosRequired: 12,
+            shardCost: 25_000_000,
+            maxLevel: 1
+        ),
+        CosmicWonder(
+            id: "event_horizon",
+            title: "Event Horizon",
+            flavor: "Pinned to the edge of a black hole, where something is always happening.",
+            effect: "A Cosmic Event is always running: no wait between them",
+            symbol: "circle.circle.fill",
+            colorHex: "FF6B6B",
+            cosmosRequired: 15,
+            shardCost: 100_000_000,
+            maxLevel: 1
+        ),
+        CosmicWonder(
+            id: "stellar_forge",
+            title: "Stellar Forge",
+            flavor: "A furnace the size of a galaxy, beating out new stars on an anvil of light.",
+            effect: "All generators ×2",
+            symbol: "hammer.circle.fill",
+            colorHex: "FFC24C",
+            cosmosRequired: 20,
+            shardCost: 10_000_000_000
         ),
     ]
 

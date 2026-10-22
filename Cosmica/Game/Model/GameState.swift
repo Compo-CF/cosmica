@@ -73,6 +73,9 @@ struct GameState: Codable {
     // ───────── Cosmic Wonders (v2.0) ─────────
     /// Ids of every built Wonder. Persistent — survives Big Bang AND True Cosmos.
     var builtWonderIds: Set<String> = []
+    /// v3.3 — Wonders level up. Level 1 = built; missing = not built. Kept in step
+    /// with `builtWonderIds` (which older code and achievements still read).
+    var wonderLevels: [String: Int] = [:]
 
     // ───────── Automation (v3.0) ─────────
     /// When the player's 4-hour Automation trial expires. nil = never trialed.
@@ -171,6 +174,9 @@ struct GameState: Codable {
         unlockedAchievementIds = try c.decodeIfPresent(Set<String>.self, forKey: .unlockedAchievementIds) ?? []
         lifetimeCosmicShards = try c.decodeIfPresent(Double.self,       forKey: .lifetimeCosmicShards) ?? 0
         builtWonderIds      = try c.decodeIfPresent(Set<String>.self,   forKey: .builtWonderIds)      ?? []
+        // A pre-3.3 save has built Wonders but no levels: each is level 1.
+        wonderLevels        = try c.decodeIfPresent([String: Int].self, forKey: .wonderLevels)
+            ?? Dictionary(uniqueKeysWithValues: builtWonderIds.map { ($0, 1) })
         automationTrialExpiresAt = try c.decodeIfPresent(Date.self,     forKey: .automationTrialExpiresAt)
         autoBuyEnabled      = try c.decodeIfPresent([String: Bool].self, forKey: .autoBuyEnabled)      ?? [:]
         autoBigBangEnabled  = try c.decodeIfPresent(Bool.self,          forKey: .autoBigBangEnabled)  ?? false
@@ -280,8 +286,9 @@ struct GameState: Codable {
     /// Nexus Lattice Wonder: while an event is active, further ×3.
     var eventStardustMultiplier: Double {
         let base = CosmicEventScheduler.stardustPerSecondMultiplier(activeEvent)
-        if activeEvent != nil && builtWonderIds.contains("nexus_lattice") {
-            return base * 3.0
+        let lattice = wonderLevel("nexus_lattice")
+        if activeEvent != nil && lattice > 0 {
+            return base * (1 + 2 * Double(lattice))   // ×3, ×5, ×7…
         }
         return base
     }
@@ -293,22 +300,36 @@ struct GameState: Codable {
     }
 
     // ───────── Wonder-derived helpers folded into other systems ─────────
-    /// Chronosphere: adds 12 hours to the offline cap. Used by `GameEngine.applyOffline`.
+    /// v3.3 — a Wonder's level (0 = not built).
+    func wonderLevel(_ id: String) -> Int { wonderLevels[id] ?? (builtWonderIds.contains(id) ? 1 : 0) }
+
+    // Every effect grows with the Wonder's level (v3.3); level 1 is the old effect.
+    /// Chronosphere: +12 hours to the offline cap per level.
     var wonderOfflineCapBonus: TimeInterval {
-        builtWonderIds.contains("chronosphere") ? 12 * 3600 : 0
+        12 * 3600 * Double(wonderLevel("chronosphere"))
     }
-    /// Voidkeeper: +50% Cosmic Shards on every Big Bang.
+    /// Voidkeeper: +50% Cosmic Shards on every Big Bang per level.
     var wonderBigBangYieldMultiplier: Double {
-        builtWonderIds.contains("voidkeeper") ? 1.5 : 1.0
+        1 + 0.5 * Double(wonderLevel("voidkeeper"))
     }
-    /// Multiverse Engine: ×2 manual tap value.
+    /// Multiverse Engine: taps ×2 per level (×2, ×4, ×8…).
     var wonderTapMultiplier: Double {
-        builtWonderIds.contains("multiverse_engine") ? 2.0 : 1.0
+        pow(2, Double(wonderLevel("multiverse_engine")))
     }
-    /// Absolute Aperture: +25% Reality Fragments per True Cosmos.
+    /// Absolute Aperture: +25% Reality Fragments per True Cosmos per level.
     var wonderFragmentMultiplier: Double {
-        builtWonderIds.contains("absolute_aperture") ? 1.25 : 1.0
+        1 + 0.25 * Double(wonderLevel("absolute_aperture"))
     }
+    /// Stellar Forge (v3.3): all generators ×2 per level.
+    var wonderForgeMultiplier: Double {
+        pow(2, Double(wonderLevel("stellar_forge")))
+    }
+    /// Time Lens (v3.3): offline earnings at the full online rate instead of half.
+    var wonderOfflineRateFactor: Double {
+        wonderLevel("time_lens") > 0 ? 1 / OfflineAccrual.offlineRate : 1
+    }
+    /// Event Horizon (v3.3): no cooldown between Cosmic Events, so one is always running.
+    var hasEventHorizon: Bool { wonderLevel("event_horizon") > 0 }
 
     /// Permanent multiplier from accumulated Reality Fragments. Never resets — this is
     /// what carries power across True Cosmoi.
@@ -339,14 +360,25 @@ struct GameState: Codable {
         * achievementMultiplier
         * challengeMultiplier
         * doublerMultiplier
+        * wonderForgeMultiplier
     }
 
     /// Base stardust per second across all generators, with each generator's tier-cluster
     /// tree buff, per-generator upgrades, and specialization applied.
-    var stardustPerSecond: Double {
+    var stardustPerSecond: Double { productionRate(offline: false) }
+
+    /// v3.3 — the rate offline earnings (and the widget's projection) use: Night Shift
+    /// generators at their away-from-the-game strength, and Time Lens folded in. The
+    /// 50% offline factor itself is still applied by `OfflineAccrual`.
+    var offlineStardustPerSecond: Double { productionRate(offline: true) * wonderOfflineRateFactor }
+
+    /// v3.3 — production with Resonant generators boosting every other generator.
+    private func productionRate(offline: Bool) -> Double {
+        let totalResonance = generators.reduce(0.0) { $0 + ($1.count > 0 ? $1.resonance : 0) }
         let base = generators.reduce(0.0) { sum, g in
             let tierMult = CosmicTree.generatorTierMultiplier(g.index, cosmicSkillLevels)
-            return sum + g.ratePerSecond(with: upgrades) * tierMult
+            let fromOthers = 1 + totalResonance - (g.count > 0 ? g.resonance : 0)
+            return sum + g.ratePerSecond(with: upgrades, offline: offline) * tierMult * fromOthers
         }
         let globalUpgradeMult = upgrades
             .filter { $0.purchased && $0.isGlobal }

@@ -72,7 +72,7 @@ struct WondersView: View {
                 VStack(alignment: .leading) {
                     Text("\(built) of \(total) built")
                         .font(.headline).foregroundStyle(.white)
-                    Text("Permanent — Wonders survive Big Bang and True Cosmos.")
+                    Text("Permanent — Wonders survive every reset, and keep leveling up.")
                         .font(.caption).foregroundStyle(.secondary)
                 }
                 Spacer()
@@ -92,9 +92,12 @@ private struct WonderRow: View {
     let onBuild: () -> Void
 
     var body: some View {
-        let built = engine.state.builtWonderIds.contains(wonder.id)
+        let level = engine.state.wonderLevel(wonder.id)
+        let built = level > 0
+        let cost = engine.wonderCost(wonder.id)          // nil = at max level
         let cosmosOk = engine.state.cosmosCount >= wonder.cosmosRequired
-        let shardsOk = engine.state.cosmicShards >= wonder.shardCost
+        let shardsOk = cost.map { engine.state.cosmicShards >= $0 } ?? false
+        let canBuy = cosmosOk && shardsOk
         let color = Color(hex: wonder.colorHex)
 
         return VStack(alignment: .leading, spacing: 10) {
@@ -106,11 +109,16 @@ private struct WonderRow: View {
                         .foregroundStyle(built ? .white : .secondary)
                 }
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(wonder.title).font(.headline).foregroundStyle(.white)
-                    Text(wonder.effect).font(.caption).foregroundStyle(color)
+                    HStack(spacing: 6) {
+                        Text(wonder.title).font(.headline).foregroundStyle(.white)
+                        if built && wonder.maxLevel != 1 {
+                            Text("Lv \(level)").font(.caption.bold()).foregroundStyle(color)
+                        }
+                    }
+                    Text(wonder.effect(atLevel: level)).font(.caption).foregroundStyle(color)
                 }
                 Spacer()
-                if built {
+                if built && cost == nil {
                     Image(systemName: "checkmark.seal.fill")
                         .font(.title3).foregroundStyle(.green)
                 }
@@ -121,25 +129,30 @@ private struct WonderRow: View {
                 .italic()
                 .foregroundStyle(.secondary)
 
-            if !built {
+            if let cost {
+                if built {
+                    // v3.3 — upgrade: show what the next level does.
+                    Text("Next: \(wonder.effect(atLevel: level + 1))")
+                        .font(.caption2).foregroundStyle(.secondary)
+                }
                 HStack(spacing: 8) {
-                    reqPill(icon: "infinity.circle.fill",
-                            text: "\(engine.state.cosmosCount) / \(wonder.cosmosRequired) Cosmoi",
-                            ok: cosmosOk)
-                    reqPill(icon: "diamond.fill",
-                            text: "\(Formatter.short(wonder.shardCost)) ◈",
-                            ok: shardsOk)
+                    if !built {
+                        reqPill(icon: "infinity.circle.fill",
+                                text: "\(engine.state.cosmosCount) / \(wonder.cosmosRequired) Cosmoi",
+                                ok: cosmosOk)
+                    }
+                    reqPill(icon: "diamond.fill", text: "\(Formatter.short(cost)) ◈", ok: shardsOk)
                     Spacer()
                 }
                 Button(action: onBuild) {
-                    Text(cosmosOk && shardsOk ? "Build" : "Locked")
+                    Text(canBuy ? (built ? "Upgrade to Lv \(level + 1)" : "Build") : "Locked")
                         .font(.subheadline.bold())
                         .frame(maxWidth: .infinity, minHeight: 40)
-                        .background(cosmosOk && shardsOk ? color : Color.gray.opacity(0.25),
+                        .background(canBuy ? color : Color.gray.opacity(0.25),
                                     in: RoundedRectangle(cornerRadius: 10))
-                        .foregroundStyle(cosmosOk && shardsOk ? .white : .secondary)
+                        .foregroundStyle(canBuy ? .white : .secondary)
                 }
-                .disabled(!(cosmosOk && shardsOk))
+                .disabled(!canBuy)
             }
         }
         .padding(14)
