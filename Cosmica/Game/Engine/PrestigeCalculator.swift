@@ -42,6 +42,31 @@ enum PrestigeCalculator {
         return raw.rounded(.down)
     }
 
+    // MARK: - v3.3 Kindling
+
+    /// Big Bangs pay this many times the usual shards while Kindling lasts.
+    static let kindlingMultiplier: Double = 3
+    /// Kindling ends once the player has earned this many lifetime shards: about
+    /// what every regular Cosmic Tree level costs (~6,000 ◈). A pacing sim
+    /// (planning/pace_v2.py) put an idle player ~7 days from first Big Bang to a
+    /// full tree, most of the road to Absolute; Kindling cuts that to ~3.
+    static let kindlingCap: Double = 6_000
+
+    static func kindlingActive(lifetimeShards: Double, cosmosCount: Int) -> Bool {
+        cosmosCount == 0 && lifetimeShards < kindlingCap
+    }
+
+    /// `shards` with Kindling applied. Only the part that fits under the cap is
+    /// tripled, so the payout stays continuous: a huge first run can't turn into
+    /// a windfall, and crossing the cap never pays less than not crossing it.
+    static func kindled(_ shards: Double, lifetimeShards: Double, cosmosCount: Int) -> Double {
+        guard shards > 0, kindlingActive(lifetimeShards: lifetimeShards, cosmosCount: cosmosCount) else { return shards }
+        let room = kindlingCap - lifetimeShards
+        let tripled = shards * kindlingMultiplier
+        if tripled <= room { return tripled }
+        return room + (shards - room / kindlingMultiplier)
+    }
+
     /// Lifetime stardust required to earn at least `targetShards` shards.
     static func lifetimeRequired(forShards targetShards: Double) -> Double {
         guard targetShards > 0 else { return threshold }

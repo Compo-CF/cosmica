@@ -24,7 +24,9 @@ players are somewhat faster):
     Gentler ranks (1.05/1.08) still give 0.6d: the fix is robust.
   * The early slog (0 -> 5,000 shards, ~7 days here) is now most of the
     journey. 3x shards until the tree is affordable -> first Absolute day 4.3.
-Run:  python pace_v2.py single | journey | ranks
+  * BUILT in 3.3 as Kindling (x3 until 6,000 lifetime shards, first cosmos,
+    only the part under the cap tripled): tree day 7.3 -> 3.0, Absolute 8.7 -> 4.3.
+Run:  python pace_v2.py single | journey | ranks | kindling
 """
 import math, sys
 
@@ -188,3 +190,37 @@ if __name__ == "__main__" and len(sys.argv) > 1 and sys.argv[1] == "ranks":
                       ("ranks, x6 cost", {"cost_growth": 6.0}), ("ranks, x8 cost", {"cost_growth": 8.0})]:
         d, runs, S = (journey() if kw is None else journey_ranks(**kw))
         print(f"  {label:32s} first Absolute in {('%.1f days' % d) if d else '>limit':>10} ({runs} runs, {S:.1e} shards)")
+
+
+# v3.3 Kindling: Big Bangs pay x3 until 6,000 lifetime shards (first cosmos).
+# Only the part under the cap is tripled (mirrors PrestigeCalculator.kindled).
+KINDLING_CAP = 6000.0
+
+def kindled(shards, lifetime):
+    if lifetime >= KINDLING_CAP: return shards
+    room = KINDLING_CAP - lifetime
+    return shards*3 if shards*3 <= room else room + (shards - room/3)
+
+def journey_kindling(absolute=1e36, run_hours=8, hold_days=2.0, P_tree=11.4, max_runs=400,
+                     kindling=True, tree_at=5000):
+    S, days, tree_day = 0.0, 0.0, None
+    for r in range(max_runs):
+        has_tree = S >= tree_at
+        if has_tree and tree_day is None: tree_day = days
+        P = P_tree if has_tree else 1.0
+        Y = 1.9 if has_tree else 1.0
+        prod, yld, left = ranks_for(S) if has_tree else (1.0, 1.0, S)
+        M = (1 + 0.02*left) * P * prod
+        t, _ = run_time(M, target=absolute, limit_days=hold_days)
+        if t is not None:
+            return days + t/86400, r + 1, tree_day
+        L = run_for(M, run_hours*3600)
+        gain = 150 * (L/1e12)**0.5 * Y * yld
+        S += kindled(gain, S) if kindling else gain
+        days += run_hours/24
+    return None, max_runs, tree_day
+
+if __name__ == "__main__" and len(sys.argv) > 1 and sys.argv[1] == "kindling":
+    for label, k in [("3.3 ranks, no Kindling", False), ("3.3 ranks + Kindling x3 to 6,000", True)]:
+        d, runs, tree = journey_kindling(kindling=k)
+        print(f"  {label:36s} tree affordable day {tree:.1f}, first Absolute day {d:.1f} ({runs} runs)")

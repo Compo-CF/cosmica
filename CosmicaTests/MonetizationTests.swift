@@ -24,11 +24,11 @@ final class MonetizationTests: XCTestCase {
 
     func test_bigBang_recordsItsPayout() {
         var s = GameState()
-        s.lifetimeStardust = 1e12            // first cosmos, first Big Bang: 150 ◈
+        s.lifetimeStardust = 1e12            // first cosmos, first Big Bang: 150 ◈, ×3 Kindling
         let e = engine(s)
         let paid = e.bigBang()
-        XCTAssertEqual(paid, 150)
-        XCTAssertEqual(e.state.lastBigBangShards, 150)
+        XCTAssertEqual(paid, 450)
+        XCTAssertEqual(e.state.lastBigBangShards, 450)
     }
 
     func test_timeWarp_isHoursOfProductionAtTheFullRate() {

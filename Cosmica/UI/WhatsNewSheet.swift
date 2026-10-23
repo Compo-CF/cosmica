@@ -28,7 +28,8 @@ struct WhatsNewSheet: View {
             bullets: [
                 Bullet(icon: "flame.circle.fill",    text: "Specializations are real choices now: Overcharged, Resonant, Night Shift or Thrifty. Each wins in a different situation."),
                 Bullet(icon: "star.fill",            text: "Stellar ranks — Cosmic Tree production nodes keep going past their max, multiplying their effect."),
-                Bullet(icon: "building.columns.fill", text: "Wonders level up, and three new ones: Time Lens, Event Horizon and the Stellar Forge.")
+                Bullet(icon: "building.columns.fill", text: "Wonders level up, and three new ones: Time Lens, Event Horizon and the Stellar Forge."),
+                Bullet(icon: "flame.fill",           text: "Kindling — early Big Bangs pay ×3 shards until you've earned enough for the whole Cosmic Tree.")
             ],
             footnote: "Unspent shards still boost earnings, so every rank and Wonder level is an invest-or-hoard choice."
         ),

@@ -201,9 +201,17 @@ final class GameEngine {
         let treeMult = CosmicTree.bigBangYieldMultiplier(state.cosmicSkillLevels)
         let eventMult = CosmicEventScheduler.bigBangYieldMultiplier(state.activeEvent)
         let wonderMult = state.wonderBigBangYieldMultiplier
-        let raw = base * treeMult * eventMult * wonderMult
+        let raw = PrestigeCalculator.kindled(base * treeMult * eventMult * wonderMult,
+                                             lifetimeShards: state.lifetimeCosmicShards,
+                                             cosmosCount: state.cosmosCount)
         guard raw.isFinite, raw > 0 else { return 0 }
         return raw.rounded(.down)
+    }
+
+    /// v3.3 — Big Bangs pay ×3 until the player has earned enough shards for the
+    /// whole Cosmic Tree (first cosmos only). See `PrestigeCalculator.kindled`.
+    var kindlingActive: Bool {
+        PrestigeCalculator.kindlingActive(lifetimeShards: state.lifetimeCosmicShards, cosmosCount: state.cosmosCount)
     }
 
     var canPrestige: Bool { availableShards > 0 }

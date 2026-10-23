@@ -124,6 +124,12 @@ struct BigBangView: View {
                     .font(.title2.bold())
                     .foregroundStyle(.cyan)
             }
+            if engine.kindlingActive {
+                Label("Kindling: Big Bangs pay ×3 until you've earned \(Formatter.short(PrestigeCalculator.kindlingCap)) ◈ (\(Formatter.short(engine.state.lifetimeCosmicShards)) so far)",
+                      systemImage: "flame.fill")
+                    .font(.caption)
+                    .foregroundStyle(.orange)
+            }
             ProgressView(value: progress)
                 .tint(.cyan)
             HStack {
