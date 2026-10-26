@@ -120,8 +120,14 @@ def to_65(img):
     return tall.crop((0, cut, 1284, cut + 2778))
 
 
+def to_medium(img):
+    """1320x2868 -> 1206x2622, App Store Connect's "iPhone Medium Display" slot
+    (the only one the PPO treatment accepted). Same aspect to within 0.1%."""
+    return img.resize((1206, 2622), Image.LANCZOS)
+
+
 if __name__ == "__main__":
-    for folder in ("6.9in", "6.5in"):
+    for folder in ("6.9in", "6.5in", "medium-1206x2622"):
         os.makedirs(os.path.join(OUT, folder), exist_ok=True)
     for i, (name, raw, crop, head, sub) in enumerate(FRAMES):
         if not os.path.exists(os.path.join(RAW, raw)):
@@ -130,4 +136,5 @@ if __name__ == "__main__":
         big = render(raw, crop, head, sub, seed=i + 7)
         big.save(os.path.join(OUT, "6.9in", name + ".png"))
         to_65(big).save(os.path.join(OUT, "6.5in", name + ".png"))
+        to_medium(big).save(os.path.join(OUT, "medium-1206x2622", name + ".png"))
         print("wrote", name)
