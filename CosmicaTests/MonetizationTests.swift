@@ -8,6 +8,15 @@ final class MonetizationTests: XCTestCase {
         GameEngine(state: state, persistence: Persistence.inMemory())
     }
 
+    // 3.3.1 — an unloaded product shows "Loading…", never a made-up US price.
+    func test_priceLabel_unloadedProductIsLoadingNotAFakePrice() {
+        let iap = IAPManager()
+        for id in IAPManager.allProductIds {
+            XCTAssertNil(iap.displayPrice(for: id), id)
+            XCTAssertEqual(iap.priceLabel(for: id), IAPManager.loadingPriceLabel, id)
+        }
+    }
+
     func test_shardPack_neverBelowItsOriginalAmount() {
         let e = engine()
         XCTAssertEqual(e.shardPackAmount(base: 250, multiple: 1), 250)

@@ -124,7 +124,7 @@ struct WhatsNewSheet: View {
 
     private var topBar: some View {
         HStack {
-            Text("Cosmica 3.0")
+            Text("What's New")
                 .font(.headline)
                 .foregroundStyle(.white)
             Spacer()

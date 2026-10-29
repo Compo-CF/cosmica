@@ -41,8 +41,8 @@ struct ShopView: View {
                         sectionHeader("Cosmic Shards")
                         // v3.1 — packs scale with the player: the larger of the
                         // original fixed amount and 1× / 10× the last Big Bang.
-                        shardsPackCard(productId: IAPManager.shardsSmallProductId, base: 250, multiple: 1, bigBangs: "1 Big Bang", icon: "diamond", color: .cyan, fallbackPrice: "$1.99")
-                        shardsPackCard(productId: IAPManager.shardsLargeProductId, base: 2500, multiple: 10, bigBangs: "10 Big Bangs", icon: "diamond.fill", color: .teal, fallbackPrice: "$9.99")
+                        shardsPackCard(productId: IAPManager.shardsSmallProductId, base: 250, multiple: 1, bigBangs: "1 Big Bang", icon: "diamond", color: .cyan)
+                        shardsPackCard(productId: IAPManager.shardsLargeProductId, base: 2500, multiple: 10, bigBangs: "10 Big Bangs", icon: "diamond.fill", color: .teal)
                         sectionHeader("Automation")
                         automationCard
                         if iap.supporterOwned || iap.product(for: IAPManager.supporterProductId) != nil {
@@ -56,6 +56,11 @@ struct ShopView: View {
                 }
             }
             .navigationTitle("Shop")
+            // 3.3.1 — if the launch-time product load failed (offline, slow
+            // network), try again whenever the Shop opens.
+            .task {
+                if iap.products.isEmpty { await iap.loadProducts() }
+            }
             .toolbarBackground(Color.black, for: .navigationBar)
             .toolbarColorScheme(.dark, for: .navigationBar)
             .alert("Ad not ready yet", isPresented: $adUnavailableAlert) {
@@ -91,7 +96,7 @@ struct ShopView: View {
     // IAPManager grants both `removeAdsOwned` and `automationCoreOwned`, which
     // makes this card disappear on the next render.
     private var bundleCard: some View {
-        let price = iap.displayPrice(for: IAPManager.everythingBundleProductId) ?? "$4.99"
+        let price = iap.priceLabel(for: IAPManager.everythingBundleProductId)
         return cardBackground {
             VStack(alignment: .leading, spacing: 12) {
                 HStack(spacing: 10) {
@@ -148,7 +153,7 @@ struct ShopView: View {
 
     private var removeAdsCard: some View {
         let owned = iap.removeAdsOwned
-        let price = iap.displayPrice(for: IAPManager.removeAdsProductId) ?? "$2.99"
+        let price = iap.priceLabel(for: IAPManager.removeAdsProductId)
         return cardBackground {
             HStack(spacing: 14) {
                 Image(systemName: owned ? "checkmark.seal.fill" : "rectangle.slash")
@@ -247,7 +252,7 @@ struct ShopView: View {
                         watchAd { engine.grantBoost(duration: 3600); haptics.upgrade() }
                     }
                     actionButton(
-                        title: iap.displayPrice(for: IAPManager.boost2x24hrProductId) ?? "$1.99",
+                        title: iap.priceLabel(for: IAPManager.boost2x24hrProductId),
                         subtitle: engine.boostLabel(24 * 3600),
                         color: .purple,
                         disabled: iap.purchaseInFlight
@@ -292,7 +297,7 @@ struct ShopView: View {
                         }
                     }
                     actionButton(
-                        title: iap.displayPrice(for: IAPManager.offline7dayProductId) ?? "$2.99",
+                        title: iap.priceLabel(for: IAPManager.offline7dayProductId),
                         subtitle: "7 day cap",
                         color: .indigo,
                         disabled: iap.purchaseInFlight
@@ -310,8 +315,8 @@ struct ShopView: View {
     }
 
     private func shardsPackCard(productId: String, base: Double, multiple: Double, bigBangs: String,
-                                icon: String, color: Color, fallbackPrice: String) -> some View {
-        let price = iap.displayPrice(for: productId) ?? fallbackPrice
+                                icon: String, color: Color) -> some View {
+        let price = iap.priceLabel(for: productId)
         let amount = engine.shardPackAmount(base: base, multiple: multiple)
         return cardBackground {
             HStack(spacing: 14) {
@@ -433,7 +438,7 @@ struct ShopView: View {
     private var automationCard: some View {
         let owned = iap.automationCoreOwned
         let trialing = automation.trialActive
-        let price = iap.displayPrice(for: IAPManager.automationCoreProductId) ?? "$2.99"
+        let price = iap.priceLabel(for: IAPManager.automationCoreProductId)
         return cardBackground {
             VStack(alignment: .leading, spacing: 12) {
                 HStack(spacing: 14) {
@@ -520,6 +525,17 @@ struct ShopView: View {
     /// the 2.1(b) App Completeness rejection.
     @MainActor
     private func attemptPurchase(_ productId: String, onSuccess: @escaping () -> Void) async {
+        // 3.3.1 — a button still showing "Loading…" retries the App Store load,
+        // then buys if the product arrived, rather than failing outright.
+        if iap.product(for: productId) == nil {
+            await iap.loadProducts()
+            guard iap.product(for: productId) != nil else {
+                iap.lastError = nil
+                purchaseErrorMessage = "Couldn't reach the App Store for this item. Check your connection and try again in a moment."
+                purchaseErrorAlert = true
+                return
+            }
+        }
         let ok = await iap.purchase(productId)
         if ok {
             onSuccess()

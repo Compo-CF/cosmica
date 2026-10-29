@@ -145,6 +145,15 @@ final class IAPManager {
         product(for: productId)?.displayPrice
     }
 
+    static let loadingPriceLabel = "Loading…"
+
+    /// Button title for a product: its real, localized App Store price, or
+    /// "Loading…" until StoreKit has it. Never a made-up price — before 3.3.1
+    /// the Shop showed a US-dollar fallback that errored when tapped.
+    func priceLabel(for productId: String) -> String {
+        displayPrice(for: productId) ?? Self.loadingPriceLabel
+    }
+
     // MARK: - Lifecycle
 
     func start() async {
