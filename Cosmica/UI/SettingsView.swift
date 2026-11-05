@@ -20,6 +20,8 @@ struct SettingsView: View {
     @State private var showGameCenter = false
     @AppStorage(OrbSkin.storageKey) private var pickedSkin = ""
     @AppStorage(OrbSkin.legacyGoldenKey) private var legacyGolden = true
+    /// v3.4 — anonymous Shop counts (see ShopStats). Off stops counting and uploads.
+    @AppStorage(ShopStats.enabledKey) private var shopStatsEnabled = true
 
     var body: some View {
         NavigationStack {
@@ -56,6 +58,10 @@ struct SettingsView: View {
                     statRow("Total Taps", "\(engine.state.totalTaps)")
                     statRow("Current Tier", engine.state.currentTier.title)
                     statRow("Earnings / sec", Formatter.short(engine.state.stardustPerSecond) + " ✦/s")
+                    if engine.state.multiverseCount > 0 {
+                        statRow("Void Sparks", Formatter.count(engine.state.voidSparks))
+                        statRow("Multiverses Collapsed", "\(engine.state.multiverseCount)")
+                    }
                 }
 
                 Section("Game Center") {
@@ -83,6 +89,13 @@ struct SettingsView: View {
                         Spacer()
                         Text(iap.doublerOwned ? "Owned · ×2 forever" : "Not owned")
                             .foregroundStyle(iap.doublerOwned ? .green : .secondary)
+                    }
+                    if iap.premiumOwned {
+                        HStack {
+                            Text("Singularity orb")
+                            Spacer()
+                            Text("Owned").foregroundStyle(.green)
+                        }
                     }
                     Button("Restore Purchases") {
                         Task { await iap.restore() }
@@ -133,6 +146,12 @@ struct SettingsView: View {
                     NavigationLink("Terms of Service") {
                         TermsOfServiceView()
                     }
+                    // v3.4 — the anonymous Shop counts described in the Privacy Policy.
+                    Toggle("Share anonymous Shop stats", isOn: $shopStatsEnabled)
+                        .tint(.purple)
+                        .onChange(of: shopStatsEnabled) { _, on in
+                            if !on { ShopStats.shared.clear() }
+                        }
                 }
 
                 Section {
@@ -263,11 +282,12 @@ struct SettingsView: View {
     /// skins earned through play. Locked ones show what unlocks them.
     private var orbSection: some View {
         let current = OrbSkin.resolve(picked: pickedSkin, legacyGolden: legacyGolden,
-                                      state: engine.state, supporter: iap.supporterOwned)
+                                      state: engine.state, supporter: iap.supporterOwned, premium: iap.premiumOwned)
         return Section {
             ForEach(OrbSkin.allCases) { skin in
                 orbRow(skin, selected: skin == current,
-                       unlocked: skin.isUnlocked(state: engine.state, supporter: iap.supporterOwned))
+                       unlocked: skin.isUnlocked(state: engine.state, supporter: iap.supporterOwned,
+                                                 premium: iap.premiumOwned))
             }
         } header: {
             Text("Tap Orb")

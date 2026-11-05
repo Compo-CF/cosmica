@@ -64,6 +64,16 @@ final class IAPManager {
     // want. A permanent multiplier is the idle genre's standard second buy.
     static let stardustDoublerProductId = "com.centricfiber.cosmica.stardust_doubler"
 
+    // v3.4 premium tier — non-consumables. 80 of ~150 paying players had bought
+    // only the $4.99 Everything Bundle (Oct 2026) and had nothing left to want.
+    // Ultimate = Remove Ads + Automation Core + Stardust Doubler + Supporter Pack
+    // + the exclusive Singularity orb, for players who own none of those.
+    // Deluxe Upgrade = Doubler + Supporter + Singularity, shown only to players
+    // who already own Remove Ads + Automation (the Everything Bundle), since
+    // Apple has no upgrade pricing. See `premiumOffer`.
+    static let ultimateBundleProductId = "com.centricfiber.cosmica.ultimate_bundle"
+    static let deluxeUpgradeProductId  = "com.centricfiber.cosmica.deluxe_upgrade"
+
     static let allProductIds: [String] = [
         removeAdsProductId,
         boost2x24hrProductId,
@@ -76,7 +86,48 @@ final class IAPManager {
         timeWarp24hProductId,
         supporterProductId,
         stardustDoublerProductId,
+        ultimateBundleProductId,
+        deluxeUpgradeProductId,
     ] + tipProductIds
+
+    /// What each non-consumable unlocks. One table for purchase and restore.
+    struct Entitlements: Equatable {
+        var removeAds = false, automation = false, supporter = false, doubler = false, premium = false
+
+        // Main-actor like the product ids it reads; == stays nonisolated.
+        @MainActor mutating func grant(_ productId: String) {
+            switch productId {
+            case IAPManager.removeAdsProductId:        removeAds = true
+            case IAPManager.automationCoreProductId:   automation = true
+            case IAPManager.everythingBundleProductId: removeAds = true; automation = true
+            case IAPManager.supporterProductId:        supporter = true
+            case IAPManager.stardustDoublerProductId:  doubler = true
+            case IAPManager.ultimateBundleProductId:
+                removeAds = true; automation = true; supporter = true; doubler = true; premium = true
+            case IAPManager.deluxeUpgradeProductId:
+                supporter = true; doubler = true; premium = true
+            default: break
+            }
+        }
+    }
+
+    /// v3.4 — which premium card the Shop offers. Never one that would charge
+    /// for something already owned.
+    enum PremiumOffer: Equatable { case ultimate, deluxe, none }
+
+    static func premiumOffer(_ e: Entitlements) -> PremiumOffer {
+        if e.premium { return .none }
+        if !e.removeAds && !e.automation && !e.doubler && !e.supporter { return .ultimate }
+        if e.removeAds && e.automation && !e.doubler && !e.supporter { return .deluxe }
+        return .none
+    }
+
+    var entitlements: Entitlements {
+        Entitlements(removeAds: removeAdsOwned, automation: automationCoreOwned,
+                     supporter: supporterOwned, doubler: doublerOwned, premium: premiumOwned)
+    }
+
+    var premiumOffer: PremiumOffer { Self.premiumOffer(entitlements) }
 
     static let consumableIds: Set<String> = [
         boost2x24hrProductId,
@@ -113,6 +164,8 @@ final class IAPManager {
     /// v3.3: owns the Stardust Doubler (permanent ×2 earnings). Mirrored onto
     /// `GameState.doublerOwned` by CosmicaApp, where the earnings math reads it.
     var doublerOwned: Bool = false
+    /// v3.4: owns Ultimate Bundle or Deluxe Upgrade (unlocks the Singularity orb).
+    var premiumOwned: Bool = false
     var purchaseInFlight: Bool = false
     /// Briefly true after a successful tip so the UI can show a thank-you beat.
     var didTip: Bool = false
@@ -196,24 +249,14 @@ final class IAPManager {
                     lastError = "Purchase couldn't be verified."
                     return false
                 }
-                if productId == Self.removeAdsProductId {
-                    removeAdsOwned = true
-                }
-                if productId == Self.automationCoreProductId {
-                    automationCoreOwned = true
-                }
-                if productId == Self.everythingBundleProductId {
-                    // v3.0.x — bundle grants both member entitlements.
-                    removeAdsOwned = true
-                    automationCoreOwned = true
-                }
-                if productId == Self.supporterProductId {
-                    supporterOwned = true
-                }
-                if productId == Self.stardustDoublerProductId {
-                    doublerOwned = true
-                }
-                if Self.tipProductIds.contains(productId) || productId == Self.supporterProductId {
+                // Add what this product unlocks to what's already owned.
+                var e = entitlements
+                e.grant(productId)
+                apply(e)
+                // Buying the Supporter Pack (alone or in a premium bundle) counts as a tip.
+                var bought = Entitlements()
+                bought.grant(productId)
+                if Self.tipProductIds.contains(productId) || bought.supporter {
                     markTipped()
                 }
                 await txn.finish()
@@ -253,27 +296,24 @@ final class IAPManager {
         // the Everything Bundle, whose ownership implies BOTH member flags.
         // Iterate the full entitlement list so a bundle transaction or
         // individual purchases both settle to the right flags in one pass.
-        var removeAds = false
-        var automation = false
-        var supporter = false
-        var doubler = false
+        // v3.4: one table (`Entitlements.grant`) for every non-consumable,
+        // including the premium bundles, which imply several flags at once.
+        var e = Entitlements()
         for await result in Transaction.currentEntitlements {
             guard case .verified(let txn) = result else { continue }
-            switch txn.productID {
-            case Self.removeAdsProductId:        removeAds = true
-            case Self.automationCoreProductId:   automation = true
-            case Self.everythingBundleProductId: removeAds = true; automation = true
-            case Self.supporterProductId:        supporter = true
-            case Self.stardustDoublerProductId:  doubler = true
-            default: break
-            }
+            e.grant(txn.productID)
         }
-        removeAdsOwned = removeAds
-        automationCoreOwned = automation
-        supporterOwned = supporter
-        doublerOwned = doubler
+        apply(e)
         // A supporter has already said thank you; stop the tip reminder.
-        if supporter && !hasEverTipped { markTipped() }
+        if e.supporter && !hasEverTipped { markTipped() }
+    }
+
+    private func apply(_ e: Entitlements) {
+        removeAdsOwned = e.removeAds
+        automationCoreOwned = e.automation
+        supporterOwned = e.supporter
+        doublerOwned = e.doubler
+        premiumOwned = e.premium
     }
 
     private func listenForTransactions() -> Task<Void, Never> {

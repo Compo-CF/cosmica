@@ -1,4 +1,5 @@
 import SwiftUI
+import StoreKit
 
 struct ShopView: View {
     @Environment(GameEngine.self) var engine
@@ -11,43 +12,49 @@ struct ShopView: View {
     @State private var adUnavailableAlert = false
     @State private var purchaseErrorAlert = false
     @State private var purchaseErrorMessage = ""
+    /// v3.4 — cards already counted as seen during this visit to the Shop.
+    @State private var seenThisVisit: Set<String> = []
+
+    private var stats: ShopStats { ShopStats.shared }
 
     var body: some View {
         NavigationStack {
             ZStack {
                 Color.black.ignoresSafeArea()
                 ScrollView {
-                    VStack(spacing: 16) {
+                    // v3.4 — Lazy, so a card's onAppear means it actually scrolled
+                    // on screen (ShopStats counts it as seen).
+                    LazyVStack(spacing: 16) {
                         CurrencyBar().background(.clear)
+                        if iap.premiumOffer != .none {
+                            premiumCard
+                        }
                         if !iap.removeAdsOwned && !iap.automationCoreOwned {
-                            bundleCard
+                            bundleCard.seen("everything_bundle", in: self)
                         }
-                        removeAdsCard
-                        // v3.1 — only shown once the App Store has loaded at
-                        // least one Time Warp product (never an unbuyable price).
-                        if iap.product(for: IAPManager.timeWarp8hProductId) != nil
-                            || iap.product(for: IAPManager.timeWarp24hProductId) != nil {
-                            sectionHeader("Time Warp")
-                            timeWarpCard
-                        }
+                        removeAdsCard.seen("removeads", in: self)
+                        sectionHeader("Time Warp")
+                        timeWarpCard.seen("timewarp", in: self)
                         sectionHeader("Earnings Boost")
                         // v3.3 — permanent ×2; only shown once StoreKit has it (or it's owned).
                         if iap.doublerOwned || iap.product(for: IAPManager.stardustDoublerProductId) != nil {
-                            doublerCard
+                            doublerCard.seen("stardust_doubler", in: self)
                         }
-                        boost2xCard
+                        boost2xCard.seen("boost", in: self)
                         sectionHeader("Offline Catch-Up")
-                        offlineCatchUpCard
+                        offlineCatchUpCard.seen("offline", in: self)
                         sectionHeader("Cosmic Shards")
-                        // v3.1 — packs scale with the player: the larger of the
-                        // original fixed amount and 1× / 10× the last Big Bang.
-                        shardsPackCard(productId: IAPManager.shardsSmallProductId, base: 250, multiple: 1, bigBangs: "1 Big Bang", icon: "diamond", color: .cyan)
-                        shardsPackCard(productId: IAPManager.shardsLargeProductId, base: 2500, multiple: 10, bigBangs: "10 Big Bangs", icon: "diamond.fill", color: .teal)
+                        shardsPackCard(productId: IAPManager.shardsSmallProductId,
+                                       pack: GameEngine.smallShardPack, icon: "diamond", color: .cyan)
+                            .seen("shards_pack_small", in: self)
+                        shardsPackCard(productId: IAPManager.shardsLargeProductId,
+                                       pack: GameEngine.largeShardPack, icon: "diamond.fill", color: .teal)
+                            .seen("shards_pack_large", in: self)
                         sectionHeader("Automation")
-                        automationCard
+                        automationCard.seen("automation_core", in: self)
                         if iap.supporterOwned || iap.product(for: IAPManager.supporterProductId) != nil {
                             sectionHeader("Support the Developer")
-                            supporterCard
+                            supporterCard.seen("supporter", in: self)
                         }
                         restoreButton
                         BannerAdSlot()
@@ -60,6 +67,13 @@ struct ShopView: View {
             // network), try again whenever the Shop opens.
             .task {
                 if iap.products.isEmpty { await iap.loadProducts() }
+            }
+            .onAppear {
+                seenThisVisit = []
+                stats.open()
+            }
+            .onDisappear {
+                Task { await ShopStats.shared.flush() }
             }
             .toolbarBackground(Color.black, for: .navigationBar)
             .toolbarColorScheme(.dark, for: .navigationBar)
@@ -78,6 +92,14 @@ struct ShopView: View {
         }
     }
 
+    /// Count a card as seen once per visit.
+    @MainActor
+    fileprivate func markSeen(_ card: String) {
+        guard !seenThisVisit.contains(card) else { return }
+        seenThisVisit.insert(card)
+        stats.view(card)
+    }
+
     // MARK: - Sections
 
     private func sectionHeader(_ text: String) -> some View {
@@ -89,6 +111,80 @@ struct ShopView: View {
         }
         .padding(.horizontal)
         .padding(.top, 8)
+    }
+
+    // v3.4 — the premium tier. Ultimate for players who own none of its parts;
+    // Deluxe Upgrade for Everything Bundle owners (Apple has no upgrade
+    // pricing). `IAPManager.premiumOffer` never offers anything already owned.
+    // Shown only once StoreKit has loaded the product: never a made-up price.
+    @ViewBuilder
+    private var premiumCard: some View {
+        let ultimate = iap.premiumOffer == .ultimate
+        let productId = ultimate ? IAPManager.ultimateBundleProductId : IAPManager.deluxeUpgradeProductId
+        if let price = iap.displayPrice(for: productId) {
+            let parts = ultimate
+                ? [IAPManager.removeAdsProductId, IAPManager.automationCoreProductId,
+                   IAPManager.stardustDoublerProductId, IAPManager.supporterProductId]
+                : [IAPManager.stardustDoublerProductId, IAPManager.supporterProductId]
+            let bullets: [(icon: String, text: String)] = (ultimate ? [
+                ("rectangle.slash", "No banner or interstitial ads"),
+                ("gearshape.2.fill", "Automation Core: auto-buy and auto-Big-Bang"),
+            ] : []) + [
+                ("infinity.circle.fill", "Stardust Doubler: every Stardust ×2, forever"),
+                ("star.circle.fill", "Supporter Pack: golden orb and Supporter badge"),
+                ("circle.circle.fill", "The Singularity orb, only in this pack"),
+            ]
+            cardBackground {
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack(spacing: 10) {
+                        Text(ultimate ? "EVERYTHING" : "UPGRADE YOUR BUNDLE")
+                            .font(.caption2.bold())
+                            .foregroundStyle(.black)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 3)
+                            .background(LinearGradient(colors: [.pink, .orange], startPoint: .leading, endPoint: .trailing),
+                                        in: Capsule())
+                        if let worth = separatePrice(parts) {
+                            Text("\(worth) if bought separately")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                    }
+                    Text(ultimate ? "Ultimate Bundle" : "Deluxe Upgrade")
+                        .font(.title3.bold())
+                        .foregroundStyle(.white)
+                    VStack(alignment: .leading, spacing: 6) {
+                        ForEach(bullets.indices, id: \.self) { i in
+                            Label(bullets[i].text, systemImage: bullets[i].icon)
+                                .font(.caption)
+                                .foregroundStyle(.white.opacity(0.9))
+                        }
+                    }
+                    Button {
+                        Task { await attemptPurchase(productId) { haptics.purchase() } }
+                    } label: {
+                        Text(price)
+                            .font(.headline)
+                            .frame(maxWidth: .infinity, minHeight: 46)
+                            .background(LinearGradient(colors: [.pink, .orange], startPoint: .leading, endPoint: .trailing),
+                                        in: RoundedRectangle(cornerRadius: 12))
+                            .foregroundStyle(.black)
+                    }
+                    .disabled(iap.purchaseInFlight)
+                }
+            }
+            .seen(ShopStats.key(productId), in: self)
+        }
+    }
+
+    /// The App Store prices of `productIds` added up, in the store's own
+    /// currency; nil unless every one has loaded.
+    private func separatePrice(_ productIds: [String]) -> String? {
+        let products = productIds.compactMap { iap.product(for: $0) }
+        guard products.count == productIds.count, let first = products.first else { return nil }
+        let total = products.reduce(Decimal(0)) { $0 + $1.price }
+        return total.formatted(first.priceFormatStyle)
     }
 
     // v3.0.x — Everything Bundle. Hidden once the player owns either component
@@ -249,7 +345,7 @@ struct ShopView: View {
                         color: .orange,
                         disabled: false
                     ) {
-                        watchAd { engine.grantBoost(duration: 3600); haptics.upgrade() }
+                        watchAd(placement: "boost") { engine.grantBoost(duration: 3600); haptics.upgrade() }
                     }
                     actionButton(
                         title: iap.priceLabel(for: IAPManager.boost2x24hrProductId),
@@ -291,7 +387,7 @@ struct ShopView: View {
                         color: .blue,
                         disabled: false
                     ) {
-                        watchAd {
+                        watchAd(placement: "offline") {
                             _ = engine.applyOfflineCatchUp(cap: 24 * 3600)
                             haptics.upgrade()
                         }
@@ -314,10 +410,13 @@ struct ShopView: View {
         }
     }
 
-    private func shardsPackCard(productId: String, base: Double, multiple: Double, bigBangs: String,
+    // v3.4 — packs are sized in Big Bangs (3 and 30) and say what they'd let
+    // the player buy next, not just how many shards they are.
+    private func shardsPackCard(productId: String, pack: (base: Double, bigBangs: Double),
                                 icon: String, color: Color) -> some View {
         let price = iap.priceLabel(for: productId)
-        let amount = engine.shardPackAmount(base: base, multiple: multiple)
+        let amount = engine.shardPackAmount(base: pack.base, multiple: pack.bigBangs)
+        let target = engine.shardPackTarget(amount: amount)
         return cardBackground {
             HStack(spacing: 14) {
                 Image(systemName: icon)
@@ -326,15 +425,22 @@ struct ShopView: View {
                     .frame(width: 50)
                 VStack(alignment: .leading, spacing: 4) {
                     Text("+\(Formatter.short(amount)) Cosmic Shards ◈").font(.headline).foregroundStyle(.white)
-                    Text("Worth \(bigBangs) at your current progress (at least \(Formatter.short(base))). Each shard is +2% earnings.")
+                    Text("Worth \(Int(pack.bigBangs)) Big Bangs at your progress.")
                         .font(.caption).foregroundStyle(.secondary)
+                    if let target {
+                        Text("Enough for \(target.name) (\(Formatter.short(target.cost)) ◈)")
+                            .font(.caption.bold()).foregroundStyle(color)
+                    } else {
+                        Text("Unspent shards add +2% earnings each.")
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
                 }
                 Spacer()
                 Button {
                     Task {
                         await attemptPurchase(productId) {
                             // Sized at the moment of purchase, so it matches the card.
-                            engine.grantShards(engine.shardPackAmount(base: base, multiple: multiple))
+                            engine.grantShards(engine.shardPackAmount(base: pack.base, multiple: pack.bigBangs))
                             haptics.purchase()
                         }
                     }
@@ -352,7 +458,8 @@ struct ShopView: View {
 
     // v3.1: Time Warp. Shows exactly what each warp would add right now (it's
     // N hours at the current full rate), so the price is easy to judge. A
-    // button only appears for a product the App Store has actually loaded.
+    // buy button only appears for a product the App Store has actually loaded.
+    // v3.4: plus a free 30-minute warp once a day for watching an ad.
     private var timeWarpCard: some View {
         cardBackground {
             VStack(alignment: .leading, spacing: 12) {
@@ -368,10 +475,28 @@ struct ShopView: View {
                     }
                     Spacer()
                 }
-                HStack(spacing: 10) {
-                    timeWarpButton(IAPManager.timeWarp8hProductId, hours: 8, color: .mint)
-                    timeWarpButton(IAPManager.timeWarp24hProductId, hours: 24, color: .teal)
+                freeWarpButton
+                if iap.product(for: IAPManager.timeWarp8hProductId) != nil
+                    || iap.product(for: IAPManager.timeWarp24hProductId) != nil {
+                    HStack(spacing: 10) {
+                        timeWarpButton(IAPManager.timeWarp8hProductId, hours: 8, color: .mint)
+                        timeWarpButton(IAPManager.timeWarp24hProductId, hours: 24, color: .teal)
+                    }
                 }
+            }
+        }
+    }
+
+    private var freeWarpButton: some View {
+        let available = engine.freeWarpAvailable()
+        let amount = engine.timeWarpAmount(hours: GameEngine.freeWarpHours)
+        let title = !available ? "Claimed today" : (ads.rewardedReady ? "Watch Ad · Free" : "Loading…")
+        let subtitle = !available ? "Your free warp is back tomorrow"
+            : (amount > 0 ? "30 min · +\(Formatter.short(amount)) ✦, once a day" : "Buy a generator first")
+        return actionButton(title: title, subtitle: subtitle, color: .green,
+                            disabled: !available || amount <= 0) {
+            watchAd(placement: "free_warp") {
+                if engine.claimFreeWarp() > 0 { haptics.upgrade() }
             }
         }
     }
@@ -465,7 +590,7 @@ struct ShopView: View {
                             color: .orange,
                             disabled: false
                         ) {
-                            watchAd {
+                            watchAd(placement: "automation") {
                                 automation.grantTrial(hours: 4)
                                 haptics.upgrade()
                             }
@@ -525,6 +650,7 @@ struct ShopView: View {
     /// the 2.1(b) App Completeness rejection.
     @MainActor
     private func attemptPurchase(_ productId: String, onSuccess: @escaping () -> Void) async {
+        stats.tap(productId)
         // 3.3.1 — a button still showing "Loading…" retries the App Store load,
         // then buys if the product arrived, rather than failing outright.
         if iap.product(for: productId) == nil {
@@ -538,6 +664,7 @@ struct ShopView: View {
         }
         let ok = await iap.purchase(productId)
         if ok {
+            stats.buy(productId)
             onSuccess()
             // v3.0.5 — a buyer who just got what they paid for is the happiest
             // player we have. Wait for the StoreKit sheet to finish closing.
@@ -560,7 +687,8 @@ struct ShopView: View {
         }
     }
 
-    private func watchAd(onReward: @escaping () -> Void) {
+    private func watchAd(placement: String, onReward: @escaping () -> Void) {
+        stats.ad(placement)
         guard ads.rewardedReady else {
             adUnavailableAlert = true
             // Kick off another load attempt so by the time the user dismisses
@@ -569,7 +697,10 @@ struct ShopView: View {
             return
         }
         guard let root = UIApplication.shared.topMostViewController() else { return }
-        ads.showRewarded(from: root, onReward: onReward)
+        ads.showRewarded(from: root, onReward: {
+            ShopStats.shared.reward(placement)
+            onReward()
+        })
     }
 
     @ViewBuilder
@@ -578,6 +709,14 @@ struct ShopView: View {
             .padding()
             .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
             .padding(.horizontal)
+    }
+}
+
+private extension View {
+    /// v3.4 — counts the card as seen (once per Shop visit) when it scrolls on screen.
+    @MainActor
+    func seen(_ card: String, in shop: ShopView) -> some View {
+        onAppear { shop.markSeen(card) }
     }
 }
 

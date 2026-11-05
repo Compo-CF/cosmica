@@ -16,7 +16,7 @@ struct ObservatoryView: View {
 
     private var skin: OrbSkin {
         OrbSkin.resolve(picked: pickedSkin, legacyGolden: legacyGolden,
-                        state: engine.state, supporter: iap.supporterOwned)
+                        state: engine.state, supporter: iap.supporterOwned, premium: iap.premiumOwned)
     }
     private static let gold = Color(red: 1.0, green: 0.80, blue: 0.32)
 

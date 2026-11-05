@@ -141,6 +141,18 @@ struct GameState: Codable {
     var challengeStreak: Int = 0
     var lastChallengeClaimWeek: Int = -1
 
+    // ───────── Multiverse Collapse (v3.4) ─────────
+    /// Third-layer currency. Unspent sparks multiply Stardust and the Reality
+    /// Fragments a True Cosmos pays (`MultiverseCalculator`). Never reset.
+    var voidSparks: Double = 0
+    /// Sum of sparks ever earned (spending doesn't reduce it).
+    var lifetimeVoidSparks: Double = 0
+    var multiverseCount: Int = 0
+
+    // ───────── Free daily Time Warp (v3.4) ─────────
+    /// When the once-a-day rewarded-ad Time Warp was last claimed.
+    var lastFreeWarpAt: Date? = nil
+
     // ───────── Codable: lenient decode so v1.0.x saves migrate to v2 ─────────
 
     init() {}   // memberwise-equivalent default init for fresh saves.
@@ -200,6 +212,10 @@ struct GameState: Codable {
         challengeStars      = try c.decodeIfPresent(Int.self,           forKey: .challengeStars)      ?? 0
         challengeStreak     = try c.decodeIfPresent(Int.self,           forKey: .challengeStreak)     ?? 0
         lastChallengeClaimWeek = try c.decodeIfPresent(Int.self,        forKey: .lastChallengeClaimWeek) ?? -1
+        voidSparks          = try c.decodeIfPresent(Double.self,        forKey: .voidSparks)          ?? 0
+        lifetimeVoidSparks  = try c.decodeIfPresent(Double.self,        forKey: .lifetimeVoidSparks)  ?? 0
+        multiverseCount     = try c.decodeIfPresent(Int.self,           forKey: .multiverseCount)     ?? 0
+        lastFreeWarpAt      = try c.decodeIfPresent(Date.self,          forKey: .lastFreeWarpAt)
 
         // v3.0.4 — the Autonomous Reactor node was retired (automation now covers
         // its cluster). Give back the 25 ◈ it cost. Removing the key makes this
@@ -229,8 +245,11 @@ struct GameState: Codable {
     ///   5. totalTaps                — never reset
     ///   6. challengeStars           — v3.2, never reset
     ///   7. lifetimeStardust         — current-run tiebreaker only
+    /// v3.4 — lifetimeVoidSparks goes first: a Multiverse Collapse zeroes the
+    /// fragment balance but never this, and only a collapsed save has any.
     var progressRank: [Double] {
-        [lifetimeRealityFragments,
+        [lifetimeVoidSparks,
+         lifetimeRealityFragments,
          lifetimeCosmicShards,
          Double(unlockedAchievementIds.count),
          Double(cosmosCount),
@@ -345,6 +364,22 @@ struct GameState: Codable {
     /// v3.3 — Stardust Doubler: ×2 forever. Stacks with the 24-hour 2× boost.
     var doublerMultiplier: Double { doublerOwned ? 2.0 : 1.0 }
 
+    // ───────── Multiverse (v3.4) ─────────
+    /// Unspent Void Sparks: +250% Stardust each.
+    var voidSparkMultiplier: Double { MultiverseCalculator.stardustMultiplier(sparks: voidSparks) }
+    /// Reality Fragments per True Cosmos: unspent sparks (+25% each) × Fragment Prism (×2 per level).
+    var voidFragmentMultiplier: Double {
+        MultiverseCalculator.fragmentMultiplier(sparks: voidSparks)
+            * pow(2, Double(wonderLevel(VoidWonderCatalog.prismId)))
+    }
+    /// Spark Furnace: Big Bang shards ×2 per level.
+    var voidBigBangMultiplier: Double { pow(2, Double(wonderLevel(VoidWonderCatalog.furnaceId))) }
+    /// Null Seed: share of Cosmic Shards kept through a True Cosmos (10% per level, up to 50%).
+    var voidShardCarryFraction: Double {
+        let cap = VoidWonderCatalog.wonder(id: VoidWonderCatalog.seedId)?.maxLevel ?? 5
+        return VoidWonderCatalog.carryPerLevel * Double(min(wonderLevel(VoidWonderCatalog.seedId), cap))
+    }
+
     /// v3.2 — best single run including the one in progress.
     var bestRunSoFar: Double { max(bestRunStardust, lifetimeStardust) }
 
@@ -361,6 +396,7 @@ struct GameState: Codable {
         * challengeMultiplier
         * doublerMultiplier
         * wonderForgeMultiplier
+        * voidSparkMultiplier
     }
 
     /// Base stardust per second across all generators, with each generator's tier-cluster

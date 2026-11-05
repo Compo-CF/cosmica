@@ -200,7 +200,7 @@ final class GameEngine {
                                                    floor: bigBangUnlockAt)
         let treeMult = CosmicTree.bigBangYieldMultiplier(state.cosmicSkillLevels)
         let eventMult = CosmicEventScheduler.bigBangYieldMultiplier(state.activeEvent)
-        let wonderMult = state.wonderBigBangYieldMultiplier
+        let wonderMult = state.wonderBigBangYieldMultiplier * state.voidBigBangMultiplier   // v3.4 Spark Furnace
         let raw = PrestigeCalculator.kindled(base * treeMult * eventMult * wonderMult,
                                              lifetimeShards: state.lifetimeCosmicShards,
                                              cosmosCount: state.cosmosCount)
@@ -257,7 +257,8 @@ final class GameEngine {
     /// Bang tab draws, so the old conversion would crash on open, not on tap.
     var availableFragments: Double {
         let base = CosmosCalculator.fragmentsEarned(cosmicShards: state.cosmicShards)
-        let raw = (base * state.wonderFragmentMultiplier).rounded(.down)
+        // v3.4 — unspent Void Sparks and the Fragment Prism multiply it too.
+        let raw = (base * state.wonderFragmentMultiplier * state.voidFragmentMultiplier).rounded(.down)
         return raw.isFinite ? raw : 0
     }
 
@@ -282,7 +283,20 @@ final class GameEngine {
         state.lifetimeRealityFragments += fragments
         state.cosmosCount += 1
 
-        // Full reset — everything a Big Bang resets, plus Cosmic Shards and the tree.
+        // v3.4 Null Seed — a share of the shards survives. Not new earnings,
+        // so lifetimeCosmicShards is left alone.
+        let carried = (state.cosmicShards * state.voidShardCarryFraction).rounded(.down)
+        resetCosmos()
+        if carried.isFinite, carried > 0 { state.cosmicShards = carried }
+
+        state.lastSeen = Date()
+        save()
+        return fragments
+    }
+
+    /// Everything a True Cosmos (and a Multiverse Collapse) resets: what a Big
+    /// Bang resets, plus Cosmic Shards and the tree.
+    private func resetCosmos() {
         state.stardust = 0
         state.lifetimeStardust = 0
         state.cosmicShards = 0
@@ -294,13 +308,58 @@ final class GameEngine {
         // Automation Core (or is trialing it), forcing them to re-buy the
         // auto-buy tier gates every collapse punishes ownership.
         state.cosmicSkillLevels = state.cosmicSkillLevels.filter { $0.key.hasPrefix("autonomy_") }
-
         // Absolute Observer title survives — they earned it once, they keep it forever.
         // absoluteAscendedAt and absoluteCelebrationShown intentionally NOT reset.
+    }
 
+    // MARK: - Multiverse Collapse (v3.4, third prestige layer)
+
+    /// Void Sparks a collapse would pay right now.
+    var availableSparks: Double {
+        MultiverseCalculator.sparksEarned(realityFragments: state.realityFragments)
+    }
+
+    /// Open once the player has collapsed enough cosmoi; usable once their
+    /// fragments would yield at least one spark.
+    var multiverseUnlocked: Bool { state.cosmosCount >= MultiverseCalculator.cosmosRequired }
+    var canCollapseMultiverse: Bool { multiverseUnlocked && availableSparks > 0 }
+
+    /// Trade every Reality Fragment, and everything a True Cosmos resets, for
+    /// Void Sparks. Kept: Wonders (shard and void), achievements, challenge
+    /// stars, cosmos count, Absolute, purchases. Returns the sparks earned.
+    @discardableResult
+    func multiverseCollapse() -> Double {
+        let sparks = availableSparks
+        guard canCollapseMultiverse, sparks > 0 else { return 0 }
+        checkChallenge()
+        state.bestRunStardust = state.bestRunSoFar
+        state.voidSparks += sparks
+        state.lifetimeVoidSparks += sparks
+        state.multiverseCount += 1
+        state.realityFragments = 0
+        resetCosmos()
         state.lastSeen = Date()
         save()
-        return fragments
+        return sparks
+    }
+
+    /// Sparks to build or raise a Void Wonder; nil if maxed or unknown.
+    func voidWonderCost(_ id: String) -> Double? {
+        guard let w = VoidWonderCatalog.wonder(id: id) else { return nil }
+        let level = state.wonderLevel(id)
+        guard w.maxLevel == 0 || level < w.maxLevel else { return nil }
+        return w.cost(toReachLevel: level + 1)
+    }
+
+    @discardableResult
+    func buildVoidWonder(id: String) -> Bool {
+        guard let w = VoidWonderCatalog.wonder(id: id), let cost = voidWonderCost(id) else { return false }
+        guard state.multiverseCount >= w.multiverseRequired else { return false }
+        guard cost.isFinite, state.voidSparks >= cost else { return false }
+        state.voidSparks -= cost
+        state.wonderLevels[id] = state.wonderLevel(id) + 1
+        save()
+        return true
     }
 
     // MARK: - Cosmic tree
@@ -535,6 +594,34 @@ final class GameEngine {
         return scaled.isFinite ? max(base, scaled) : base
     }
 
+    /// v3.4 shard packs, sized in Big Bangs (was 1 and 10). Kindling (3.3)
+    /// tripled early Big Bangs and pack sales stopped: one Big Bang's worth no
+    /// longer bought anything a player couldn't earn in minutes. Same price
+    /// ratio between the two as before.
+    static let smallShardPack = (base: 500.0, bigBangs: 3.0)
+    static let largeShardPack = (base: 5_000.0, bigBangs: 30.0)
+
+    /// v3.4 — the biggest single thing `amount` more shards would let the
+    /// player buy that they can't afford now: a Cosmic Tree level or a Wonder.
+    /// Lets a pack say what it's for instead of only how big it is. nil when
+    /// nothing new comes into reach.
+    func shardPackTarget(amount: Double) -> (name: String, cost: Double)? {
+        let have = state.cosmicShards
+        let budget = have + amount
+        var best: (name: String, cost: Double)?
+        func consider(_ name: String, _ cost: Double?) {
+            guard let cost, cost.isFinite, cost > have, cost <= budget else { return }
+            if best == nil || cost > best!.cost { best = (name, cost) }
+        }
+        for skill in CosmicTree.skills where !skill.id.hasPrefix("autonomy_") {
+            consider(skill.name, cosmicSkillCost(skill.id))
+        }
+        for w in WondersCatalog.all where state.cosmosCount >= w.cosmosRequired {
+            consider(w.title, wonderCost(w.id))
+        }
+        return best
+    }
+
     /// v3.1 Time Warp — `hours` of production at the full online rate, right
     /// now. Scales with the player, unlike a fixed-amount pack. Counts toward
     /// this run's lifetime (tier, Big Bang reward, Absolute) like any earning.
@@ -553,6 +640,26 @@ final class GameEngine {
         checkChallenge()
         save()
         return amount
+    }
+
+    // MARK: - Free daily Time Warp (v3.4)
+
+    /// Length of the once-a-day Time Warp a rewarded ad pays for.
+    static let freeWarpHours: Double = 0.5
+
+    /// One per calendar day (local), like the daily reward.
+    func freeWarpAvailable(now: Date = Date()) -> Bool {
+        guard let last = state.lastFreeWarpAt else { return true }
+        return !Calendar.current.isDate(last, inSameDayAs: now)
+    }
+
+    /// Grants the free warp and stamps the day. Nothing is stamped when the
+    /// warp would be worth nothing (no production yet), so the day isn't lost.
+    @discardableResult
+    func claimFreeWarp(now: Date = Date()) -> Double {
+        guard freeWarpAvailable(now: now), timeWarpAmount(hours: Self.freeWarpHours) > 0 else { return 0 }
+        state.lastFreeWarpAt = now
+        return applyTimeWarp(hours: Self.freeWarpHours)   // saves
     }
 
     /// Offline catch-up with an explicit cap (paid IAPs can pay for longer windows).

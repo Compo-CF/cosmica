@@ -9,11 +9,11 @@ settings:
   base:
     SWIFT_VERSION: "5.9"
     IPHONEOS_DEPLOYMENT_TARGET: "17.0"
-    # v3.0.3 — version lives HERE, once, for both the app and the widget
+    # v3.0.3 â€” version lives HERE, once, for both the app and the widget
     # extension (App Store rejects an extension whose version differs from
     # its app). scripts/testflight.sh overrides CURRENT_PROJECT_VERSION with the git
     # commit count; the value here only matters for manual Xcode archives.
-    MARKETING_VERSION: "3.3.1"
+    MARKETING_VERSION: "3.4.0"
     CURRENT_PROJECT_VERSION: "40"
     TARGETED_DEVICE_FAMILY: "1"
     ALWAYS_SEARCH_USER_PATHS: NO
@@ -46,7 +46,7 @@ targets:
         CFBundleDisplayName: Cosmica
         CFBundleShortVersionString: "$(MARKETING_VERSION)"
         CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
-        # v3.0.3 — widget tap deep link (cosmica://observatory).
+        # v3.0.3 â€” widget tap deep link (cosmica://observatory).
         CFBundleURLTypes:
           - CFBundleURLName: com.centricfiber.cosmica
             CFBundleURLSchemes:
@@ -86,7 +86,7 @@ targets:
         com.apple.developer.game-center: true
         com.apple.security.application-groups:
           - group.com.centricfiber.cosmica
-  # v3.0.3 — home-screen + Lock Screen widgets. Reads the WidgetSnapshot the
+  # v3.0.3 â€” home-screen + Lock Screen widgets. Reads the WidgetSnapshot the
   # app publishes to the shared App Group; the three shared files below are
   # Foundation-only so they compile in both targets.
   CosmicaWidget:

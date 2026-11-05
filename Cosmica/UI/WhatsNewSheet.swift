@@ -7,7 +7,7 @@ import SwiftUI
 /// Wonders.
 ///
 /// Shown once per install per major version, gated in `RootView` by
-/// `@AppStorage("hasSeenWhatsNew_3_3")`. Update the copy AND rename the
+/// `@AppStorage("hasSeenWhatsNew_3_4")`. Update the copy AND rename the
 /// AppStorage key each major-version release so a new "what's new" fires
 /// exactly once after that version installs.
 struct WhatsNewSheet: View {
@@ -18,6 +18,21 @@ struct WhatsNewSheet: View {
     /// Cards in order. Automation first (the thing they'll open the app to
     /// explore), then three system reminders that compound with automation.
     private let cards: [Card] = [
+        // v3.4 — the third prestige layer, a free daily warp, bigger shard packs.
+        Card(
+            eyebrow: "New in 3.4",
+            title: "The Multiverse",
+            subtitle: "A third layer past True Cosmos, and more to claim every day.",
+            icon: "circle.circle.fill",
+            tintGradient: [.purple, .orange],
+            bullets: [
+                Bullet(icon: "circle.circle.fill",   text: "Multiverse Collapse — after 10 cosmoi, trade Reality Fragments for Void Sparks: permanent Stardust and fragment bonuses."),
+                Bullet(icon: "leaf.circle.fill",     text: "Three Void Wonders: keep shards through True Cosmos, double Big Bang shards, double Reality Fragments."),
+                Bullet(icon: "clock.arrow.2.circlepath", text: "A free 30-minute Time Warp once a day in the Shop, for watching an ad."),
+                Bullet(icon: "diamond.fill",         text: "Shard packs are bigger (3 and 30 Big Bangs' worth) and show what they'll unlock.")
+            ],
+            footnote: "The Multiverse opens from the True Cosmos screen."
+        ),
         // v3.3 — depth for long-running universes (from an Oct 2026 App Store review).
         Card(
             eyebrow: "New in 3.3",

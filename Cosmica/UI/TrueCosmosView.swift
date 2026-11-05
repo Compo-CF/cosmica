@@ -27,6 +27,10 @@ struct TrueCosmosView: View {
                     } else {
                         lockedCard
                     }
+                    // v3.4 — the third layer, previewed from 5 cosmoi, open at 10.
+                    if engine.state.cosmosCount >= 5 || engine.state.multiverseCount > 0 {
+                        multiverseLink
+                    }
                 }
                 .padding(.bottom, 32)
             }
@@ -215,12 +219,37 @@ struct TrueCosmosView: View {
             }
             .padding(.top, 6)
             resetRow(icon: "infinity.circle.fill", text: "Reality Fragments (+5% each, permanent)")
+            if engine.state.voidShardCarryFraction > 0 {
+                resetRow(icon: "leaf.circle.fill",
+                         text: "\(Int(engine.state.voidShardCarryFraction * 100))% of your Cosmic Shards (Null Seed)")
+            }
             resetRow(icon: "sparkle",              text: "Absolute Observer title")
             resetRow(icon: "cart.fill",            text: "IAP purchases (Remove Ads, etc.)")
         }
         .padding()
         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
         .padding(.horizontal)
+    }
+
+    private var multiverseLink: some View {
+        NavigationLink { MultiverseView() } label: {
+            HStack {
+                Image(systemName: engine.multiverseUnlocked ? "circle.circle.fill" : "lock.fill")
+                    .foregroundStyle(Color(red: 0.55, green: 0.45, blue: 1.00))
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Multiverse Collapse").font(.headline).foregroundStyle(.white)
+                    Text(engine.multiverseUnlocked
+                         ? "Trade Reality Fragments for permanent Void Sparks"
+                         : "Opens at \(MultiverseCalculator.cosmosRequired) cosmoi (\(engine.state.cosmosCount) so far)")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+                Spacer()
+                Image(systemName: "chevron.right").foregroundStyle(.secondary)
+            }
+            .padding()
+            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
+            .padding(.horizontal)
+        }
     }
 
     private func resetRow(icon: String, text: String) -> some View {

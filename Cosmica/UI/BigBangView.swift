@@ -44,6 +44,10 @@ struct BigBangView: View {
                         if engine.state.cosmosCount >= 1 {
                             wondersLink
                         }
+                        // v3.4 — third layer, once open.
+                        if engine.multiverseUnlocked || engine.state.multiverseCount > 0 {
+                            multiverseLink
+                        }
                         if automation.isActive {
                             autoBigBangCard
                         }
@@ -251,6 +255,26 @@ struct BigBangView: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Cosmic Wonders").font(.headline).foregroundStyle(.white)
                     Text("\(engine.state.builtWonderIds.count) / \(WondersCatalog.all.count) built  ·  permanent across every reset")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+                Spacer()
+                Image(systemName: "chevron.right").foregroundStyle(.secondary)
+            }
+            .padding()
+            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
+            .padding(.horizontal)
+        }
+    }
+
+    /// v3.4 — Multiverse Collapse entry point, once it has opened (10 cosmoi).
+    private var multiverseLink: some View {
+        NavigationLink { MultiverseView() } label: {
+            HStack {
+                Image(systemName: "circle.circle.fill")
+                    .foregroundStyle(Color(red: 0.55, green: 0.45, blue: 1.00))
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Multiverse").font(.headline).foregroundStyle(.white)
+                    Text("\(Formatter.count(engine.state.voidSparks)) Void Sparks  ·  \(Formatter.multiplier(engine.state.voidSparkMultiplier)) permanent")
                         .font(.caption).foregroundStyle(.secondary)
                 }
                 Spacer()

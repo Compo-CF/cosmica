@@ -121,6 +121,14 @@ struct CosmicaApp: App {
                 // and each publish costs a widget reload.
                 if phase == .background { WidgetSnapshotWriter.publish(engine.state) }
                 pushToCloud()
+                // v3.4 — send the day's anonymous Shop counts (no-op if off/signed out).
+                if phase == .background {
+                    let statsTask = UIApplication.shared.beginBackgroundTask(withName: "cosmica.shopStats")
+                    Task {
+                        await ShopStats.shared.flush()
+                        UIApplication.shared.endBackgroundTask(statsTask)
+                    }
+                }
                 Task { await gameCenter.report(state: engine.state) }
                 // v3.0 Phase 5 — schedule "reactor ready" + "daily reward"
                 // notifications for while the app is closed. No-op unless the
