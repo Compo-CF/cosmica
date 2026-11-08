@@ -52,18 +52,46 @@ final class AdManager: NSObject {
     @ObservationIgnored var onFullScreenAd: ((Bool) -> Void)?
     @ObservationIgnored private let adWatcher = FullScreenAdWatcher()
 
-    private func watchFullScreenAd() {
-        adWatcher.onDismiss = { [weak self] in self?.onFullScreenAd?(false) }
+    /// `then` runs when the ad really closes (or fails to show), after the music is back.
+    private func watchFullScreenAd(then: (() -> Void)? = nil) {
+        adWatcher.onDismiss = { [weak self] in
+            self?.onFullScreenAd?(false)
+            then?()
+        }
         onFullScreenAd?(true)
+    }
+
+    // v3.4.1 — a loaded rewarded ad is kept until it's used or goes stale.
+    // `configure` runs on every foreground and used to throw away a good ad
+    // and request a new one, leaving the buttons on "Loading…" for a while;
+    // AdMob also expires a loaded ad after an hour, and showing an expired
+    // one fails. ShopStats (Nov 2026): about half of Watch Ad taps paid out.
+    private var rewardedLoadedAt: Date?
+    private var rewardedLoading = false
+    private var interstitialLoadedAt: Date?
+    /// Replace a loaded ad older than this (AdMob's limit is 60 minutes).
+    static let maxAdAge: TimeInterval = 55 * 60
+
+    private func isFresh(_ loadedAt: Date?) -> Bool {
+        guard let loadedAt else { return false }
+        return Date().timeIntervalSince(loadedAt) < Self.maxAdAge
     }
 
     func configure(removeAdsOwned: Bool) {
         self.removeAdsOwned = removeAdsOwned
         guard sdkStarted else { return }   // remembered; loads happen in startAfterConsent
         Task {
-            await loadRewarded()
-            if !removeAdsOwned { await loadInterstitial() }
+            await refreshRewardedIfNeeded()
+            if !removeAdsOwned, interstitialAd == nil || !isFresh(interstitialLoadedAt) {
+                await loadInterstitial()
+            }
         }
+    }
+
+    /// Loads a rewarded ad unless a fresh one is already waiting.
+    func refreshRewardedIfNeeded() async {
+        if rewardedAd != nil, isFresh(rewardedLoadedAt) { return }
+        await loadRewarded()
     }
 
     /// v3.1.2 — called once ConsentManager reports `canRequestAds`: starts the SDK, then loads.
@@ -79,12 +107,25 @@ final class AdManager: NSObject {
 
     func loadRewarded() async {
         guard sdkStarted else { return }   // v3.1.2 — never request before consent
+        guard !rewardedLoading else { return }   // v3.4.1 — one request at a time
+        rewardedLoading = true
+        defer { rewardedLoading = false }
         do {
             let ad = try await RewardedAd.load(with: rewardedUnitId, request: Request())
+            let stamp = Date()
             rewardedAd = ad
+            rewardedLoadedAt = stamp
             rewardedReady = true
+            // Swap it for a new one before AdMob expires it, if it's still unused.
+            Task { [weak self] in
+                try? await Task.sleep(nanoseconds: UInt64(Self.maxAdAge * 1_000_000_000))
+                guard let self, self.rewardedLoadedAt == stamp, self.rewardedAd != nil else { return }
+                self.rewardedAd = nil
+                self.rewardedReady = false
+                await self.loadRewarded()
+            }
         } catch {
-            rewardedReady = false
+            if !isFresh(rewardedLoadedAt) { rewardedAd = nil; rewardedReady = false }
             print("[AdManager] Rewarded load failed: \(error)")
             // Schedule a background retry. New AdMob accounts often return
             // "no fill" for hours; keep trying so the button comes alive
@@ -96,24 +137,47 @@ final class AdManager: NSObject {
         }
     }
 
-    /// Present the rewarded ad. `onReward` is invoked on successful reward; `onDismiss` is always invoked when the ad closes.
-    func showRewarded(from root: UIViewController, onReward: @escaping () -> Void, onDismiss: @escaping () -> Void = {}) {
-        guard let ad = rewardedAd else {
+    /// Present the rewarded ad. `onReward` is invoked on a successful reward;
+    /// `onDismiss` is always invoked once: when the ad closes, or right away
+    /// if there was no usable ad. Returns false when nothing was shown.
+    @discardableResult
+    func showRewarded(from root: UIViewController, onReward: @escaping () -> Void, onDismiss: @escaping () -> Void = {}) -> Bool {
+        guard let ad = rewardedAd, isFresh(rewardedLoadedAt) else {
+            // None loaded, or it has expired: drop it and fetch a new one.
+            rewardedAd = nil
+            rewardedReady = false
             onDismiss()
             Task { await loadRewarded() }
-            return
+            return false
         }
+        rewardedAd = nil
+        rewardedLoadedAt = nil
         rewardedReady = false
         ad.fullScreenContentDelegate = adWatcher
-        watchFullScreenAd()
+        watchFullScreenAd(then: onDismiss)
         ad.present(from: root) {
             onReward()
         }
-        // Preload the next one.
-        Task {
-            await loadRewarded()
+        // Preload the next one while this one plays.
+        Task { await loadRewarded() }
+        return true
+    }
+
+    /// v3.4.1 — a rewarded ad from anywhere outside the Shop (welcome-back,
+    /// daily reward), counted in ShopStats under `placement` the way the
+    /// Shop's buttons are. Returns false (after `onDismiss`) if no ad was ready.
+    @discardableResult
+    func watch(placement: String, onReward: @escaping () -> Void, onDismiss: @escaping () -> Void = {}) -> Bool {
+        ShopStats.shared.ad(placement)
+        guard rewardedReady, let root = UIApplication.shared.topMostViewController() else {
+            Task { await loadRewarded() }
             onDismiss()
+            return false
         }
+        return showRewarded(from: root, onReward: {
+            ShopStats.shared.reward(placement)
+            onReward()
+        }, onDismiss: onDismiss)
     }
 
     // MARK: - Interstitial
@@ -123,6 +187,7 @@ final class AdManager: NSObject {
         do {
             let ad = try await InterstitialAd.load(with: interstitialUnitId, request: Request())
             interstitialAd = ad
+            interstitialLoadedAt = Date()
             interstitialReady = true
         } catch {
             interstitialReady = false
@@ -139,10 +204,12 @@ final class AdManager: NSObject {
     func showInterstitialIfReady(from root: UIViewController) {
         guard !removeAdsOwned else { return }
         if let last = lastInterstitialShownAt, Date().timeIntervalSince(last) < interstitialMinInterval { return }
-        guard let ad = interstitialAd else {
+        guard let ad = interstitialAd, isFresh(interstitialLoadedAt) else {
+            interstitialAd = nil
             Task { await loadInterstitial() }
             return
         }
+        interstitialAd = nil
         ad.fullScreenContentDelegate = adWatcher
         watchFullScreenAd()
         ad.present(from: root)

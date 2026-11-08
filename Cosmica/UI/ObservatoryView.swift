@@ -9,6 +9,7 @@ struct ObservatoryView: View {
     /// generator list has room to breathe.
     @Environment(\.verticalSizeClass) private var vSizeClass
     @Environment(IAPManager.self) private var iap
+    @Environment(AdManager.self) private var ads
     /// v3.2 — orb skin picked in Settings (3.1's golden orb is one of them).
     @AppStorage(OrbSkin.storageKey) private var pickedSkin = ""
     @AppStorage(OrbSkin.legacyGoldenKey) private var legacyGolden = true
@@ -32,6 +33,7 @@ struct ObservatoryView: View {
                     eventBanner(event)
                 }
                 tapZone
+                    .overlay(alignment: .topTrailing) { boostChip }
                 generatorList
                 BannerAdSlot()
             }
@@ -68,6 +70,43 @@ struct ObservatoryView: View {
         }
         .padding(.horizontal)
         .padding(.top, 2)
+    }
+
+    // MARK: - v3.4.1 boost chip
+
+    /// A small corner chip by the orb: while a 2× boost runs it shows the time
+    /// left; otherwise, once a rewarded ad is loaded, it offers a free hour.
+    /// Hidden for brand-new players and whenever there's no ad to show, so it
+    /// never sits there as a dead button.
+    @ViewBuilder
+    private var boostChip: some View {
+        TimelineView(.periodic(from: .now, by: 1)) { context in
+            let left = max(0, engine.state.adBoostExpiresAt?.timeIntervalSince(context.date) ?? 0)
+            if left > 0 {
+                Label("2× · \(Formatter.duration(left))", systemImage: "bolt.fill")
+                    .font(.caption.weight(.bold))
+                    .monospacedDigit()
+                    .foregroundStyle(.black)
+                    .padding(.horizontal, 9).padding(.vertical, 5)
+                    .background(Color.yellow, in: Capsule())
+                    .padding(.trailing, 12)
+            } else if ads.rewardedReady && engine.state.totalGeneratorsBought >= 10 {
+                Button {
+                    ads.watch(placement: "chip_boost", onReward: {
+                        engine.grantBoost(duration: 3600)
+                        haptics.upgrade()
+                    })
+                } label: {
+                    Label("2× free · \(engine.boostLabel(3600))", systemImage: "play.rectangle.fill")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.yellow)
+                        .padding(.horizontal, 9).padding(.vertical, 5)
+                        .background(Color.yellow.opacity(0.15), in: Capsule())
+                        .overlay(Capsule().stroke(Color.yellow.opacity(0.5), lineWidth: 1))
+                }
+                .padding(.trailing, 12)
+            }
+        }
     }
 
     // MARK: - Components

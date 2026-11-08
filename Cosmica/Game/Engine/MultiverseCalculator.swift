@@ -14,6 +14,11 @@ import Foundation
 /// minimum True Cosmos pays 50·(1 + 0.25S): 1,000 F → ~56 needed vs ≥112 paid,
 /// 10,000 F → ~240 vs ≥237, 1M F → ~2,500 vs ≥2,025 (plus the bigger shard
 /// totals a stronger run reaches). So it is never a trap, only a dip.
+///
+/// v3.4.1: the fragment bonus now grows with √sparks, so the dip after a big
+/// collapse is deeper and takes a few cosmoi to climb out of (the endgame
+/// model put the old version's collapses at 100–1,000× each, which is how
+/// players reached the 1e300 ceiling in under a week).
 enum MultiverseCalculator {
     /// True Cosmoi the player must have collapsed before the layer opens.
     static let cosmosRequired = 10
@@ -54,5 +59,10 @@ enum MultiverseCalculator {
     }
 
     static func stardustMultiplier(sparks: Double) -> Double { 1 + stardustPerSpark * max(0, sparks) }
-    static func fragmentMultiplier(sparks: Double) -> Double { 1 + fragmentBonusPerSpark * max(0, sparks) }
+    /// v3.4.1: grows with √sparks (was linear). Sparks already multiply
+    /// Stardust linearly; paying fragments linearly too made every collapse
+    /// worth 100–1,000× the one before it, and players hit the 1e300 ceiling
+    /// within days (planning/endgame_v1.py). 1 spark is unchanged; 100 sparks
+    /// is ×3.5 fragments instead of ×26.
+    static func fragmentMultiplier(sparks: Double) -> Double { 1 + fragmentBonusPerSpark * max(0, sparks).squareRoot() }
 }

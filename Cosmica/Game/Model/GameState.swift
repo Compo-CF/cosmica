@@ -153,6 +153,19 @@ struct GameState: Codable {
     /// When the once-a-day rewarded-ad Time Warp was last claimed.
     var lastFreeWarpAt: Date? = nil
 
+    // ───────── Offline catch-up (v3.4.1) ─────────
+    /// The last real absence (≥ 5 min) and how much of it has been paid for.
+    /// Catch-Up (ad or IAP) pays the part a longer cap would have covered.
+    /// Before 3.4.1 it measured from `lastSeen`, which every save resets, so
+    /// it paid for a few seconds.
+    var lastAwaySeconds: Double = 0
+    var lastAwayPaidSeconds: Double = 0
+
+    // ───────── Cosmos Goal (v3.4.1) ─────────
+    /// Best single run in the current cosmos. A True Cosmos needs it to reach
+    /// `CosmosCalculator.goal(cosmosCount:)`. Reset by True Cosmos and collapse.
+    var cosmosBestRun: Double = 0
+
     // ───────── Codable: lenient decode so v1.0.x saves migrate to v2 ─────────
 
     init() {}   // memberwise-equivalent default init for fresh saves.
@@ -216,6 +229,13 @@ struct GameState: Codable {
         lifetimeVoidSparks  = try c.decodeIfPresent(Double.self,        forKey: .lifetimeVoidSparks)  ?? 0
         multiverseCount     = try c.decodeIfPresent(Int.self,           forKey: .multiverseCount)     ?? 0
         lastFreeWarpAt      = try c.decodeIfPresent(Date.self,          forKey: .lastFreeWarpAt)
+        lastAwaySeconds     = try c.decodeIfPresent(Double.self,        forKey: .lastAwaySeconds)     ?? 0
+        lastAwayPaidSeconds = try c.decodeIfPresent(Double.self,        forKey: .lastAwayPaidSeconds) ?? 0
+        // A pre-3.4.1 save: the cosmos's best run isn't known. The current run
+        // and the all-time best are both fair stand-ins; the all-time best can
+        // only help, so nobody is set back by the update.
+        cosmosBestRun       = try c.decodeIfPresent(Double.self,        forKey: .cosmosBestRun)
+            ?? max(lifetimeStardust, bestRunStardust)
 
         // v3.0.4 — the Autonomous Reactor node was retired (automation now covers
         // its cluster). Give back the 25 ◈ it cost. Removing the key makes this
@@ -367,7 +387,8 @@ struct GameState: Codable {
     // ───────── Multiverse (v3.4) ─────────
     /// Unspent Void Sparks: +250% Stardust each.
     var voidSparkMultiplier: Double { MultiverseCalculator.stardustMultiplier(sparks: voidSparks) }
-    /// Reality Fragments per True Cosmos: unspent sparks (+25% each) × Fragment Prism (×2 per level).
+    /// Reality Fragments per True Cosmos: unspent sparks (v3.4.1: +25% × √sparks)
+    /// × Fragment Prism (×2 per level).
     var voidFragmentMultiplier: Double {
         MultiverseCalculator.fragmentMultiplier(sparks: voidSparks)
             * pow(2, Double(wonderLevel(VoidWonderCatalog.prismId)))
@@ -382,6 +403,8 @@ struct GameState: Codable {
 
     /// v3.2 — best single run including the one in progress.
     var bestRunSoFar: Double { max(bestRunStardust, lifetimeStardust) }
+    /// v3.4.1 — best single run in this cosmos, including the one in progress.
+    var cosmosBestSoFar: Double { max(cosmosBestRun, lifetimeStardust) }
 
     /// Full multiplier stack on Stardust production.
     var totalMultiplier: Double {

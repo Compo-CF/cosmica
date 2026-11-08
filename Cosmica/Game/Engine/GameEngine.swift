@@ -229,6 +229,7 @@ final class GameEngine {
         // v3.2 — latch a single-run challenge and record the run before it resets.
         checkChallenge()
         state.bestRunStardust = state.bestRunSoFar
+        state.cosmosBestRun = state.cosmosBestSoFar   // v3.4.1 Cosmos Goal
         state.cosmicShards += shards
         state.lifetimeCosmicShards += shards
         state.prestigeCount += 1
@@ -266,8 +267,12 @@ final class GameEngine {
     /// at least one Fragment. Both gates are needed — otherwise a first-run player
     /// could Cosmos immediately for zero yield.
     var canTrueCosmos: Bool {
-        state.hasAbsoluteAscended && availableFragments > 0
+        state.hasAbsoluteAscended && availableFragments > 0 && cosmosGoalMet
     }
+
+    /// v3.4.1 — lifetime Stardust one run in this cosmos must reach first.
+    var cosmosGoal: Double { CosmosCalculator.goal(cosmosCount: state.cosmosCount) }
+    var cosmosGoalMet: Bool { state.cosmosBestSoFar >= cosmosGoal }
 
     /// Collapse the current cosmos into Reality Fragments. Trades every Cosmic Shard,
     /// every tree level, every generator, and every upgrade for a permanent +5% per
@@ -276,7 +281,7 @@ final class GameEngine {
     @discardableResult
     func trueCosmos() -> Double {
         let fragments = availableFragments
-        guard fragments > 0 else { return 0 }
+        guard fragments > 0, canTrueCosmos else { return 0 }
         checkChallenge()
         state.bestRunStardust = state.bestRunSoFar
         state.realityFragments += fragments
@@ -301,6 +306,7 @@ final class GameEngine {
         state.lifetimeStardust = 0
         state.cosmicShards = 0
         state.prestigeCount = 0
+        state.cosmosBestRun = 0     // v3.4.1 — a new cosmos, a new goal
         state.generators = GameContent.defaultGenerators
         state.upgrades = GameContent.defaultUpgrades
         // v3.0 — Autonomy branch keys survive True Cosmos. Same class of
@@ -443,9 +449,10 @@ final class GameEngine {
     func previewDailyReward() -> DailyReward { reward(forStreak: nextDailyStreak()) }
 
     @discardableResult
-    func claimDaily() -> DailyReward {
+    func claimDaily(multiplier: Double = 1) -> DailyReward {
         let streak = nextDailyStreak()
-        let r = reward(forStreak: streak)
+        // v3.4.1 — `multiplier` 2 when the player watched an ad to double it.
+        let r = reward(forStreak: streak).scaled(by: max(1, multiplier))
         addStardust(r.stardust)
         state.totalDailyClaims += 1
         let shardGain = Double(r.cosmicShards) * CosmicEventScheduler.shardGrantMultiplier(state.activeEvent)
@@ -662,22 +669,46 @@ final class GameEngine {
         return applyTimeWarp(hours: Self.freeWarpHours)   // saves
     }
 
-    /// Offline catch-up with an explicit cap (paid IAPs can pay for longer windows).
+    // MARK: - Offline Catch-Up (v3.4.1)
+
+    /// The ad's cap (24h) and the IAP's (7 days), each plus the player's own
+    /// cap bonuses (Night Watch, Chronosphere) so they always reach past the base cap.
+    var adCatchUpCap: TimeInterval { OfflineAccrual.extendedCap + offlineCapBonuses }
+    var iapCatchUpCap: TimeInterval { 7 * 24 * 3600 + offlineCapBonuses }
+    private var offlineCapBonuses: TimeInterval {
+        CosmicTree.offlineCapBonus(state.cosmicSkillLevels) + state.wonderOfflineCapBonus
+    }
+
+    /// Seconds of the last absence a `cap` would pay for that haven't been paid yet.
+    func catchUpSeconds(cap: TimeInterval) -> TimeInterval {
+        max(0, min(state.lastAwaySeconds, cap) - state.lastAwayPaidSeconds)
+    }
+
+    /// Stardust `applyOfflineCatchUp(cap:)` would pay right now.
+    func offlineCatchUpAmount(cap: TimeInterval) -> Double {
+        let amount = state.offlineStardustPerSecond * catchUpSeconds(cap: cap) * OfflineAccrual.offlineRate
+        return amount.isFinite ? max(0, amount) : 0
+    }
+
+    /// Pays the part of the last absence the base cap cut off, up to `cap`.
+    /// Before 3.4.1 this measured from `lastSeen`, which every save resets,
+    /// so the ad and the $2.99 IAP both paid for a few seconds.
     @discardableResult
     func applyOfflineCatchUp(cap: TimeInterval) -> OfflineAccrual.Result {
-        let secs = max(0, Date().timeIntervalSince(state.lastSeen))
-        let counted = min(secs, cap)
-        let earned = state.offlineStardustPerSecond * counted * OfflineAccrual.offlineRate
+        let secs = catchUpSeconds(cap: cap)
+        let earned = offlineCatchUpAmount(cap: cap)
         addStardust(earned)
-        state.lastSeen = Date()
+        state.lastAwayPaidSeconds += secs
+        checkAbsoluteAscension()
+        checkAchievements()
         checkChallenge()
         save()
         return OfflineAccrual.Result(
             stardustEarned: earned,
-            secondsElapsed: secs,
-            secondsCounted: counted,
+            secondsElapsed: state.lastAwaySeconds,
+            secondsCounted: secs,
             capUsed: cap,
-            wasCapped: secs > cap
+            wasCapped: state.lastAwaySeconds > cap
         )
     }
 
@@ -693,6 +724,12 @@ final class GameEngine {
             extraCap: CosmicTree.offlineCapBonus(state.cosmicSkillLevels) + state.wonderOfflineCapBonus
         )
         addStardust(result.stardustEarned)
+        // v3.4.1 — remember a real absence so Catch-Up can pay what the cap cut
+        // off. A quick app switch doesn't replace a long night away.
+        if result.secondsElapsed >= 300 {
+            state.lastAwaySeconds = result.secondsElapsed
+            state.lastAwayPaidSeconds = result.secondsCounted
+        }
         state.lastSeen = Date()
         checkAbsoluteAscension()
         checkAchievements()

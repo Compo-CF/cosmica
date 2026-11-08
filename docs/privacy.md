@@ -1,6 +1,6 @@
 # Cosmica — Privacy Policy
 
-*Last updated: November 5, 2026*
+*Last updated: November 8, 2026*
 
 ## TL;DR
 
@@ -8,7 +8,7 @@ Cosmica is a single-player idle game. Anthony Compofelice (the developer) does n
 
 ## What the developer collects
 
-Anonymous Shop counts, and nothing else (from version 3.4). Each day Cosmica counts how many times the Shop was opened, how often each item was shown, how often each buy or watch-ad button was tapped, and how many purchases and ad rewards completed. If you're signed into iCloud, that day's counts are stored as one record in Cosmica's iCloud (CloudKit) public database, under a random name that changes every day, so one day can't be connected to another or to you. The record holds no name, Apple ID, device identifier, location, game progress or payment details. The developer uses the totals to see which items players find useful.
+Anonymous Shop counts, and nothing else (from version 3.4). Each day Cosmica counts how many times the Shop was opened, how often each item was shown, how often each buy or watch-ad button was tapped (in the Shop, and the optional ad offers on the welcome-back, daily reward and main screens), and how many purchases and ad rewards completed. If you're signed into iCloud, that day's counts are stored as one record in Cosmica's iCloud (CloudKit) public database, under a random name that changes every day, so one day can't be connected to another or to you. The record holds no name, Apple ID, device identifier, location, game progress or payment details. The developer uses the totals to see which items players find useful.
 
 To stop it, turn off **Settings → Legal → Share anonymous Shop stats**. That also deletes the counts kept on your device.
 

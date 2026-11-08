@@ -121,10 +121,14 @@ struct TrialEndOfferSheet: View {
 
     private func watchAd() {
         guard let root = UIApplication.shared.topMostViewController() else { return }
+        var rewarded = false
         ads.showRewarded(from: root, onReward: {
             automation.grantTrial(hours: 4)
             haptics.upgrade()
-            onDismiss()
+            rewarded = true
+        }, onDismiss: {
+            // v3.4.1 — close the sheet after the ad does, not under it.
+            if rewarded { onDismiss() }
         })
     }
 }

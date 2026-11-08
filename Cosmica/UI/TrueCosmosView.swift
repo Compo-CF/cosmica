@@ -18,6 +18,9 @@ struct TrueCosmosView: View {
             ScrollView {
                 VStack(spacing: 22) {
                     cosmosOrb.padding(.top, 12)
+                    if engine.state.hasAbsoluteAscended && engine.state.cosmosCount > 0 {
+                        cosmosGoalCard
+                    }
                     fragmentRewardCard
                     permanentPowerCard
                     cosmosCountCard
@@ -105,6 +108,37 @@ struct TrueCosmosView: View {
                     .animation(.easeIn(duration: 1.3), value: collapseAnim)
             }
         }
+    }
+
+    // v3.4.1 — each cosmos after the first asks for one big run before it can
+    // collapse (×10,000 more each time), so cosmoi are climbed, not spammed.
+    private var cosmosGoalCard: some View {
+        let goal = engine.cosmosGoal
+        let best = engine.state.cosmosBestSoFar
+        let met = engine.cosmosGoalMet
+        // Progress on a log scale: the goal is orders of magnitude, not a sum.
+        let progress: Double = {
+            guard !met, best > 1, goal > 1 else { return met ? 1 : 0 }
+            return min(max(log10(best) / log10(goal), 0), 1)
+        }()
+        return VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text("Cosmos Goal").font(.headline).foregroundStyle(.white)
+                Spacer()
+                if met {
+                    Label("Reached", systemImage: "checkmark.seal.fill")
+                        .font(.caption.bold()).foregroundStyle(.green)
+                }
+            }
+            Text("One run in this cosmos must reach \(Formatter.short(goal)) ✦ before it can collapse.")
+                .font(.subheadline).foregroundStyle(.secondary)
+            ProgressView(value: progress).tint(met ? .green : Color(red: 0.30, green: 0.90, blue: 1.00))
+            Text("Best run this cosmos: \(Formatter.short(best)) ✦")
+                .font(.caption).foregroundStyle(.secondary).monospacedDigit()
+        }
+        .padding()
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
+        .padding(.horizontal)
     }
 
     private var fragmentRewardCard: some View {
@@ -284,6 +318,12 @@ struct TrueCosmosView: View {
                 Text("Reach Absolute Observer to unlock True Cosmos")
                     .font(.subheadline).foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
+            } else if !engine.cosmosGoalMet {
+                Text("Reach this cosmos's goal first: one run to \(Formatter.short(engine.cosmosGoal)) ✦")
+                    .font(.subheadline).foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                Text("Best run this cosmos: \(Formatter.short(engine.state.cosmosBestSoFar)) ✦")
+                    .font(.caption).foregroundStyle(.secondary).monospacedDigit()
             } else {
                 Text("Need \(Formatter.short(CosmosCalculator.firstCosmosThreshold)) ◈ Cosmic Shards for your first Cosmos")
                     .font(.subheadline).foregroundStyle(.secondary)

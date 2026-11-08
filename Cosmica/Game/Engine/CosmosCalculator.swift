@@ -16,22 +16,44 @@ enum CosmosCalculator {
     private static let scaleFactor: Double = 50.0
 
     /// Reality Fragments a player would earn if they True Cosmoi'd right now.
-    /// Formula: floor(50 · √(shards / 1M)). Requires ≥ 1M shards to yield any.
+    /// Formula: floor(50 · √(shards / 1M)) up to 1B shards, then a gentler
+    /// curve (v3.4.1, see `lateExponent`). Requires ≥ 1M shards to yield any.
     ///
     /// v3.2: `Double` (was `Int`). Converting a Double above Int64.max (~9.2e18)
     /// to Int traps, and that point is ~3.4e40 shards — within reach of the
     /// longest-running saves. Same fix 2.1.1 made for Big Bang shards.
     static func fragmentsEarned(cosmicShards: Double) -> Double {
         guard cosmicShards >= firstCosmosThreshold else { return 0 }
-        let raw = (scaleFactor * sqrt(cosmicShards / firstCosmosThreshold)).rounded(.down)
+        let raw = rawFragments(cosmicShards).rounded(.down)
         return raw.isFinite ? raw : 0
+    }
+
+    // MARK: - v3.4.1 softer curve past a billion shards
+
+    /// Past this many shards the payout grows with `lateExponent` instead of √.
+    /// A billion shards is ~1,581 fragments; nothing below it changes.
+    static let lateKnee: Double = 1e9
+    /// v3.4.1 — the √ curve kept up with shard totals that themselves grow
+    /// with every fragment, so each True Cosmos paid ×50 the last and players
+    /// reached the 1e300 ceiling in days (planning/endgame_v1.py).
+    static let lateExponent: Double = 0.45
+
+    private static var kneeFragments: Double { scaleFactor * sqrt(lateKnee / firstCosmosThreshold) }
+
+    /// Unrounded fragments for `shards` (continuous at the knee).
+    static func rawFragments(_ shards: Double) -> Double {
+        guard shards > 0 else { return 0 }
+        if shards <= lateKnee { return scaleFactor * sqrt(shards / firstCosmosThreshold) }
+        return kneeFragments * pow(shards / lateKnee, lateExponent)
     }
 
     /// Cosmic Shards required to earn at least `target` fragments.
     static func shardsRequired(forFragments target: Double) -> Double {
         guard target > 0 else { return firstCosmosThreshold }
-        let ratio = pow(target / scaleFactor, 2.0)
-        return firstCosmosThreshold * ratio
+        if target <= kneeFragments {
+            return firstCosmosThreshold * pow(target / scaleFactor, 2.0)
+        }
+        return lateKnee * pow(target / kneeFragments, 1 / lateExponent)
     }
 
     /// Shard threshold at which the *next* fragment would be earned.
@@ -55,5 +77,20 @@ enum CosmosCalculator {
     /// stays readable (100 fragments = ×6, 500 = ×26).
     static func multiplier(fragments: Double) -> Double {
         1.0 + fragments * 0.05
+    }
+
+    // MARK: - v3.4.1 Cosmos Goal
+
+    /// Orders of magnitude each cosmos adds to its goal.
+    static let goalStep: Double = 4
+
+    /// Lifetime Stardust one run in the current cosmos must reach before it can
+    /// collapse: 1e40 in cosmos 1, 1e44 in cosmos 2… (cosmos 0 is gated by
+    /// Absolute itself, 1e36). Capped at the number ceiling, so a save past
+    /// cosmos 66 is never locked out, only asked for a ceiling run.
+    /// v3.4.1 review: "spamming 20 cosmic resets to gain all 8 pillars".
+    static func goal(cosmosCount n: Int) -> Double {
+        guard n > 0 else { return 0 }
+        return pow(10, min(300, 36 + goalStep * Double(n)))
     }
 }

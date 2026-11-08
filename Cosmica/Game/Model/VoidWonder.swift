@@ -56,11 +56,14 @@ enum VoidWonderCatalog {
         VoidWonder(id: furnaceId, title: "Spark Furnace",
                    flavor: "It burns the space between universes and leaves shards in the ash.",
                    symbol: "flame.circle.fill", colorHex: "FF7A45",
-                   multiverseRequired: 1, sparkCost: 3, costGrowth: 3, maxLevel: 0),
+                   // v3.4.1: each level ×9 the last (was ×3) — ×2 shards for ×3
+                   // the cost compounded too fast. Levels already built keep their effect.
+                   multiverseRequired: 1, sparkCost: 3, costGrowth: 9, maxLevel: 0),
         VoidWonder(id: prismId, title: "Fragment Prism",
                    flavor: "Split one collapsing cosmos and it falls into many.",
                    symbol: "rhombus.fill", colorHex: "5CE1E6",
-                   multiverseRequired: 2, sparkCost: 5, costGrowth: 4, maxLevel: 0),
+                   // v3.4.1: ×16 per level (was ×4), same reason as the Furnace.
+                   multiverseRequired: 2, sparkCost: 5, costGrowth: 16, maxLevel: 0),
     ]
 
     static func wonder(id: String) -> VoidWonder? { all.first { $0.id == id } }

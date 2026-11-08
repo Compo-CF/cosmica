@@ -128,7 +128,7 @@ final class DepthTests: XCTestCase {
 
     // MARK: - Wonder levels
 
-    func test_wonder_buildsThenLevelsUpAtTenTimesTheCost() {
+    func test_wonder_buildsThenLevelsUpAtAHundredTimesTheCost() {
         var s = GameState()
         s.cosmosCount = 1
         s.cosmicShards = 1e6
@@ -136,7 +136,7 @@ final class DepthTests: XCTestCase {
         XCTAssertEqual(e.wonderCost("chronosphere"), 5_000)
         XCTAssertTrue(e.buildWonder(id: "chronosphere"))
         XCTAssertEqual(e.state.wonderLevel("chronosphere"), 1)
-        XCTAssertEqual(e.wonderCost("chronosphere"), 50_000)
+        XCTAssertEqual(e.wonderCost("chronosphere"), 500_000)   // v3.4.1: ×100 per level
         XCTAssertTrue(e.buildWonder(id: "chronosphere"))
         XCTAssertEqual(e.state.wonderLevel("chronosphere"), 2)
         XCTAssertEqual(e.state.wonderOfflineCapBonus, 24 * 3600)

@@ -234,6 +234,13 @@ struct OfflineWelcomeBackSheet: View {
     let summary: OfflineAccrual.Result
     let onDismiss: () -> Void
 
+    @Environment(GameEngine.self) private var engine
+    @Environment(AdManager.self) private var ads
+    @Environment(HapticsManager.self) private var haptics
+    /// v3.4.1 — set once the ad paid out, to show what it added.
+    @State private var adEarned: Double?
+    @State private var adBusy = false
+
     var body: some View {
         VStack(spacing: 18) {
             Image(systemName: "moon.stars.fill")
@@ -247,16 +254,45 @@ struct OfflineWelcomeBackSheet: View {
             Text("While you were away (\(Formatter.duration(summary.secondsCounted)))")
                 .foregroundStyle(.secondary)
 
-            Text("+\(Formatter.short(summary.stardustEarned)) ✦")
+            Text("+\(Formatter.short(summary.stardustEarned + (adEarned ?? 0))) ✦")
                 .font(.system(size: 48, weight: .heavy, design: .rounded))
                 .foregroundStyle(LinearGradient(colors: [.purple, .blue], startPoint: .leading, endPoint: .trailing))
 
-            if summary.wasCapped {
-                Text("Capped at \(Formatter.duration(summary.capUsed)) — watch a rewarded ad in the Shop to extend offline earnings to 24h.")
+            if let adEarned {
+                Text("+\(Formatter.short(adEarned)) ✦ more from your time away")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(.green)
+            } else if summary.wasCapped {
+                // v3.4.1 — the ad used to live only in the Shop, and the Shop's
+                // version paid for a few seconds (see applyOfflineCatchUp).
+                let extra = engine.offlineCatchUpAmount(cap: engine.adCatchUpCap)
+                Text("Capped at \(Formatter.duration(summary.capUsed)) of \(Formatter.duration(summary.secondsElapsed)) away.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal)
+                if extra > 0 {
+                    Button {
+                        adBusy = true
+                        ads.watch(placement: "welcome_back", onReward: {
+                            adEarned = engine.applyOfflineCatchUp(cap: engine.adCatchUpCap).stardustEarned
+                            haptics.upgrade()
+                        }, onDismiss: { adBusy = false })
+                    } label: {
+                        HStack {
+                            Image(systemName: "play.rectangle.fill")
+                            Text(ads.rewardedReady
+                                 ? "Watch Ad · +\(Formatter.short(extra)) ✦ (up to \(Formatter.duration(engine.adCatchUpCap)))"
+                                 : "Ad loading…")
+                        }
+                        .font(.subheadline.bold())
+                        .frame(maxWidth: .infinity, minHeight: 46)
+                        .background(Color.white.opacity(0.12), in: RoundedRectangle(cornerRadius: 12))
+                        .foregroundStyle(.primary)
+                    }
+                    .disabled(adBusy || !ads.rewardedReady)
+                    .padding(.horizontal)
+                }
             }
 
             Spacer()

@@ -6,7 +6,9 @@ struct DailyRewardView: View {
     @Environment(GameEngine.self) var engine
     @Environment(HapticsManager.self) var haptics
     @Environment(ReviewPrompter.self) var reviewPrompter
+    @Environment(AdManager.self) var ads
     let onClaim: () -> Void
+    @State private var adBusy = false
 
     var body: some View {
         let reward = engine.previewDailyReward()
@@ -40,20 +42,34 @@ struct DailyRewardView: View {
 
             Spacer()
 
+            // v3.4.1 — optional ×2 for a rewarded ad. The plain Claim stays the
+            // big button: the ad is an offer, never the way through.
             Button {
-                _ = engine.claimDaily()
-                haptics.dailyClaim()
-                // v2.1: retention celebration. A 7+ day streak is a strong
-                // signal the player is enjoying Cosmica. Fire the rating
-                // prompt after the sheet dismisses so the moment isn't
-                // stepped on.
-                let streak = engine.state.dailyStreak
-                if streak >= 7 {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
-                        reviewPrompter.maybePrompt(reason: "daily_streak_\(streak)")
-                    }
+                adBusy = true
+                var rewarded = false
+                // Claim once the ad has closed: claiming dismisses this sheet,
+                // which would take the still-showing ad down with it.
+                ads.watch(placement: "daily_double", onReward: {
+                    rewarded = true
+                }, onDismiss: {
+                    adBusy = false
+                    if rewarded { claim(multiplier: 2) }
+                })
+            } label: {
+                HStack {
+                    Image(systemName: "play.rectangle.fill")
+                    Text(ads.rewardedReady ? "Watch Ad · Claim ×2" : "Ad loading…")
                 }
-                onClaim()
+                .font(.subheadline.bold())
+                .frame(maxWidth: .infinity, minHeight: 44)
+                .background(Color.white.opacity(0.12), in: RoundedRectangle(cornerRadius: 12))
+                .foregroundStyle(.primary)
+            }
+            .disabled(adBusy || !ads.rewardedReady)
+            .padding(.horizontal)
+
+            Button {
+                claim(multiplier: 1)
             } label: {
                 Text("Claim")
                     .font(.headline)
@@ -61,8 +77,26 @@ struct DailyRewardView: View {
                     .background(.cyan, in: RoundedRectangle(cornerRadius: 14))
                     .foregroundStyle(.black)
             }
+            .disabled(adBusy)
             .padding(.horizontal)
             .padding(.bottom, 24)
         }
+    }
+
+    private func claim(multiplier: Double) {
+        guard engine.dailyRewardAvailable else { onClaim(); return }
+        _ = engine.claimDaily(multiplier: multiplier)
+        haptics.dailyClaim()
+        // v2.1: retention celebration. A 7+ day streak is a strong
+        // signal the player is enjoying Cosmica. Fire the rating
+        // prompt after the sheet dismisses so the moment isn't
+        // stepped on.
+        let streak = engine.state.dailyStreak
+        if streak >= 7 {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+                reviewPrompter.maybePrompt(reason: "daily_streak_\(streak)")
+            }
+        }
+        onClaim()
     }
 }

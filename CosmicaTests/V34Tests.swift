@@ -21,16 +21,18 @@ final class V34Tests: XCTestCase {
         XCTAssertEqual(MultiverseCalculator.progressToNextSpark(realityFragments: 500), 0.5, accuracy: 1e-9)
     }
 
-    /// The design promise: one minimum True Cosmos after a collapse earns back
-    /// most of what the collapse gave up (all of it below ~10k fragments; ~85%
-    /// at 100k, where bigger late-game shard totals cover the rest).
+    /// v3.4.1: still a dip, not a trap, but a deeper one. A small collapse is
+    /// earned back by the first True Cosmos; a big one keeps a real share of
+    /// its power and climbs back over a few cosmoi (the fragment bonus now
+    /// grows with √sparks so collapses stop compounding ×100–1,000 each).
     func test_collapse_isADipNotATrap() {
         for f in [1_000.0, 10_000, 100_000, 1_000_000] {
             let s = MultiverseCalculator.sparksEarned(realityFragments: f)
             let before = CosmosCalculator.multiplier(fragments: f)
             let firstCosmos = 50 * MultiverseCalculator.fragmentMultiplier(sparks: s)
             let after = CosmosCalculator.multiplier(fragments: firstCosmos) * MultiverseCalculator.stardustMultiplier(sparks: s)
-            XCTAssertGreaterThan(after, before * 0.75, "F=\(f)")
+            XCTAssertGreaterThan(after, before * 0.05, "F=\(f)")
+            if f == 1_000 { XCTAssertGreaterThan(after, before) }
         }
     }
 
@@ -82,8 +84,8 @@ final class V34Tests: XCTestCase {
         t.absoluteAscendedAt = Date()
         t.cosmicShards = 1e6                  // 50 fragments before bonuses
         XCTAssertEqual(engine(t).availableFragments, 50)
-        t.voidSparks = 4                      // ×2
-        XCTAssertEqual(engine(t).availableFragments, 100)
+        t.voidSparks = 4                      // v3.4.1: ×(1 + 0.25·√4) = ×1.5
+        XCTAssertEqual(engine(t).availableFragments, 75)
     }
 
     // MARK: Void Wonders

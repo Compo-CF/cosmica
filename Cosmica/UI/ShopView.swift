@@ -365,8 +365,13 @@ struct ShopView: View {
         }
     }
 
+    // v3.4.1 — Catch-Up pays the part of your last absence the base cap cut
+    // off (it used to measure from the last save and pay for seconds). Both
+    // buttons say what they'd add, and neither sells anything worth nothing.
     private var offlineCatchUpCard: some View {
-        cardBackground {
+        let adAmount = engine.offlineCatchUpAmount(cap: engine.adCatchUpCap)
+        let iapAmount = engine.offlineCatchUpAmount(cap: engine.iapCatchUpCap)
+        return cardBackground {
             VStack(alignment: .leading, spacing: 12) {
                 HStack(spacing: 14) {
                     Image(systemName: "moon.zzz.fill")
@@ -375,32 +380,34 @@ struct ShopView: View {
                         .frame(width: 50)
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Offline Catch-Up").font(.headline).foregroundStyle(.white)
-                        Text("Extend your offline earning cap and claim Stardust now.")
+                        Text(iapAmount > 0
+                             ? "Your last time away was \(Formatter.duration(engine.state.lastAwaySeconds)); your cap counted \(Formatter.duration(engine.state.lastAwayPaidSeconds)). Claim the rest."
+                             : "When you're away longer than your offline cap, claim the time it missed here.")
                             .font(.caption).foregroundStyle(.secondary)
                     }
                     Spacer()
                 }
                 HStack(spacing: 10) {
                     actionButton(
-                        title: ads.rewardedReady ? "Watch Ad" : "Loading…",
-                        subtitle: "24 hour cap",
+                        title: adAmount <= 0 ? "Nothing missed" : (ads.rewardedReady ? "Watch Ad" : "Loading…"),
+                        subtitle: adAmount > 0 ? "Up to 24h · +\(Formatter.short(adAmount)) ✦" : "24 hour cap",
                         color: .blue,
-                        disabled: false
+                        disabled: adAmount <= 0
                     ) {
                         watchAd(placement: "offline") {
-                            _ = engine.applyOfflineCatchUp(cap: 24 * 3600)
+                            _ = engine.applyOfflineCatchUp(cap: engine.adCatchUpCap)
                             haptics.upgrade()
                         }
                     }
                     actionButton(
-                        title: iap.priceLabel(for: IAPManager.offline7dayProductId),
-                        subtitle: "7 day cap",
+                        title: iapAmount <= 0 ? "Nothing missed" : iap.priceLabel(for: IAPManager.offline7dayProductId),
+                        subtitle: iapAmount > 0 ? "Up to 7 days · +\(Formatter.short(iapAmount)) ✦" : "7 day cap",
                         color: .indigo,
-                        disabled: iap.purchaseInFlight
+                        disabled: iap.purchaseInFlight || iapAmount <= 0
                     ) {
                         Task {
                             await attemptPurchase(IAPManager.offline7dayProductId) {
-                                _ = engine.applyOfflineCatchUp(cap: 7 * 24 * 3600)
+                                _ = engine.applyOfflineCatchUp(cap: engine.iapCatchUpCap)
                                 haptics.purchase()
                             }
                         }
@@ -697,10 +704,11 @@ struct ShopView: View {
             return
         }
         guard let root = UIApplication.shared.topMostViewController() else { return }
-        ads.showRewarded(from: root, onReward: {
+        let shown = ads.showRewarded(from: root, onReward: {
             ShopStats.shared.reward(placement)
             onReward()
         })
+        if !shown { adUnavailableAlert = true }   // v3.4.1 — the loaded ad had expired
     }
 
     @ViewBuilder

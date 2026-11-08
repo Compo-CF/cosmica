@@ -99,7 +99,7 @@ struct MultiverseView: View {
                 Text("Next spark: \(Formatter.short(MultiverseCalculator.nextSparkThreshold(realityFragments: f)))")
                     .font(.caption).foregroundStyle(.secondary).monospacedDigit()
             }
-            Text("Each unspent Void Spark adds +\(Int(MultiverseCalculator.stardustPerSpark * 100))% Stardust and +\(Int(MultiverseCalculator.fragmentBonusPerSpark * 100))% Reality Fragments per True Cosmos, forever. Your first True Cosmos after a collapse usually puts you ahead of where you were.")
+            Text("Each unspent Void Spark adds +\(Int(MultiverseCalculator.stardustPerSpark * 100))% Stardust, forever. Sparks also raise the Reality Fragments every True Cosmos pays: ×\(String(format: "%.1f", engine.state.voidFragmentMultiplier)) right now (it grows with the square root of your sparks). Expect a dip after a big collapse: it takes a few cosmoi to climb past where you were.")
                 .font(.caption2).foregroundStyle(.secondary)
         }
     }

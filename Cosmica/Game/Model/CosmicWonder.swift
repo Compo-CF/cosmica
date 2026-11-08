@@ -20,8 +20,12 @@ struct CosmicWonder: Identifiable, Codable, Hashable {
     /// v3.3 — highest level (0 = no limit). One-shot Wonders are 1.
     var maxLevel: Int = 0
 
-    /// Each level costs this many times the previous one.
-    static let levelCostGrowth: Double = 10
+    /// Each level costs this many times the previous one. v3.4.1: 100 (was 10).
+    /// At ×10, Stellar Forge and Multiverse Engine (×2 per level) grew with
+    /// every Big Bang's shards and fed straight back into bigger Big Bangs,
+    /// one of the loops that ran players into the 1e300 ceiling within days.
+    /// Levels already built keep their effect; only new levels cost more.
+    static let levelCostGrowth: Double = 100
 
     func cost(toReachLevel level: Int) -> Double {
         shardCost * pow(Self.levelCostGrowth, Double(max(0, level - 1)))
