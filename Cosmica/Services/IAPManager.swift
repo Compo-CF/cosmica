@@ -113,13 +113,40 @@ final class IAPManager {
 
     /// v3.4 — which premium card the Shop offers. Never one that would charge
     /// for something already owned.
-    enum PremiumOffer: Equatable { case ultimate, deluxe, none }
+    /// v3.4.2 — `.completeSet` for players who own some of the four permanent
+    /// pieces but fit neither bundle (bought Remove Ads or Automation alone, or
+    /// the Doubler first). Before 3.4.2 they saw no bundle card at all.
+    enum PremiumOffer: Equatable { case ultimate, deluxe, completeSet, none }
 
     static func premiumOffer(_ e: Entitlements) -> PremiumOffer {
         if e.premium { return .none }
         if !e.removeAds && !e.automation && !e.doubler && !e.supporter { return .ultimate }
         if e.removeAds && e.automation && !e.doubler && !e.supporter { return .deluxe }
-        return .none
+        return missingSetPieces(e).isEmpty ? .none : .completeSet
+    }
+
+    /// v3.4.2 — the four permanent purchases, in the order the set card lists them.
+    static let setPieceIds: [String] = [
+        removeAdsProductId, automationCoreProductId, stardustDoublerProductId, supporterProductId,
+    ]
+
+    /// The pieces of the set `e` doesn't own yet.
+    static func missingSetPieces(_ e: Entitlements) -> [String] {
+        setPieceIds.filter { id in
+            switch id {
+            case removeAdsProductId:       return !e.removeAds
+            case automationCoreProductId:  return !e.automation
+            case stardustDoublerProductId: return !e.doubler
+            default:                       return !e.supporter
+            }
+        }
+    }
+
+    /// When buying one piece would open the Deluxe Upgrade (owns exactly one of
+    /// Remove Ads / Automation and neither Doubler nor Supporter), that piece.
+    static func deluxeUnlockedBy(_ e: Entitlements) -> String? {
+        guard !e.premium, !e.doubler, !e.supporter, e.removeAds != e.automation else { return nil }
+        return e.removeAds ? automationCoreProductId : removeAdsProductId
     }
 
     var entitlements: Entitlements {

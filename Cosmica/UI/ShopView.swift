@@ -26,8 +26,10 @@ struct ShopView: View {
                     // on screen (ShopStats counts it as seen).
                     LazyVStack(spacing: 16) {
                         CurrencyBar().background(.clear)
-                        if iap.premiumOffer != .none {
-                            premiumCard
+                        switch iap.premiumOffer {
+                        case .ultimate, .deluxe: premiumCard
+                        case .completeSet:       completeSetCard
+                        case .none:              EmptyView()
                         }
                         if !iap.removeAdsOwned && !iap.automationCoreOwned {
                             bundleCard.seen("everything_bundle", in: self)
@@ -175,6 +177,88 @@ struct ShopView: View {
                 }
             }
             .seen(ShopStats.key(productId), in: self)
+        }
+    }
+
+    // v3.4.2 — Complete Your Set. For players who bought some permanent pieces
+    // one at a time and so fit neither bundle: lists only what they're missing,
+    // each at its own App Store price (Apple has no upgrade pricing, so nothing
+    // here ever charges for something they own). Rows wait for StoreKit's
+    // price; the card hides if none has loaded.
+    @ViewBuilder
+    private var completeSetCard: some View {
+        let e = iap.entitlements
+        let missing = IAPManager.missingSetPieces(e).filter { iap.product(for: $0) != nil }
+        if !missing.isEmpty {
+            let owned = IAPManager.setPieceIds.count - IAPManager.missingSetPieces(e).count
+            cardBackground {
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack(spacing: 10) {
+                        Text("COMPLETE YOUR SET")
+                            .font(.caption2.bold())
+                            .foregroundStyle(.black)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 3)
+                            .background(LinearGradient(colors: [.pink, .orange], startPoint: .leading, endPoint: .trailing),
+                                        in: Capsule())
+                        Text("You own \(owned) of \(IAPManager.setPieceIds.count)")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        Spacer()
+                    }
+                    ForEach(missing, id: \.self) { id in
+                        setPieceRow(id)
+                    }
+                    if let key = IAPManager.deluxeUnlockedBy(e),
+                       let deluxe = iap.displayPrice(for: IAPManager.deluxeUpgradeProductId) {
+                        Label("Own \(setPieceInfo(key).name) too and the Deluxe Upgrade opens: Stardust Doubler, Supporter Pack and the Singularity orb for \(deluxe).",
+                              systemImage: "circle.circle.fill")
+                            .font(.caption)
+                            .foregroundStyle(.orange)
+                    }
+                }
+            }
+            .seen("complete_set", in: self)
+        }
+    }
+
+    private func setPieceInfo(_ id: String) -> (name: String, blurb: String, icon: String, color: Color) {
+        switch id {
+        case IAPManager.removeAdsProductId:
+            return ("Remove Ads", "No banner or interstitial ads", "rectangle.slash", .yellow)
+        case IAPManager.automationCoreProductId:
+            return ("Automation Core", "Auto-buy and auto-Big-Bang", "gearshape.2.fill", .green)
+        case IAPManager.stardustDoublerProductId:
+            return ("Stardust Doubler", "Every Stardust ×2, forever", "infinity.circle.fill", .orange)
+        default:
+            return ("Supporter Pack", "Golden orb and Supporter badge", "star.circle.fill", .yellow)
+        }
+    }
+
+    private func setPieceRow(_ id: String) -> some View {
+        let info = setPieceInfo(id)
+        return HStack(spacing: 12) {
+            Image(systemName: info.icon)
+                .font(.title3)
+                .foregroundStyle(info.color)
+                .frame(width: 32)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(info.name).font(.subheadline.bold()).foregroundStyle(.white)
+                Text(info.blurb).font(.caption).foregroundStyle(.secondary)
+            }
+            Spacer()
+            Button {
+                Task { await attemptPurchase(id) { haptics.purchase() } }
+            } label: {
+                Text(iap.priceLabel(for: id))
+                    .font(.subheadline.bold())
+                    .padding(.horizontal, 14)
+                    .frame(minHeight: 36)
+                    .background(LinearGradient(colors: [.pink, .orange], startPoint: .leading, endPoint: .trailing),
+                                in: RoundedRectangle(cornerRadius: 10))
+                    .foregroundStyle(.black)
+            }
+            .disabled(iap.purchaseInFlight)
         }
     }
 

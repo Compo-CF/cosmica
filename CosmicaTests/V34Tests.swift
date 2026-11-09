@@ -150,9 +150,11 @@ final class V34Tests: XCTestCase {
         typealias E = IAPManager.Entitlements
         XCTAssertEqual(IAPManager.premiumOffer(E()), .ultimate)
         XCTAssertEqual(IAPManager.premiumOffer(E(removeAds: true, automation: true)), .deluxe)
-        XCTAssertEqual(IAPManager.premiumOffer(E(removeAds: true)), .none)
-        XCTAssertEqual(IAPManager.premiumOffer(E(removeAds: true, automation: true, doubler: true)), .none)
-        XCTAssertEqual(IAPManager.premiumOffer(E(supporter: true)), .none)
+        // v3.4.2 — partial owners get Complete Your Set instead of nothing.
+        XCTAssertEqual(IAPManager.premiumOffer(E(removeAds: true)), .completeSet)
+        XCTAssertEqual(IAPManager.premiumOffer(E(removeAds: true, automation: true, doubler: true)), .completeSet)
+        XCTAssertEqual(IAPManager.premiumOffer(E(supporter: true)), .completeSet)
+        XCTAssertEqual(IAPManager.premiumOffer(E(removeAds: true, automation: true, supporter: true, doubler: true)), .none)
         XCTAssertEqual(IAPManager.premiumOffer(E(premium: true)), .none)
     }
 
