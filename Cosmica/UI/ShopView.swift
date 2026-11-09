@@ -34,7 +34,11 @@ struct ShopView: View {
                         if !iap.removeAdsOwned && !iap.automationCoreOwned {
                             bundleCard.seen("everything_bundle", in: self)
                         }
-                        removeAdsCard.seen("removeads", in: self)
+                        if IAPManager.showsStandaloneRemoveAds(
+                            iap.entitlements,
+                            removeAdsLoaded: iap.product(for: IAPManager.removeAdsProductId) != nil) {
+                            removeAdsCard.seen("removeads", in: self)
+                        }
                         sectionHeader("Time Warp")
                         timeWarpCard.seen("timewarp", in: self)
                         sectionHeader("Earnings Boost")

@@ -149,6 +149,13 @@ final class IAPManager {
         return e.removeAds ? automationCoreProductId : removeAdsProductId
     }
 
+    /// v3.4.3 — the standalone Remove Ads card is hidden while the Complete Your
+    /// Set card is already selling Remove Ads (it lists it once its price loads).
+    /// Owners still see the standalone card's "disabled, thanks" state.
+    static func showsStandaloneRemoveAds(_ e: Entitlements, removeAdsLoaded: Bool) -> Bool {
+        !(premiumOffer(e) == .completeSet && !e.removeAds && removeAdsLoaded)
+    }
+
     var entitlements: Entitlements {
         Entitlements(removeAds: removeAdsOwned, automation: automationCoreOwned,
                      supporter: supporterOwned, doubler: doublerOwned, premium: premiumOwned)

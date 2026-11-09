@@ -25,6 +25,16 @@ final class V342Tests: XCTestCase {
         XCTAssertNil(IAPManager.deluxeUnlockedBy(E(automation: true, premium: true)))
     }
 
+    // v3.4.3 — no duplicate Remove Ads card while the set card lists it.
+    func test_standaloneRemoveAds_hiddenOnlyWhileSetCardSellsIt() {
+        let automationOnly = E(automation: true)
+        XCTAssertFalse(IAPManager.showsStandaloneRemoveAds(automationOnly, removeAdsLoaded: true))
+        XCTAssertTrue(IAPManager.showsStandaloneRemoveAds(automationOnly, removeAdsLoaded: false)) // set card has no row yet
+        XCTAssertTrue(IAPManager.showsStandaloneRemoveAds(E(), removeAdsLoaded: true))             // Ultimate: no set card
+        XCTAssertTrue(IAPManager.showsStandaloneRemoveAds(E(removeAds: true, doubler: true), removeAdsLoaded: true)) // owned: thanks state
+        XCTAssertTrue(IAPManager.showsStandaloneRemoveAds(E(removeAds: true, automation: true), removeAdsLoaded: true)) // Deluxe
+    }
+
     func test_everyOwnershipMix_getsExactlyOneOffer_andNeverResellsAPiece() {
         for mask in 0..<16 {
             let e = E(removeAds: mask & 1 != 0, automation: mask & 2 != 0,
