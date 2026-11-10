@@ -49,6 +49,10 @@ jobs:
       - uses: actions/checkout@v4
       - name: Screenshot walk
         run: bash scripts/ci-screens.sh
+      - name: Screens log (always)
+        if: always()
+        run: |
+          grep -nE "error|Crash|crash|Fatal|terminat|EXC_|Test Case" screens.log | head -80 || true
       - name: Errors (screens job)
         if: failure()
         run: |

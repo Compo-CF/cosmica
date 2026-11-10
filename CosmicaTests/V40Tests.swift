@@ -154,6 +154,23 @@ final class V40Tests: XCTestCase {
         XCTAssertEqual(e.state.cosmosCount, 1)
     }
 
+    /// The CI screenshot save must survive the engine's tick paths and every formatter.
+    func test_demoSave_runsTheEngineWithoutTrapping() {
+        let e = engine(DemoMode.state())
+        _ = e.state.stardustPerSecond
+        _ = e.state.tapValue
+        _ = e.availableShards; _ = e.availableFragments; _ = e.availableSparks; _ = e.availableEchoes
+        e.manualTap()
+        e.applyTimeWarp(hours: 1)          // runs the door / achievement / challenge checks
+        e.omniverseAutomationStep(now: Date())
+        for g in e.state.generators { _ = Formatter.short(g.nextCost); _ = g.maxAffordable(budget: e.state.stardust) }
+        for s in [e.state.stardust, e.state.cosmicShards, e.state.realityFragments, e.state.stardustPerSecond] {
+            _ = Formatter.short(s); _ = Formatter.count(s); _ = Formatter.multiplier(s)
+        }
+        for a in AchievementCatalog.all { _ = a.goal.progress(state: e.state) }
+        XCTAssertTrue(e.state.lifetimeStardust > Dilation.threshold)
+    }
+
     func test_formatter_pastDouble() {
         XCTAssertEqual(Formatter.short(Big(1_500)), "1.50K")
         XCTAssertEqual(Formatter.short(Big(mantissa: 4.82, exponent: 71)), "4.82e71")
