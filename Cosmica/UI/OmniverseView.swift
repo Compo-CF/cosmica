@@ -14,6 +14,9 @@ struct OmniverseView: View {
     static let gold = Color(red: 1.00, green: 0.82, blue: 0.40)
     static let teal = Color(red: 0.35, green: 0.95, blue: 0.85)
 
+    /// "1 Echo", "42 Echoes".
+    static func echoes(_ n: Big) -> String { "\(Formatter.count(n)) \(n == 1 ? "Echo" : "Echoes")" }
+
     var body: some View {
         ZStack {
             LinearGradient(colors: [.black, Color(red: 0.10, green: 0.07, blue: 0.02), .black],
@@ -38,7 +41,7 @@ struct OmniverseView: View {
         .toolbarBackground(Color.black, for: .navigationBar)
         .toolbarColorScheme(.dark, for: .navigationBar)
         .confirmationDialog("Collapse the Omniverse?", isPresented: $showConfirm, titleVisibility: .visible) {
-            Button("Collapse (\(Formatter.count(engine.availableEchoes)) Echoes)", role: .destructive) {
+            Button("Collapse (\(Self.echoes(engine.availableEchoes)))", role: .destructive) {
                 triggerCollapse()
             }
         } message: {
@@ -55,7 +58,7 @@ struct OmniverseView: View {
                 .foregroundStyle(LinearGradient(colors: [Self.gold, Self.teal], startPoint: .topLeading, endPoint: .bottomTrailing))
                 .scaleEffect(collapseAnim ? 1.6 : 1)
                 .opacity(collapseAnim ? 0.2 : 1)
-            Text("\(Formatter.count(engine.state.echoes)) Echoes")
+            Text("\(Self.echoes(engine.state.echoes))")
                 .font(.title2.bold()).foregroundStyle(.white).monospacedDigit()
             Text("\(Formatter.multiplier(engine.state.echoMultiplier)) everything you earn")
                 .font(.subheadline).foregroundStyle(Self.gold)
@@ -68,7 +71,7 @@ struct OmniverseView: View {
             HStack {
                 Text("If you collapse now").font(.subheadline).foregroundStyle(.secondary)
                 Spacer()
-                Text("+\(Formatter.count(engine.availableEchoes)) Echoes")
+                Text("+\(Self.echoes(engine.availableEchoes))")
                     .font(.title3.bold()).foregroundStyle(Self.gold).monospacedDigit()
             }
             ProgressView(value: OmniverseCalculator.progressToNextEcho(bestRun: best)).tint(Self.gold)
@@ -101,7 +104,7 @@ struct OmniverseView: View {
 
     private var collapseButton: some View {
         Button { showConfirm = true } label: {
-            Text("Collapse the Omniverse — claim \(Formatter.count(engine.availableEchoes)) Echoes")
+            Text("Collapse the Omniverse — claim \(Self.echoes(engine.availableEchoes))")
                 .font(.headline)
                 .frame(maxWidth: .infinity, minHeight: 54)
                 .background(LinearGradient(colors: [Self.gold, Self.teal], startPoint: .leading, endPoint: .trailing),

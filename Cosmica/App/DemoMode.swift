@@ -37,7 +37,8 @@ enum DemoMode {
         s.omniverseCount = 4
         s.omniverseDoorOpen = true
         s.omniverseBestRun = Big(mantissa: 9.1, exponent: 321)
-        s.omniverseLevels = [OmniverseTree.veilId: 3, OmniverseTree.autoCosmosId: 1]
+        // No autopilots: they would True Cosmos at launch and every screen would show 0 ✦.
+        s.omniverseLevels = [OmniverseTree.veilId: 3, OmniverseTree.sparkMemoryId: 1]
         s.cosmicSkillLevels = Dictionary(uniqueKeysWithValues: CosmicTree.skills.map { ($0.id, $0.maxLevel) })
         for w in WondersCatalog.all { s.wonderLevels[w.id] = w.maxLevel == 1 ? 1 : 6; s.builtWonderIds.insert(w.id) }
         for w in VoidWonderCatalog.all { s.wonderLevels[w.id] = 2 }

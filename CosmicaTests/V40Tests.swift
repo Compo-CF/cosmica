@@ -163,8 +163,11 @@ final class V40Tests: XCTestCase {
         e.manualTap()
         e.applyTimeWarp(hours: 1)          // runs the door / achievement / challenge checks
         XCTAssertTrue(e.state.lifetimeStardust > Dilation.threshold)
-        e.omniverseAutomationStep(now: Date())   // Cosmic Autopilot is bought: a True Cosmos resets the run
-        XCTAssertEqual(e.state.cosmosCount, 65)
+        e.omniverseAutomationStep(now: Date())   // the demo owns no autopilot: nothing resets
+        XCTAssertEqual(e.state.cosmosCount, 64)
+        e.state.omniverseLevels[OmniverseTree.autoCosmosId] = 1
+        e.omniverseAutomationStep(now: Date().addingTimeInterval(60))
+        XCTAssertEqual(e.state.cosmosCount, 65)                // with it, a True Cosmos runs
         for g in e.state.generators { _ = Formatter.short(g.nextCost); _ = g.maxAffordable(budget: e.state.stardust) }
         for s in [e.state.stardust, e.state.cosmicShards, e.state.realityFragments, e.state.stardustPerSecond] {
             _ = Formatter.short(s); _ = Formatter.count(s); _ = Formatter.multiplier(s)
