@@ -160,7 +160,7 @@ final class V40Tests: XCTestCase {
         var s = GameState()
         s.omniverseCount = 1
         s.generators[0].count = 25
-        s.bestRunStardust = Big(1e400)
+        s.bestRunStardust = Big.fromLog10(400)   // (a 1e400 literal is +inf as a Double)
         return engine(s)
     }
 
