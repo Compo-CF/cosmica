@@ -8,7 +8,10 @@ import XCTest
 
 func XCTAssertEqual(_ a: Big, _ b: Double, _ message: @autoclosure () -> String = "",
                     file: StaticString = #filePath, line: UInt = #line) {
-    XCTAssertTrue(a == Big(b), "\(a) is not \(b). \(message())", file: file, line: line)
+    // Big is not bit-exact with Double (normalizing divides by powers of ten), so
+    // "equal" means equal to 12 significant digits.
+    let tolerance = Swift.max(Swift.abs(b), a.magnitude.double) * 1e-12
+    XCTAssertTrue((a - Big(b)).magnitude <= Big(tolerance), "\(a) is not \(b). \(message())", file: file, line: line)
 }
 
 func XCTAssertEqual(_ a: Big, _ b: Double, accuracy: Double, _ message: @autoclosure () -> String = "",

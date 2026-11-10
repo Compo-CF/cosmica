@@ -254,7 +254,9 @@ extension Big: CustomStringConvertible, LosslessStringConvertible {
     /// Parses "1.23e456", "1.23E456", "12345" or "1e+20".
     init?(_ text: String) {
         let t = text.trimmingCharacters(in: .whitespaces)
-        if let d = Double(t), d.isFinite {
+        // Plain numbers go through Double. Anything with an exponent is split, since
+        // Double("9.99e-400") quietly underflows to 0 and Double("1e400") to ∞.
+        if !t.lowercased().contains("e"), let d = Double(t), d.isFinite {
             self.init(d)
             return
         }

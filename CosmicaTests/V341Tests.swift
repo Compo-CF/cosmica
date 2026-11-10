@@ -118,7 +118,9 @@ final class V341Tests: XCTestCase {
         XCTAssertEqual(e.state.stardust - before, r.stardustEarned, accuracy: expected * 1e-3)
         // Claimed: the ad has nothing left; the 7-day IAP still covers the last 6 hours.
         XCTAssertEqual(e.offlineCatchUpAmount(cap: e.adCatchUpCap), 0)
-        XCTAssertEqual(e.offlineCatchUpAmount(cap: e.iapCatchUpCap), rate * 6 * 3600, accuracy: rate * 10)
+        // At today's rate: the 16 hours just paid lifted the run a tier (×1.25).
+        let rateNow = e.state.offlineStardustPerSecond * OfflineAccrual.offlineRate
+        XCTAssertEqual(e.offlineCatchUpAmount(cap: e.iapCatchUpCap), rateNow * 6 * 3600, accuracy: rateNow * 10)
     }
 
     func test_shortAbsence_leavesNothingToSell_andAQuickSwitchKeepsTheClaim() {
