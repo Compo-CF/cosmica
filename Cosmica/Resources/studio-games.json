@@ -8,7 +8,7 @@
       "appStoreID": "6830660705",
       "name": "Ghostline: Idle Racer",
       "tagline": "Idle retro racing. Ghost laps speed up the team.",
-      "iconURL": "https://compo-cf.github.io/cosmica/studio/ghostline.png",
+      "iconURL": "https://is1-ssl.mzstatic.com/image/thumb/Purple221/v4/62/c8/50/62c850e1-80ec-abc0-35c7-8f5e7a9089ee/AppIcon-0-0-1x_U007ephone-0-11-0-85-220.png/512x512bb.jpg",
       "sortWeight": 10,
       "audienceTags": ["idle", "racing"]
     },
@@ -17,7 +17,7 @@
       "appStoreID": "6797896315",
       "name": "Pupdoku: Puppy Puzzles",
       "tagline": "Queens-style logic puzzles with a Bones economy.",
-      "iconURL": "https://compo-cf.github.io/cosmica/studio/pupdoku.png",
+      "iconURL": "https://is1-ssl.mzstatic.com/image/thumb/Purple211/v4/21/68/23/216823e1-42d7-4f97-8294-fe5e99621131/AppIcon-0-0-1x_U007ephone-0-1-85-220.png/512x512bb.jpg",
       "sortWeight": 20,
       "audienceTags": ["puzzle", "casual"]
     },
