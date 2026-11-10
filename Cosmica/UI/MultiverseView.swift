@@ -50,7 +50,7 @@ struct MultiverseView: View {
 
     private var background: some View {
         ZStack {
-            Color.black
+            DSLayerBackground(layer: .multiverse)   // v4.0 layer world
             RadialGradient(colors: [Self.violet.opacity(0.35), Self.ember.opacity(0.10), .clear],
                            center: .center, startRadius: 5, endRadius: 420)
                 .scaleEffect(collapseAnim ? 0.1 : 1)
@@ -181,10 +181,7 @@ struct MultiverseView: View {
 
     private func card<C: View>(@ViewBuilder _ content: () -> C) -> some View {
         VStack(alignment: .leading, spacing: 10) { content() }
-            .padding()
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
-            .padding(.horizontal)
+            .dsCard(.multiverse)
     }
 
     private func row(_ label: String, _ value: String) -> some View {

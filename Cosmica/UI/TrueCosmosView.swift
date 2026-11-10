@@ -59,7 +59,7 @@ struct TrueCosmosView: View {
 
     private var background: some View {
         ZStack {
-            Color.black
+            DSLayerBackground(layer: .cosmos)   // v4.0 layer world
             TimelineView(.animation) { ctx in
                 let angle = Angle.degrees(ctx.date.timeIntervalSince1970.truncatingRemainder(dividingBy: 90) * 4)
                 AngularGradient(
@@ -137,9 +137,7 @@ struct TrueCosmosView: View {
             Text("Best run this cosmos: \(Formatter.short(best)) ✦")
                 .font(.caption).foregroundStyle(.secondary).monospacedDigit()
         }
-        .padding()
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
-        .padding(.horizontal)
+        .dsCard(.cosmos)
     }
 
     private var fragmentRewardCard: some View {
@@ -170,9 +168,7 @@ struct TrueCosmosView: View {
             Text("Each Fragment permanently multiplies earnings by +5%. Fragments never reset.")
                 .font(.caption2).foregroundStyle(.secondary)
         }
-        .padding()
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
-        .padding(.horizontal)
+        .dsCard(.cosmos)
     }
 
     private var permanentPowerCard: some View {
@@ -201,9 +197,7 @@ struct TrueCosmosView: View {
                 Spacer()
             }
         }
-        .padding()
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
-        .padding(.horizontal)
+        .dsCard(.cosmos)
     }
 
     private var cosmosCountCard: some View {
@@ -233,9 +227,7 @@ struct TrueCosmosView: View {
                     .font(.caption).foregroundStyle(.secondary)
             }
         }
-        .padding()
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
-        .padding(.horizontal)
+        .dsCard(.cosmos)
     }
 
     private var resetSummaryCard: some View {
@@ -261,9 +253,7 @@ struct TrueCosmosView: View {
             resetRow(icon: "sparkle",              text: "Absolute Observer title")
             resetRow(icon: "cart.fill",            text: "IAP purchases (Remove Ads, etc.)")
         }
-        .padding()
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
-        .padding(.horizontal)
+        .dsCard(.cosmos)
     }
 
     private var multiverseLink: some View {
@@ -281,9 +271,7 @@ struct TrueCosmosView: View {
                 Spacer()
                 Image(systemName: "chevron.right").foregroundStyle(.secondary)
             }
-            .padding()
-            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
-            .padding(.horizontal)
+            .dsCard(.cosmos)
         }
     }
 
@@ -333,9 +321,7 @@ struct TrueCosmosView: View {
                     .font(.caption).foregroundStyle(.secondary).monospacedDigit()
             }
         }
-        .padding()
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
-        .padding(.horizontal)
+        .dsCard(.cosmos)
     }
 
     private func triggerCollapse() {
