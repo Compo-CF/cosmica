@@ -50,7 +50,7 @@ struct RootView: View {
         }
         .tint(.purple)
         .sheet(isPresented: Binding(
-            get: { !showSplash && offlineSummary != nil && (offlineSummary?.stardustEarned ?? 0) > 0 && hasSeenOnboarding },
+            get: { !showSplash && offlineSummary != nil && (offlineSummary?.stardustEarned ?? .zero) > 0 && hasSeenOnboarding },
             set: { if !$0 { offlineSummary = nil } }
         )) {
             if let summary = offlineSummary {
@@ -238,7 +238,7 @@ struct OfflineWelcomeBackSheet: View {
     @Environment(AdManager.self) private var ads
     @Environment(HapticsManager.self) private var haptics
     /// v3.4.1 — set once the ad paid out, to show what it added.
-    @State private var adEarned: Double?
+    @State private var adEarned: Big?
     @State private var adBusy = false
 
     var body: some View {
@@ -254,7 +254,7 @@ struct OfflineWelcomeBackSheet: View {
             Text("While you were away (\(Formatter.duration(summary.secondsCounted)))")
                 .foregroundStyle(.secondary)
 
-            Text("+\(Formatter.short(summary.stardustEarned + (adEarned ?? 0))) ✦")
+            Text("+\(Formatter.short(summary.stardustEarned + (adEarned ?? .zero))) ✦")
                 .font(.system(size: 48, weight: .heavy, design: .rounded))
                 .foregroundStyle(LinearGradient(colors: [.purple, .blue], startPoint: .leading, endPoint: .trailing))
 

@@ -87,7 +87,7 @@ struct CosmicTreeView: View {
                 Button {
                     if engine.buyCosmicSkill(skill.id) { haptics.skillUnlock() } else { haptics.error() }
                 } label: {
-                    Text("\(Formatter.short(cost ?? 0)) ◈")
+                    Text("\(Formatter.short(cost ?? .zero)) ◈")
                         .font(.caption.bold())
                         .padding(.vertical, 6).padding(.horizontal, 10)
                         .background(canAfford ? tint : Color.gray.opacity(0.3),

@@ -54,7 +54,7 @@ struct CurrencyBar: View {
     /// The big animated "+X ✦/s" pill. A once-per-second pulsing dot signals
     /// the tick is alive without shouting; the +/second copy is the actual
     /// prominence lift the player was asking for.
-    private func ratePill(rate: Double, color: Color) -> some View {
+    private func ratePill(rate: Big, color: Color) -> some View {
         HStack(spacing: 8) {
             PulsingDot(color: .green)
             Text("+\(Formatter.short(rate))")

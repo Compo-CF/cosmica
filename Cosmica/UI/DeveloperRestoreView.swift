@@ -127,8 +127,9 @@ struct DeveloperRestoreView: View {
     private func apply() {
         var s = engine.state
         if let v = Int(cosmosCount) { s.cosmosCount = max(0, v) }
-        if let v = Double(realityFragments), v.isFinite {
-            s.realityFragments = max(0, v)
+        // v4.0 — Big parses "1e450" as well as plain numbers.
+        if let v = Big(realityFragments) {
+            s.realityFragments = max(v, Big.zero)
             s.lifetimeRealityFragments = max(s.lifetimeRealityFragments, s.realityFragments)
         }
         if absoluteAscended {
@@ -138,11 +139,11 @@ struct DeveloperRestoreView: View {
             s.absoluteAscendedAt = nil
         }
         if let v = Int(prestigeCount) { s.prestigeCount = max(0, v) }
-        if let v = Double(cosmicShards), v.isFinite { s.cosmicShards = max(0, v) }
-        if let v = Double(lifetimeCosmicShards), v.isFinite { s.lifetimeCosmicShards = max(0, v) }
+        if let v = Big(cosmicShards) { s.cosmicShards = max(v, Big.zero) }
+        if let v = Big(lifetimeCosmicShards) { s.lifetimeCosmicShards = max(v, Big.zero) }
         s.lifetimeCosmicShards = max(s.lifetimeCosmicShards, s.cosmicShards)
-        if let v = Double(stardust), v.isFinite { s.stardust = max(0, v) }
-        if let v = Double(lifetimeStardust), v.isFinite { s.lifetimeStardust = max(0, v) }
+        if let v = Big(stardust) { s.stardust = max(v, Big.zero) }
+        if let v = Big(lifetimeStardust) { s.lifetimeStardust = max(v, Big.zero) }
         s.lifetimeStardust = max(s.lifetimeStardust, s.stardust)
         if let n = Int(generatorsEach), n > 0 {
             for i in s.generators.indices { s.generators[i].count = n }

@@ -157,6 +157,14 @@ struct BigBangView: View {
         return min(max((v - l) / (h - l), 0), 1)
     }
 
+    /// v4.0 — same, for a `Big` lifetime.
+    static func logProgress(_ value: Big, from lo: Double, to hi: Double) -> Double {
+        guard hi > 1 else { return 0 }
+        let l = log10(max(lo, 1)), h = log10(hi), v = max(value, Big.one).log10Value
+        guard h > l else { return 0 }
+        return min(max((v - l) / (h - l), 0), 1)
+    }
+
     private var tierCard: some View {
         let tier = engine.state.currentTier
         return VStack(alignment: .leading, spacing: 10) {
@@ -374,11 +382,11 @@ struct BigBangView: View {
                 Menu {
                     ForEach(autoBangThresholdOptions, id: \.self) { t in
                         Button {
-                            engine.setAutoBigBangThreshold(t)
+                            engine.setAutoBigBangThreshold(Big(t))
                         } label: {
                             HStack {
                                 Text("\(Formatter.short(t)) ◈")
-                                if t == threshold {
+                                if Big(t) == threshold {
                                     Image(systemName: "checkmark")
                                 }
                             }
