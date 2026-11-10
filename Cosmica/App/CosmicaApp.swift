@@ -30,6 +30,12 @@ struct CosmicaApp: App {
     @State private var cloudChecked = false
 
     init() {
+        // v4.0 — `-cosmicaDemo` (CI screenshot run): a late-game save in memory only.
+        if DemoMode.isActive {
+            DemoMode.prepareDefaults()
+            _engine = State(initialValue: GameEngine(state: DemoMode.state(), persistence: Persistence.inMemory()))
+            return
+        }
         let persistence = (try? Persistence()) ?? Persistence.inMemory()
         let initial = persistence.load()
         _engine = State(initialValue: GameEngine(state: initial, persistence: persistence))
@@ -83,6 +89,10 @@ struct CosmicaApp: App {
                     // v3.0 Phase 5 — notification manager needs to install its
                     // delegate before the OS may deliver a tap event on cold launch.
                     notif.start()
+                    if DemoMode.isActive {   // v4.0 — no iCloud, Game Center, ads or offline sheet
+                        engine.start()
+                        return
+                    }
                     gameCenter.authenticate()
                     offlineSummary = engine.applyOffline()
                     engine.start()

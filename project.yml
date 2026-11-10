@@ -131,3 +131,26 @@ targets:
       base:
         PRODUCT_NAME: CosmicaTests
         GENERATE_INFOPLIST_FILE: YES   # needed to sign the test bundle (CI ad-hoc signs)
+  # v4.0 — screenshot walk of every screen on the -cosmicaDemo save (CI visual audit).
+  # Lives in its own scheme so scripts/testflight.sh (scheme Cosmica) doesn't run it.
+  CosmicaUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - CosmicaUITests
+    dependencies:
+      - target: Cosmica
+    settings:
+      base:
+        PRODUCT_NAME: CosmicaUITests
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_TARGET_NAME: Cosmica
+schemes:
+  CosmicaScreens:
+    build:
+      targets:
+        Cosmica: all
+        CosmicaUITests: [test]
+    test:
+      targets:
+        - CosmicaUITests

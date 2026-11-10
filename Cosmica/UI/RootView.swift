@@ -84,6 +84,14 @@ struct RootView: View {
         )) {
             AbsoluteAscensionView()
         }
+        // v4.0 — the first run past 1.8e308 opens the Omniverse. Waits for the
+        // Absolute moment if both somehow land together (a restored save).
+        .fullScreenCover(isPresented: Binding(
+            get: { !showSplash && !engine.showAbsoluteCelebration && engine.showOmniverseDoor },
+            set: { if !$0 { engine.acknowledgeOmniverseDoor() } }
+        )) {
+            OmniverseDoorView()
+        }
         .fullScreenCover(isPresented: $showOnboarding) {
             OnboardingView()
         }
