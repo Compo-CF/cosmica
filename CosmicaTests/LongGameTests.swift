@@ -19,7 +19,7 @@ final class LongGameTests: XCTestCase {
     func test_fragments_pastInt64_doNotTrap() {
         var s = GameState()
         s.absoluteAscendedAt = Date()
-        s.cosmicShards = 1e45            // ~5e20 fragments: past Int64.max
+        s.cosmicShards = Big(1e45)            // ~5e20 fragments: past Int64.max
         let e = engine(s)
         let f = e.availableFragments
         XCTAssertTrue(f.isFinite)
@@ -32,8 +32,8 @@ final class LongGameTests: XCTestCase {
     func test_stardust_neverBecomesInfinite() {
         var s = GameState()
         s.generators[0].count = 25
-        s.realityFragments = 1e300        // multiplier stack overflows to ∞
-        s.cosmicShards = 1e300
+        s.realityFragments = Big(1e300)        // multiplier stack overflows to ∞
+        s.cosmicShards = Big(1e300)
         let e = engine(s)
         XCTAssertFalse(e.state.tapValue.isFinite)
         e.manualTap()
@@ -56,7 +56,7 @@ final class LongGameTests: XCTestCase {
 
     func test_bigBang_countsAndRecordsBestRun() {
         var s = GameState()
-        s.lifetimeStardust = 1e12
+        s.lifetimeStardust = Big(1e12)
         let e = engine(s)
         e.bigBang()
         XCTAssertEqual(e.state.totalBigBangs, 1)
@@ -137,7 +137,7 @@ final class LongGameTests: XCTestCase {
         e.state.totalTaps += 100_000
         e.state.totalGeneratorsBought += 100_000
         e.state.totalDailyClaims += 10
-        e.state.lifetimeStardust = 1e200
+        e.state.lifetimeStardust = Big(1e200)
         e.checkChallenge()
         e.claimChallenge()
         XCTAssertEqual(e.state.challengeStars, 2)
@@ -146,13 +146,13 @@ final class LongGameTests: XCTestCase {
 
     func test_bestRunChallenge_latchesBeforeABigBangResetsTheRun() {
         var s = GameState()
-        s.bestRunStardust = 1e11
+        s.bestRunStardust = Big(1e11)
         let e = engine(s)
         let pool = WeeklyChallenge.pool(for: e.state)
         let w = (40...60).first { pool[$0 % pool.count] == .beatBestRun }!
         e.refreshChallenge(now: date(inWeek: w))
         XCTAssertEqual(e.challenge?.target, 1e12)
-        e.state.lifetimeStardust = 2e12
+        e.state.lifetimeStardust = Big(2e12)
         e.bigBang()                       // resets the run; must not lose the goal
         XCTAssertEqual(e.state.lifetimeStardust, 0)
         XCTAssertTrue(e.state.challengeCompleted)
@@ -183,7 +183,7 @@ final class LongGameTests: XCTestCase {
 
     func test_hugeTargets_progressOnALogScale() {
         var s = GameState()
-        s.lifetimeStardust = 1e50
+        s.lifetimeStardust = Big(1e50)
         XCTAssertEqual(AchievementGoal.lifetimeStardust(1e100).progress(state: s), 0.5, accuracy: 1e-9)
     }
 

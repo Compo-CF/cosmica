@@ -7,7 +7,7 @@ final class DoublerTests: XCTestCase {
     func test_doubler_doublesEarningsAndTaps() {
         var s = GameState()
         s.generators[0].count = 25
-        s.cosmicShards = 1e6            // big enough that a tap isn't stuck at its 1 ✦ floor
+        s.cosmicShards = Big(1e6)            // big enough that a tap isn't stuck at its 1 ✦ floor
         let base = s.stardustPerSecond
         let baseTap = s.tapValue
         XCTAssertGreaterThan(baseTap, 1)
@@ -28,7 +28,7 @@ final class DoublerTests: XCTestCase {
 
     func test_doubler_survivesBigBangAndOldSavesDefaultToOff() throws {
         var s = GameState()
-        s.lifetimeStardust = 1e12
+        s.lifetimeStardust = Big(1e12)
         s.doublerOwned = true
         let e = GameEngine(state: s, persistence: Persistence.inMemory())
         e.bigBang()

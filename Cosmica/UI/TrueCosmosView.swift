@@ -119,7 +119,7 @@ struct TrueCosmosView: View {
         // Progress on a log scale: the goal is orders of magnitude, not a sum.
         let progress: Double = {
             guard !met, best > 1, goal > 1 else { return met ? 1 : 0 }
-            return min(max(log10(best) / log10(goal), 0), 1)
+            return min(max(best.log10Value / goal.log10Value, 0), 1)
         }()
         return VStack(alignment: .leading, spacing: 10) {
             HStack {

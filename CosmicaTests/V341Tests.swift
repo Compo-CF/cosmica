@@ -24,15 +24,15 @@ final class V341Tests: XCTestCase {
         var s = GameState()
         s.absoluteAscendedAt = Date()
         s.cosmosCount = 3                       // goal 1e48
-        s.cosmicShards = 1e8
-        s.lifetimeStardust = 1e47
+        s.cosmicShards = Big(1e8)
+        s.lifetimeStardust = Big(1e47)
         let e = engine(s)
         XCTAssertGreaterThan(e.availableFragments, 0)
         XCTAssertFalse(e.cosmosGoalMet)
         XCTAssertFalse(e.canTrueCosmos)
         XCTAssertEqual(e.trueCosmos(), 0)
 
-        e.state.lifetimeStardust = 2e48
+        e.state.lifetimeStardust = Big(2e48)
         XCTAssertTrue(e.canTrueCosmos)
         // A Big Bang resets the run, but the cosmos remembers it reached the goal.
         XCTAssertGreaterThan(e.bigBang(), 0)
@@ -47,7 +47,7 @@ final class V341Tests: XCTestCase {
 
     func test_preUpdateSave_keepsItsBestRunTowardTheGoal() throws {
         var s = GameState()
-        s.bestRunStardust = 3e60
+        s.bestRunStardust = Big(3e60)
         var json = try JSONSerialization.jsonObject(with: JSONEncoder().encode(s)) as! [String: Any]
         for k in ["cosmosBestRun", "lastAwaySeconds", "lastAwayPaidSeconds"] { json.removeValue(forKey: k) }
         let old = try JSONDecoder().decode(GameState.self, from: JSONSerialization.data(withJSONObject: json))
@@ -58,25 +58,25 @@ final class V341Tests: XCTestCase {
     // MARK: Softer late curves
 
     func test_fragments_unchangedBelowABillionShards_gentlerAbove_andContinuous() {
-        XCTAssertEqual(CosmosCalculator.fragmentsEarned(cosmicShards: 1e6), 50)
-        XCTAssertEqual(CosmosCalculator.fragmentsEarned(cosmicShards: 1e8), 500)
-        let atKnee = CosmosCalculator.rawFragments(1e9)
-        XCTAssertEqual(CosmosCalculator.rawFragments(1e9 * 1.000001), atKnee, accuracy: atKnee * 1e-5)
+        XCTAssertEqual(CosmosCalculator.fragmentsEarned(cosmicShards: Big(1e6)), 50)
+        XCTAssertEqual(CosmosCalculator.fragmentsEarned(cosmicShards: Big(1e8)), 500)
+        let atKnee = CosmosCalculator.rawFragments(Big(1e9))
+        XCTAssertEqual(CosmosCalculator.rawFragments(Big(1e9 * 1.000001)), atKnee, accuracy: atKnee.double * 1e-5)
         // 1e19 shards: √ would pay 5e9; the gentler curve pays ~5e7.
-        let late = CosmosCalculator.fragmentsEarned(cosmicShards: 1e19)
+        let late = CosmosCalculator.fragmentsEarned(cosmicShards: Big(1e19))
         XCTAssertLessThan(late, 1e8)
         XCTAssertGreaterThan(late, 1e7)
         // The inverse agrees on both sides of the knee.
         for f in [400.0, 1_581, 5_000, 1e7] {
-            let need = CosmosCalculator.shardsRequired(forFragments: f)
+            let need = CosmosCalculator.shardsRequired(forFragments: Big(f))
             XCTAssertGreaterThanOrEqual(CosmosCalculator.rawFragments(need * 1.0000001), f * 0.99999, "f=\(f)")
         }
     }
 
     func test_sparkFragmentBonus_growsWithTheSquareRoot() {
-        XCTAssertEqual(MultiverseCalculator.fragmentMultiplier(sparks: 0), 1)
-        XCTAssertEqual(MultiverseCalculator.fragmentMultiplier(sparks: 1), 1.25, accuracy: 1e-12)
-        XCTAssertEqual(MultiverseCalculator.fragmentMultiplier(sparks: 100), 3.5, accuracy: 1e-12)
+        XCTAssertEqual(MultiverseCalculator.fragmentMultiplier(sparks: Big(0)), 1)
+        XCTAssertEqual(MultiverseCalculator.fragmentMultiplier(sparks: Big(1)), 1.25, accuracy: 1e-12)
+        XCTAssertEqual(MultiverseCalculator.fragmentMultiplier(sparks: Big(100)), 3.5, accuracy: 1e-12)
     }
 
     func test_newWonderLevels_costMore_builtLevelsKeepTheirEffect() {

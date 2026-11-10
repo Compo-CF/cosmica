@@ -18,7 +18,7 @@ final class WidgetSnapshotTests: XCTestCase {
             eventMultiplier: eventMultiplier,
             eventExpiresAt: eventExpiresAt,
             offlineCap: offlineCap,
-            cosmicShards: 0,
+            cosmicShards: Big(0),
             prestigeCount: 0,
             cosmosCount: 0,
             tierTitle: "Stargazer",
@@ -31,7 +31,7 @@ final class WidgetSnapshotTests: XCTestCase {
         let saved = Date()
         let s = snapshot(savedAt: saved)
         let later = saved.addingTimeInterval(3600)
-        let expected = OfflineAccrual.compute(now: later, lastSeen: saved, ratePerSecond: 10).stardustEarned
+        let expected = OfflineAccrual.compute(now: later, lastSeen: saved, ratePerSecond: Big(10)).stardustEarned
         XCTAssertEqual(s.waiting(at: later), expected, accuracy: 1e-6)
         XCTAssertEqual(s.waiting(at: later), 18_000, accuracy: 1e-6)
     }

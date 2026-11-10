@@ -6,7 +6,7 @@ struct WeeklyChallengeCard: View {
     @Environment(GameEngine.self) private var engine
     @Environment(HapticsManager.self) private var haptics
 
-    @State private var claimedShards: Double?
+    @State private var claimedShards: Big?
 
     private static let star = Color(red: 1.0, green: 0.80, blue: 0.32)
 

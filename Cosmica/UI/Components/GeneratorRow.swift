@@ -54,7 +54,7 @@ struct GeneratorRow: View {
         return max(n, 1)
     }
 
-    private var totalCost: Double {
+    private var totalCost: Big {
         if buyMode == .max {
             let n = generator.maxAffordable(budget: engine.state.stardust)
             return n > 0 ? generator.bulkCost(amount: n) : generator.nextCost

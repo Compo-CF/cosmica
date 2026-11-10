@@ -12,13 +12,13 @@ final class V34Tests: XCTestCase {
     // MARK: Multiverse math
 
     func test_sparks_needAThousandFragments_thenGrowWithTheSquareRoot() {
-        XCTAssertEqual(MultiverseCalculator.sparksEarned(realityFragments: 999), 0)
-        XCTAssertEqual(MultiverseCalculator.sparksEarned(realityFragments: 1_000), 5)
-        XCTAssertEqual(MultiverseCalculator.sparksEarned(realityFragments: 4_000), 10)
-        XCTAssertEqual(MultiverseCalculator.sparksEarned(realityFragments: 1e6), 158)
-        XCTAssertEqual(MultiverseCalculator.nextSparkThreshold(realityFragments: 0), 1_000)
-        XCTAssertEqual(MultiverseCalculator.nextSparkThreshold(realityFragments: 1_000), 1_440, accuracy: 1e-6)
-        XCTAssertEqual(MultiverseCalculator.progressToNextSpark(realityFragments: 500), 0.5, accuracy: 1e-9)
+        XCTAssertEqual(MultiverseCalculator.sparksEarned(realityFragments: Big(999)), 0)
+        XCTAssertEqual(MultiverseCalculator.sparksEarned(realityFragments: Big(1_000)), 5)
+        XCTAssertEqual(MultiverseCalculator.sparksEarned(realityFragments: Big(4_000)), 10)
+        XCTAssertEqual(MultiverseCalculator.sparksEarned(realityFragments: Big(1e6)), 158)
+        XCTAssertEqual(MultiverseCalculator.nextSparkThreshold(realityFragments: Big(0)), 1_000)
+        XCTAssertEqual(MultiverseCalculator.nextSparkThreshold(realityFragments: Big(1_000)), 1_440, accuracy: 1e-6)
+        XCTAssertEqual(MultiverseCalculator.progressToNextSpark(realityFragments: Big(500)), 0.5, accuracy: 1e-9)
     }
 
     /// v3.4.1: still a dip, not a trap, but a deeper one. A small collapse is
@@ -27,8 +27,8 @@ final class V34Tests: XCTestCase {
     /// grows with √sparks so collapses stop compounding ×100–1,000 each).
     func test_collapse_isADipNotATrap() {
         for f in [1_000.0, 10_000, 100_000, 1_000_000] {
-            let s = MultiverseCalculator.sparksEarned(realityFragments: f)
-            let before = CosmosCalculator.multiplier(fragments: f)
+            let s = MultiverseCalculator.sparksEarned(realityFragments: Big(f))
+            let before = CosmosCalculator.multiplier(fragments: Big(f))
             let firstCosmos = 50 * MultiverseCalculator.fragmentMultiplier(sparks: s)
             let after = CosmosCalculator.multiplier(fragments: firstCosmos) * MultiverseCalculator.stardustMultiplier(sparks: s)
             XCTAssertGreaterThan(after, before * 0.05, "F=\(f)")
@@ -39,9 +39,9 @@ final class V34Tests: XCTestCase {
     func test_multiverseCollapse_tradesFragmentsForSparks_keepsWhatShouldSurvive() {
         var s = GameState()
         s.cosmosCount = 10
-        s.realityFragments = 4_000
-        s.lifetimeRealityFragments = 4_000
-        s.cosmicShards = 5e6
+        s.realityFragments = Big(4_000)
+        s.lifetimeRealityFragments = Big(4_000)
+        s.cosmicShards = Big(5e6)
         s.absoluteAscendedAt = Date()
         s.wonderLevels = ["chronosphere": 2]
         s.builtWonderIds = ["chronosphere"]
@@ -69,7 +69,7 @@ final class V34Tests: XCTestCase {
     func test_multiverse_locksBelowTenCosmoi() {
         var s = GameState()
         s.cosmosCount = 9
-        s.realityFragments = 50_000
+        s.realityFragments = Big(50_000)
         XCTAssertFalse(engine(s).canCollapseMultiverse)
     }
 
@@ -77,14 +77,14 @@ final class V34Tests: XCTestCase {
         var s = GameState()
         s.generators[0].count = 25
         let base = s.stardustPerSecond
-        s.voidSparks = 4
+        s.voidSparks = Big(4)
         XCTAssertEqual(s.stardustPerSecond, base * 11, accuracy: base * 1e-9)   // 1 + 2.5·4
 
         var t = GameState()
         t.absoluteAscendedAt = Date()
-        t.cosmicShards = 1e6                  // 50 fragments before bonuses
+        t.cosmicShards = Big(1e6)                  // 50 fragments before bonuses
         XCTAssertEqual(engine(t).availableFragments, 50)
-        t.voidSparks = 4                      // v3.4.1: ×(1 + 0.25·√4) = ×1.5
+        t.voidSparks = Big(4)                      // v3.4.1: ×(1 + 0.25·√4) = ×1.5
         XCTAssertEqual(engine(t).availableFragments, 75)
     }
 
@@ -93,7 +93,7 @@ final class V34Tests: XCTestCase {
     func test_voidWonders_costSparks_andApplyTheirEffects() {
         var s = GameState()
         s.multiverseCount = 1
-        s.voidSparks = 10
+        s.voidSparks = Big(10)
         s.absoluteAscendedAt = Date()
         let e = engine(s)
         XCTAssertEqual(e.voidWonderCost(VoidWonderCatalog.seedId), 2)
@@ -105,7 +105,7 @@ final class V34Tests: XCTestCase {
         XCTAssertFalse(e.buildVoidWonder(id: VoidWonderCatalog.prismId))
 
         // Null Seed level 1 keeps 10% of shards through a True Cosmos.
-        e.state.cosmicShards = 4e6
+        e.state.cosmicShards = Big(4e6)
         XCTAssertGreaterThan(e.trueCosmos(), 0)
         XCTAssertEqual(e.state.cosmicShards, 4e5)
     }
@@ -118,7 +118,7 @@ final class V34Tests: XCTestCase {
 
     func test_sparkFurnace_doublesBigBangShardsPerLevel() {
         var s = GameState()
-        s.lifetimeStardust = 1e12
+        s.lifetimeStardust = Big(1e12)
         s.cosmosCount = 1                     // past Kindling
         let base = engine(s).availableShards
         XCTAssertGreaterThan(base, 0)
@@ -137,10 +137,10 @@ final class V34Tests: XCTestCase {
 
     func test_progressRank_aCollapsedSaveBeatsAnUncollapsedOne() {
         var veteran = GameState()
-        veteran.lifetimeRealityFragments = 5_000
+        veteran.lifetimeRealityFragments = Big(5_000)
         var collapsed = GameState()
-        collapsed.lifetimeRealityFragments = 4_000
-        collapsed.lifetimeVoidSparks = 10
+        collapsed.lifetimeRealityFragments = Big(4_000)
+        collapsed.lifetimeVoidSparks = Big(10)
         XCTAssertTrue(collapsed.isAhead(of: veteran))
     }
 
@@ -181,7 +181,7 @@ final class V34Tests: XCTestCase {
 
     func test_shardPacks_areThreeAndThirtyBigBangs() {
         var s = GameState()
-        s.lastBigBangShards = 1_000
+        s.lastBigBangShards = Big(1_000)
         let e = engine(s)
         let small = GameEngine.smallShardPack, large = GameEngine.largeShardPack
         XCTAssertEqual(e.shardPackAmount(base: small.base, multiple: small.bigBangs), 3_000)
@@ -192,8 +192,8 @@ final class V34Tests: XCTestCase {
 
     func test_shardPackTarget_namesTheBiggestThingNewlyInReach() {
         let e = engine()
-        XCTAssertNil(e.shardPackTarget(amount: 0))
-        let t = e.shardPackTarget(amount: 1e9)
+        XCTAssertNil(e.shardPackTarget(amount: Big(0)))
+        let t = e.shardPackTarget(amount: Big(1e9))
         XCTAssertNotNil(t)
         XCTAssertLessThanOrEqual(t!.cost, 1e9)
         XCTAssertGreaterThan(t!.cost, 0)

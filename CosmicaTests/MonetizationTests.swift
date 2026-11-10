@@ -25,7 +25,7 @@ final class MonetizationTests: XCTestCase {
 
     func test_shardPack_scalesWithTheLastBigBang() {
         var s = GameState()
-        s.lastBigBangShards = 25e12          // the Reddit player's late game
+        s.lastBigBangShards = Big(25e12)          // the Reddit player's late game
         let e = engine(s)
         XCTAssertEqual(e.shardPackAmount(base: 250, multiple: 1), 25e12)
         XCTAssertEqual(e.shardPackAmount(base: 2500, multiple: 10), 25e13)
@@ -33,7 +33,7 @@ final class MonetizationTests: XCTestCase {
 
     func test_bigBang_recordsItsPayout() {
         var s = GameState()
-        s.lifetimeStardust = 1e12            // first cosmos, first Big Bang: 150 ◈, ×3 Kindling
+        s.lifetimeStardust = Big(1e12)            // first cosmos, first Big Bang: 150 ◈, ×3 Kindling
         let e = engine(s)
         let paid = e.bigBang()
         XCTAssertEqual(paid, 450)

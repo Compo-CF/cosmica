@@ -21,7 +21,7 @@ struct ObservatoryView: View {
     }
     private static let gold = Color(red: 1.0, green: 0.80, blue: 0.32)
 
-    struct Floater: Identifiable { let id = UUID(); let value: Double; let x: CGFloat }
+    struct Floater: Identifiable { let id = UUID(); let value: Big; let x: CGFloat }
 
     var body: some View {
         ZStack {

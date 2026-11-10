@@ -83,7 +83,7 @@ final class DepthTests: XCTestCase {
     func test_buyingARank_spendsShardsAndRaisesLevel() {
         var s = GameState()
         s.cosmicSkillLevels["focus"] = 12
-        s.cosmicShards = 1e6
+        s.cosmicShards = Big(1e6)
         let e = engine(s)
         let cost = e.cosmicSkillCost("focus")!
         XCTAssertTrue(e.buyCosmicSkill("focus"))
@@ -95,7 +95,7 @@ final class DepthTests: XCTestCase {
 
     func test_kindling_triplesEarlyBigBangs() {
         var s = GameState()
-        s.lifetimeStardust = 1e12                           // 150 ◈ base
+        s.lifetimeStardust = Big(1e12)                           // 150 ◈ base
         let e = engine(s)
         XCTAssertTrue(e.kindlingActive)
         XCTAssertEqual(e.availableShards, 450)
@@ -107,21 +107,21 @@ final class DepthTests: XCTestCase {
     func test_kindling_onlyTriplesUpToTheCap() {
         let cap = PrestigeCalculator.kindlingCap
         // 900 ◈ base with 5,700 earned: 300 fits under the cap (100 base ×3), the rest is plain.
-        XCTAssertEqual(PrestigeCalculator.kindled(900, lifetimeShards: cap - 300, cosmosCount: 0), 300 + 800)
+        XCTAssertEqual(PrestigeCalculator.kindled(Big(900), lifetimeShards: Big(cap - 300), cosmosCount: 0), 300 + 800)
         // A giant first run is not a windfall.
-        XCTAssertEqual(PrestigeCalculator.kindled(1e6, lifetimeShards: 0, cosmosCount: 0), 1e6 + cap * 2 / 3, accuracy: 1e-6)
+        XCTAssertEqual(PrestigeCalculator.kindled(Big(1e6), lifetimeShards: Big(0), cosmosCount: 0), 1e6 + cap * 2 / 3, accuracy: 1e-6)
         // Crossing the cap never pays less than staying just under it.
-        let under = PrestigeCalculator.kindled(99, lifetimeShards: cap - 300, cosmosCount: 0)
-        let over = PrestigeCalculator.kindled(101, lifetimeShards: cap - 300, cosmosCount: 0)
+        let under = PrestigeCalculator.kindled(Big(99), lifetimeShards: Big(cap - 300), cosmosCount: 0)
+        let over = PrestigeCalculator.kindled(Big(101), lifetimeShards: Big(cap - 300), cosmosCount: 0)
         XCTAssertGreaterThan(over, under)
     }
 
     func test_kindling_endsAtTheCapAndAfterTrueCosmos() {
-        XCTAssertEqual(PrestigeCalculator.kindled(150, lifetimeShards: PrestigeCalculator.kindlingCap, cosmosCount: 0), 150)
-        XCTAssertEqual(PrestigeCalculator.kindled(150, lifetimeShards: 0, cosmosCount: 1), 150)
+        XCTAssertEqual(PrestigeCalculator.kindled(Big(150), lifetimeShards: Big(PrestigeCalculator.kindlingCap), cosmosCount: 0), 150)
+        XCTAssertEqual(PrestigeCalculator.kindled(Big(150), lifetimeShards: Big(0), cosmosCount: 1), 150)
         var s = GameState()
         s.cosmosCount = 1
-        s.lifetimeStardust = 1e12
+        s.lifetimeStardust = Big(1e12)
         XCTAssertFalse(engine(s).kindlingActive)
         XCTAssertEqual(engine(s).availableShards, 150)
     }
@@ -131,7 +131,7 @@ final class DepthTests: XCTestCase {
     func test_wonder_buildsThenLevelsUpAtAHundredTimesTheCost() {
         var s = GameState()
         s.cosmosCount = 1
-        s.cosmicShards = 1e6
+        s.cosmicShards = Big(1e6)
         let e = engine(s)
         XCTAssertEqual(e.wonderCost("chronosphere"), 5_000)
         XCTAssertTrue(e.buildWonder(id: "chronosphere"))
@@ -146,7 +146,7 @@ final class DepthTests: XCTestCase {
     func test_oneShotWonder_stopsAtOne() {
         var s = GameState()
         s.cosmosCount = 12
-        s.cosmicShards = 1e9
+        s.cosmicShards = Big(1e9)
         let e = engine(s)
         XCTAssertTrue(e.buildWonder(id: "time_lens"))
         XCTAssertNil(e.wonderCost("time_lens"))
