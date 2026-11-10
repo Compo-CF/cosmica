@@ -15,7 +15,7 @@ enum Dilation {
     static let maxStrength: Double = 0.62
 
     /// `x` with every order of magnitude past the threshold counted at `strength`.
-    static func apply(_ x: Big, strength: Double) -> Big {
+    static func apply(_ x: Big, strength: Double, threshold: Big = Dilation.threshold) -> Big {
         guard x > threshold else { return x }
         let t = threshold.log10Value
         return Big.fromLog10(t + strength * (x.log10Value - t))

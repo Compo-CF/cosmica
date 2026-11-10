@@ -154,6 +154,68 @@ final class V40Tests: XCTestCase {
         XCTAssertEqual(e.state.cosmosCount, 1)
     }
 
+    // MARK: Rifts
+
+    private func riftReady() -> GameEngine {
+        var s = GameState()
+        s.omniverseCount = 1
+        s.generators[0].count = 25
+        s.bestRunStardust = Big(1e400)
+        return engine(s)
+    }
+
+    func test_rift_goalFollowsYourBest_andEnteringResetsTheRun() {
+        let e = riftReady()
+        XCTAssertEqual(e.riftGoalLog(for: RiftCatalog.dimStarsId), 240)        // 60% of 1e400
+        e.state.stardust = Big(1e50)
+        XCTAssertTrue(e.enterRift(RiftCatalog.dimStarsId))
+        XCTAssertEqual(e.state.activeRiftId, RiftCatalog.dimStarsId)
+        XCTAssertEqual(e.state.riftGoalLog, 240, accuracy: 1e-9)
+        XCTAssertTrue(e.state.stardust < 1e50)
+        XCTAssertFalse(e.enterRift(RiftCatalog.loneHandId))                       // one at a time
+    }
+
+    func test_rift_completesATier_andThenAsksMore() {
+        let e = riftReady()
+        e.enterRift(RiftCatalog.loneHandId)
+        e.state.lifetimeStardust = Big.fromLog10(241)
+        e.applyTimeWarp(hours: 0.01)                                              // any gain path checks
+        XCTAssertNil(e.state.activeRiftId)
+        XCTAssertEqual(e.state.riftTier(RiftCatalog.loneHandId), 1)
+        XCTAssertEqual(e.completedRiftId, RiftCatalog.loneHandId)
+        XCTAssertEqual(e.riftGoalLog(for: RiftCatalog.loneHandId), 321)           // 80% of the 1e400 best
+    }
+
+    func test_rift_rules() {
+        var s = GameState()
+        s.generators[0].count = 25
+        s.generators[9].count = 25
+        s.realityFragments = Big(1e6)
+        let free = s.stardustPerSecond
+        s.activeRiftId = RiftCatalog.dimStarsId
+        XCTAssertTrue(s.stardustPerSecond < free)                                 // generator 10 is dark
+        s.activeRiftId = RiftCatalog.silentVoidId
+        XCTAssertEqual(s.realityFragmentMultiplier, 1)
+        s.activeRiftId = RiftCatalog.shortNightId
+        XCTAssertEqual(s.offlineStardustPerSecond, 0)
+        s.activeRiftId = RiftCatalog.loneHandId
+        let tapRift = s.tapValue
+        s.activeRiftId = nil
+        XCTAssertEqual(tapRift, s.tapValue * 100, accuracy: tapRift * 1e-9)
+    }
+
+    func test_rift_rewards() {
+        var s = GameState()
+        s.riftTiers = [RiftCatalog.heavyVeilId: 3, RiftCatalog.loneHandId: 2]
+        s.omniverseLevels = [OmniverseTree.veilId: 12]
+        XCTAssertEqual(s.dilationStrength, 0.641, accuracy: 1e-12)
+        XCTAssertLessThan(s.dilationStrength, 0.65)                               // the runaway line
+        s.generators[0].count = 25
+        let tap = s.tapValue
+        s.riftTiers[RiftCatalog.loneHandId] = 0
+        XCTAssertEqual(tap, s.tapValue * 25, accuracy: tap * 1e-9)
+    }
+
     /// The CI screenshot save must survive the engine's tick paths and every formatter.
     func test_demoSave_runsTheEngineWithoutTrapping() {
         let e = engine(DemoMode.state())

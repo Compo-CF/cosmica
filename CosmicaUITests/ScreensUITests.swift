@@ -33,6 +33,11 @@ final class ScreensUITests: XCTestCase {
             snap(String(format: "%02d-%@-lower", 11 + i * 2, slug(name)))
             app.navigationBars.buttons.element(boundBy: 0).tap()
         }
+        // v4.0 — Rifts sit under the Omniverse.
+        tab("Big Bang")
+        if open("Omniverse"), open("Rifts") {
+            sleep(1); snap("22-rifts"); app.swipeUp(); snap("23-rifts-lower")
+        }
     }
 
     // MARK: Helpers

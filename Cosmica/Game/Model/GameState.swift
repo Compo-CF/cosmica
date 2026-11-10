@@ -184,6 +184,14 @@ struct GameState: Codable {
     /// Best single run since the last Omniverse collapse (sizes the Echoes it pays).
     var omniverseBestRun: Big = .zero
 
+    // ───────── Rifts (v4.0 challenge runs) ─────────
+    /// The Rift being run right now, if any (see Rifts.swift).
+    var activeRiftId: String? = nil
+    /// log10 of the lifetime Stardust that completes the active Rift's next tier.
+    var riftGoalLog: Double = 0
+    /// Completed tiers per Rift (0–3). Rewards scale with these and are kept forever.
+    var riftTiers: [String: Int] = [:]
+
     // ───────── Codable: lenient decode so v1.0.x saves migrate to v2 ─────────
 
     init() {}   // memberwise-equivalent default init for fresh saves.
@@ -262,6 +270,9 @@ struct GameState: Codable {
         omniverseDoorOpen   = try c.decodeIfPresent(Bool.self,          forKey: .omniverseDoorOpen)   ?? false
         omniverseBestRun    = try c.decodeIfPresent(Big.self,           forKey: .omniverseBestRun)
             ?? max(lifetimeStardust, bestRunStardust)
+        activeRiftId        = try c.decodeIfPresent(String.self,        forKey: .activeRiftId)
+        riftGoalLog         = try c.decodeIfPresent(Double.self,        forKey: .riftGoalLog)         ?? 0
+        riftTiers           = try c.decodeIfPresent([String: Int].self, forKey: .riftTiers)           ?? [:]
 
         // v3.0.4 — the Autonomous Reactor node was retired (automation now covers
         // its cluster). Give back the 25 ◈ it cost. Removing the key makes this
@@ -373,7 +384,9 @@ struct GameState: Codable {
     // Every effect grows with the Wonder's level (v3.3); level 1 is the old effect.
     /// Chronosphere: +12 hours to the offline cap per level.
     var wonderOfflineCapBonus: TimeInterval {
+        // v4.0 — Short Night Rift tiers add here too (every offline-cap reader sums this).
         12 * 3600 * Double(wonderLevel("chronosphere"))
+            + RiftCatalog.shortNightRewardPerTier * Double(riftTier(RiftCatalog.shortNightId))
     }
     /// Voidkeeper: +50% Cosmic Shards on every Big Bang per level.
     var wonderBigBangYieldMultiplier: Double {
@@ -401,7 +414,8 @@ struct GameState: Codable {
     /// Permanent multiplier from accumulated Reality Fragments. Never resets — this is
     /// what carries power across True Cosmoi.
     var realityFragmentMultiplier: Big {
-        CosmosCalculator.multiplier(fragments: realityFragments)
+        if inRift(RiftCatalog.silentVoidId) { return .one }   // v4.0 Rift rule
+        return CosmosCalculator.multiplier(fragments: realityFragments)
     }
 
     /// v3.2 — permanent +10% per claimed weekly challenge (additive, like fragments).
@@ -414,7 +428,9 @@ struct GameState: Codable {
 
     // ───────── Multiverse (v3.4) ─────────
     /// Unspent Void Sparks: +250% Stardust each.
-    var voidSparkMultiplier: Big { MultiverseCalculator.stardustMultiplier(sparks: voidSparks) }
+    var voidSparkMultiplier: Big {
+        inRift(RiftCatalog.silentVoidId) ? .one : MultiverseCalculator.stardustMultiplier(sparks: voidSparks)
+    }
     /// Reality Fragments per True Cosmos: unspent sparks (v3.4.1: +25% × √sparks)
     /// × Fragment Prism (×2 per level).
     var voidFragmentMultiplier: Big {
@@ -438,9 +454,15 @@ struct GameState: Codable {
     func omniverseLevel(_ id: String) -> Int { omniverseLevels[id] ?? 0 }
     /// How much each ×10 of production past 1.8e308 counts (0.5 → 0.62 with Thin the Veil).
     var dilationStrength: Double {
-        min(Dilation.maxStrength,
-            Dilation.baseStrength + OmniverseTree.veilStep * Double(omniverseLevel(OmniverseTree.veilId)))
+        let veil = min(Dilation.maxStrength,
+                       Dilation.baseStrength + OmniverseTree.veilStep * Double(omniverseLevel(OmniverseTree.veilId)))
+        // Heavy Veil Rift tiers go past the Veil's cap (3 × 0.7% → 0.641, still under ~0.65).
+        return veil + RiftCatalog.heavyVeilRewardPerTier * Double(riftTier(RiftCatalog.heavyVeilId))
     }
+
+    // ───────── Rifts (v4.0) ─────────
+    func riftTier(_ id: String) -> Int { riftTiers[id] ?? 0 }
+    func inRift(_ id: String) -> Bool { activeRiftId == id }
     var echoMultiplier: Big { OmniverseCalculator.multiplier(echoes: echoes) }
     var omniverseBestSoFar: Big { max(omniverseBestRun, lifetimeStardust) }
 
@@ -467,24 +489,35 @@ struct GameState: Codable {
     /// v3.3 — the rate offline earnings (and the widget's projection) use: Night Shift
     /// generators at their away-from-the-game strength, and Time Lens folded in. The
     /// 50% offline factor itself is still applied by `OfflineAccrual`.
-    var offlineStardustPerSecond: Big { productionRate(offline: true) * wonderOfflineRateFactor }
+    var offlineStardustPerSecond: Big {
+        if inRift(RiftCatalog.shortNightId) { return .zero }   // v4.0 Rift rule: no offline earnings
+        return productionRate(offline: true) * wonderOfflineRateFactor
+    }
 
     /// v3.3 — production with Resonant generators boosting every other generator.
     private func productionRate(offline: Bool) -> Big {
         let totalResonance = generators.reduce(0.0) { $0 + ($1.count > 0 ? $1.resonance : 0) }
         var base = Big.zero
+        let dimStars = inRift(RiftCatalog.dimStarsId)
+        let lowBoost = pow(RiftCatalog.dimStarsRewardPerTier, Double(riftTier(RiftCatalog.dimStarsId)))
         for g in generators {
+            if dimStars && g.index >= 8 { continue }           // v4.0 Rift rule: generators 9–16 dark
             let tierMult: Big = CosmicTree.generatorTierMultiplier(g.index, cosmicSkillLevels)
             let fromOthers: Double = 1 + totalResonance - (g.count > 0 ? g.resonance : 0)
             let own: Double = g.ratePerSecond(with: upgrades, offline: offline) * fromOthers
+                * (g.index < 8 ? lowBoost : 1)                // Dim Stars reward
             base += tierMult * own
         }
         let globalUpgradeMult = upgrades
             .filter { $0.purchased && $0.isGlobal }
             .reduce(1.0) { $0 * $1.multiplier }
         // v4.0 — dilation past 1.8e308, then unspent Echoes on top (see Omniverse.swift).
-        let raw = base * globalUpgradeMult * totalMultiplier
-        return Dilation.apply(raw, strength: dilationStrength) * echoMultiplier
+        var raw = base * globalUpgradeMult * totalMultiplier
+        if inRift(RiftCatalog.shortNightId) { raw *= RiftCatalog.shortNightProductionBoost }
+        let dilated = inRift(RiftCatalog.heavyVeilId)
+            ? Dilation.apply(raw, strength: RiftCatalog.heavyVeilStrength, threshold: RiftCatalog.heavyVeilThreshold)
+            : Dilation.apply(raw, strength: dilationStrength)
+        return dilated * echoMultiplier
     }
 
     /// Value of a single manual tap.
@@ -492,6 +525,8 @@ struct GameState: Codable {
     var tapValue: Big {
         let base: Big = max(stardustPerSecond * 0.1, Big.one)
         let tree: Big = CosmicTree.tapMultiplier(cosmicSkillLevels)
-        return base * tree * wonderTapMultiplier * CosmicEventScheduler.tapMultiplier(activeEvent)
+        let rift = pow(RiftCatalog.loneHandRewardPerTier, Double(riftTier(RiftCatalog.loneHandId)))
+            * (inRift(RiftCatalog.loneHandId) ? RiftCatalog.loneHandTapBoost : 1)
+        return base * tree * wonderTapMultiplier * (CosmicEventScheduler.tapMultiplier(activeEvent) * rift)
     }
 }

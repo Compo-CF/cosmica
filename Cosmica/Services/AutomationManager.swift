@@ -64,7 +64,7 @@ final class AutomationManager {
     ///   3. The Autonomy branch on the Cosmic Tree covers this generator's cluster
     ///      per `CosmicTree.isGeneratorAutoBuyUnlocked(index:levels:)`
     func autoBuyStep() {
-        guard isActive, let engine else { return }
+        guard isActive, let engine, !engine.state.inRift(RiftCatalog.loneHandId) else { return }   // v4.0 Lone Hand
         let state = engine.state
         let budgetCap = state.stardust * 0.5
         guard budgetCap > 0 else { return }
@@ -103,7 +103,7 @@ final class AutomationManager {
     /// No-op when: Automation Core inactive, player hasn't enabled auto-BB,
     /// threshold not met, or cooldown still active.
     func autoBigBangStep() {
-        guard isActive, let engine else { return }
+        guard isActive, let engine, !engine.state.inRift(RiftCatalog.loneHandId) else { return }
         guard engine.state.autoBigBangEnabled else { return }
         // v3.1 — "Hold until Absolute": let one run climb to 1e36 instead of
         // resetting it every 30 seconds. Releases itself after ascending.
@@ -140,7 +140,8 @@ final class AutomationManager {
     ///   - Stop when nothing's affordable under the reserve, or when a
     ///     `buyCosmicSkill` returns false (safety net).
     func autoBuyCosmicTreeStep() {
-        guard isActive, let engine, engine.state.autoBuyCosmicTreeEnabled else { return }
+        guard isActive, let engine, engine.state.autoBuyCosmicTreeEnabled,
+              !engine.state.inRift(RiftCatalog.loneHandId) else { return }
 
         var safety = 0
         while safety < 100 {  // hard iteration cap — defense-in-depth

@@ -32,6 +32,23 @@ struct OmniverseView: View {
                         collapseButton
                     }
                     nodesSection
+                    if engine.riftsUnlocked {
+                        NavigationLink { RiftsView() } label: {
+                            HStack {
+                                Image(systemName: "tornado").foregroundStyle(Self.teal)
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("Rifts").font(.headline).foregroundStyle(.white)
+                                    Text(engine.activeRift.map { "In \($0.title)" } ?? "Challenge runs with permanent rewards")
+                                        .font(.caption).foregroundStyle(.secondary)
+                                }
+                                Spacer()
+                                Image(systemName: "chevron.right").foregroundStyle(.secondary)
+                            }
+                            .padding()
+                            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
+                            .padding(.horizontal)
+                        }
+                    }
                 }
                 .padding(.bottom, 32)
             }

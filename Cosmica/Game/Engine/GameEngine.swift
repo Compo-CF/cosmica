@@ -262,7 +262,8 @@ final class GameEngine {
     var availableFragments: Big {
         let base: Big = CosmosCalculator.fragmentsEarned(cosmicShards: state.cosmicShards)
         // v3.4 — unspent Void Sparks and the Fragment Prism multiply it too.
-        return (base * state.voidFragmentMultiplier * state.wonderFragmentMultiplier).floored
+        let rift = pow(RiftCatalog.silentVoidRewardPerTier, Double(state.riftTier(RiftCatalog.silentVoidId)))   // v4.0
+        return (base * state.voidFragmentMultiplier * (state.wonderFragmentMultiplier * rift)).floored
     }
 
     /// True Cosmos unlocks after Absolute Ascension AND when the shard balance yields
@@ -327,7 +328,8 @@ final class GameEngine {
 
     /// Void Sparks a collapse would pay right now.
     var availableSparks: Big {
-        MultiverseCalculator.sparksEarned(realityFragments: state.realityFragments)
+        let rift = pow(RiftCatalog.silentVoidRewardPerTier, Double(state.riftTier(RiftCatalog.silentVoidId)))   // v4.0
+        return (MultiverseCalculator.sparksEarned(realityFragments: state.realityFragments) * rift).floored
     }
 
     /// Open once the player has collapsed enough cosmoi; usable once their
@@ -386,6 +388,7 @@ final class GameEngine {
     func acknowledgeOmniverseDoor() { showOmniverseDoor = false }
 
     private func checkOmniverseDoor() {
+        checkRift()
         guard !state.omniverseDoorOpen, state.lifetimeStardust >= Dilation.threshold else { return }
         state.omniverseDoorOpen = true
         showOmniverseDoor = true
@@ -441,6 +444,7 @@ final class GameEngine {
     /// Internal for tests.
     func omniverseAutomationStep(now: Date) {
         guard now.timeIntervalSince(lastOmniverseAutoAt) >= 30 else { return }
+        guard !state.inRift(RiftCatalog.loneHandId) else { return }   // Rift rule: no automation
         if state.omniverseLevel(OmniverseTree.autoCollapseId) > 0, canCollapseMultiverse,
            availableSparks >= max(state.voidSparks, Big.one) {
             lastOmniverseAutoAt = now
@@ -452,6 +456,61 @@ final class GameEngine {
             lastOmniverseAutoAt = now
             trueCosmos()
         }
+    }
+
+    // MARK: - Rifts (v4.0 challenge runs)
+
+    /// Open after the first Omniverse collapse.
+    var riftsUnlocked: Bool { state.omniverseCount >= 1 }
+    var activeRift: Rift? { state.activeRiftId.flatMap(RiftCatalog.rift(id:)) }
+    /// Transient: the Rift whose tier was just completed (the UI shows it once).
+    private(set) var completedRiftId: String?
+    func acknowledgeRiftCompletion() { completedRiftId = nil }
+
+    /// log10 goal the next tier of `id` would ask for if entered now; nil once all tiers are done.
+    func riftGoalLog(for id: String) -> Double? {
+        let tier = state.riftTier(id)
+        guard tier < RiftCatalog.maxTier else { return nil }
+        return RiftCatalog.goalLog(tierIndex: tier, bestRunLog: state.bestRunSoFar.log10Value)
+    }
+
+    /// Start a fresh run under the Rift's rule. The goal is fixed now (your best run
+    /// keeps rising during the Rift, the target doesn't).
+    @discardableResult
+    func enterRift(_ id: String) -> Bool {
+        guard riftsUnlocked, state.activeRiftId == nil, RiftCatalog.rift(id: id) != nil,
+              let goal = riftGoalLog(for: id) else { return false }
+        checkChallenge()
+        state.bestRunStardust = state.bestRunSoFar
+        state.cosmosBestRun = state.cosmosBestSoFar
+        state.omniverseBestRun = state.omniverseBestSoFar
+        state.activeRiftId = id
+        state.riftGoalLog = goal
+        state.stardust = CosmicTree.startingStardust(state.cosmicSkillLevels)
+        state.lifetimeStardust = .zero
+        state.generators = GameContent.defaultGenerators
+        state.upgrades = GameContent.defaultUpgrades
+        save()
+        return true
+    }
+
+    /// Leave without completing: the rule ends, the run in progress carries on.
+    func leaveRift() {
+        guard state.activeRiftId != nil else { return }
+        state.activeRiftId = nil
+        state.riftGoalLog = 0
+        save()
+    }
+
+    /// Completes the active Rift's tier once this run reaches its goal. Runs on every
+    /// Stardust gain (via the Absolute / door checks).
+    private func checkRift() {
+        guard let id = state.activeRiftId, state.lifetimeStardust.log10Value >= state.riftGoalLog else { return }
+        state.riftTiers[id] = min(RiftCatalog.maxTier, state.riftTier(id) + 1)
+        state.activeRiftId = nil
+        state.riftGoalLog = 0
+        completedRiftId = id
+        save()
     }
 
     // MARK: - Cosmic tree
