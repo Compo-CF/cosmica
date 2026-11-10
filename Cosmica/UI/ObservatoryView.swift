@@ -111,11 +111,19 @@ struct ObservatoryView: View {
 
     // MARK: - Components
 
+    /// v4.0 — the sky takes the colour of the furthest layer the player has reached,
+    /// so the home screen itself changes as they climb (plan phase 4, "hero scene").
+    private var homeLayer: DSLayer {
+        let s = engine.state
+        if s.omniverseDoorOpen { return .omniverse }
+        if s.multiverseCount > 0 { return .multiverse }
+        if s.cosmosCount > 0 { return .cosmos }
+        if s.totalBigBangs > 0 { return .bigBang }
+        return .core
+    }
+
     private var background: some View {
-        LinearGradient(
-            colors: [.black, Color(red: 0.05, green: 0.0, blue: 0.18), .black],
-            startPoint: .top, endPoint: .bottom
-        )
+        DSLayerBackground(layer: homeLayer)
         .overlay {
             // Stars
             Canvas { ctx, size in
