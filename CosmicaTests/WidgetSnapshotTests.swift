@@ -12,7 +12,7 @@ final class WidgetSnapshotTests: XCTestCase {
                           lastDailyClaim: Date? = nil) -> WidgetSnapshot {
         WidgetSnapshot(
             savedAt: savedAt,
-            baseRate: baseRate,
+            baseRate: Big(baseRate),
             adBoostMultiplier: adBoostExpiresAt == nil ? 1 : 2,
             adBoostExpiresAt: adBoostExpiresAt,
             eventMultiplier: eventMultiplier,
