@@ -1,0 +1,33 @@
+name: iOS build and tests
+
+# Simulator build + CosmicaTests, no signing. The repo is public, so macOS minutes are free.
+on:
+  push:
+    branches: [v4.0]
+    paths:
+      - 'Cosmica/**'
+      - 'CosmicaTests/**'
+      - 'CosmicaWidget/**'
+      - 'project.yml'
+      - 'scripts/ci.sh'
+      - '.github/workflows/ci.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: ios-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: macos-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and unit tests
+        run: bash scripts/ci.sh
+      - name: Errors
+        if: failure()
+        run: grep -E "error:" build.log | sort -u | head -120 || true
+      - name: Failed tests
+        if: failure()
+        run: grep -E "error: -\[|failed \(" build.log | head -80 || true
