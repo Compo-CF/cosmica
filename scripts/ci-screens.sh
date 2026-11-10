@@ -17,6 +17,21 @@ xcodebuild \
   -skipPackagePluginValidation -skipMacroValidation \
   CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM= PROVISIONING_PROFILE_SPECIFIER= \
   test 2>&1 | tee screens.log | grep -E "error:|Test Case|TEST" || true
+CRASH=$(ls -t ~/Library/Logs/DiagnosticReports/ 2>/dev/null | grep -i cosmica | head -1 || true)
+if [ -n "$CRASH" ]; then
+  echo "===== crash report: $CRASH ====="
+  python3 - ~/Library/Logs/DiagnosticReports/"$CRASH" <<'PY' | tee crash.txt
+import json, sys
+text = open(sys.argv[1]).read()
+body = json.loads(text[text.index("\n") + 1:])
+print("exception:", body.get("exception"), "| termination:", body.get("termination", {}).get("indicator"))
+ft = body.get("faultingThread", 0)
+images = body.get("usedImages", [])
+for f in body["threads"][ft]["frames"][:25]:
+    img = images[f["imageIndex"]].get("name", "?") if f.get("imageIndex") is not None else "?"
+    print(f"  {img:28s} {f.get('symbol', '?')}  {f.get('sourceFile', '')}:{f.get('sourceLine', '')}")
+PY
+fi
 xcrun xcresulttool export attachments --path screens.xcresult --output-path shots-raw
 python3 - <<'PY'
 import json, os, shutil, re

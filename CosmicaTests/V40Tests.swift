@@ -162,13 +162,14 @@ final class V40Tests: XCTestCase {
         _ = e.availableShards; _ = e.availableFragments; _ = e.availableSparks; _ = e.availableEchoes
         e.manualTap()
         e.applyTimeWarp(hours: 1)          // runs the door / achievement / challenge checks
-        e.omniverseAutomationStep(now: Date())
+        XCTAssertTrue(e.state.lifetimeStardust > Dilation.threshold)
+        e.omniverseAutomationStep(now: Date())   // Cosmic Autopilot is bought: a True Cosmos resets the run
+        XCTAssertEqual(e.state.cosmosCount, 65)
         for g in e.state.generators { _ = Formatter.short(g.nextCost); _ = g.maxAffordable(budget: e.state.stardust) }
         for s in [e.state.stardust, e.state.cosmicShards, e.state.realityFragments, e.state.stardustPerSecond] {
             _ = Formatter.short(s); _ = Formatter.count(s); _ = Formatter.multiplier(s)
         }
         for a in AchievementCatalog.all { _ = a.goal.progress(state: e.state) }
-        XCTAssertTrue(e.state.lifetimeStardust > Dilation.threshold)
     }
 
     func test_formatter_pastDouble() {
