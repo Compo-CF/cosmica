@@ -147,13 +147,20 @@ struct GeneratorRow: View {
                 .frame(minWidth: 74)
                 .padding(.vertical, 8)
                 .padding(.horizontal, 10)
-                .background(canAfford ? Color.purple : Color.gray.opacity(0.3), in: RoundedRectangle(cornerRadius: 10))
-                .foregroundStyle(canAfford ? .white : .secondary)
+                .background(canAfford ? AnyShapeStyle(DSLayer.core.gradient) : AnyShapeStyle(Color.gray.opacity(0.3)),
+                            in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .foregroundStyle(canAfford ? Color.black : Color.secondary)
             }
             .disabled(!canAfford)
         }
         .padding(12)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
+        // v4.0 design system: the hairline lights up when the next buy is affordable.
+        .background {
+            RoundedRectangle(cornerRadius: DS.radius, style: .continuous)
+                .fill(.ultraThinMaterial)
+                .overlay(RoundedRectangle(cornerRadius: DS.radius, style: .continuous)
+                    .strokeBorder(DSLayer.core.accent.opacity(canAfford ? 0.45 : 0.12), lineWidth: 1))
+        }
     }
 
     private var lockedView: some View {

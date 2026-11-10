@@ -55,6 +55,13 @@ targets:
           UIColorName: "LaunchBackground"
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
+        # v4.0 — Xcode 26 upload validation: an iPad build must list all four orientations
+        # (iPad multitasking). iPhone stays portrait-only via the key above.
+        UISupportedInterfaceOrientations~ipad:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
         NSUserTrackingUsageDescription: "Cosmica uses your identifier to show more relevant ads and support the game."
         GADApplicationIdentifier: "ca-app-pub-1927040492403163~7701480321"
         ITSAppUsesNonExemptEncryption: false

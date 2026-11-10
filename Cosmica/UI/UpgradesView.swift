@@ -17,7 +17,7 @@ struct UpgradesView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                Color.black.ignoresSafeArea()
+                DSLayerBackground(layer: .core)
                 ScrollView {
                     VStack(alignment: .leading, spacing: 18) {
                         CurrencyBar()
@@ -79,7 +79,7 @@ struct UpgradesView: View {
                         .font(.caption.bold())
                         .padding(.vertical, 6)
                         .padding(.horizontal, 10)
-                        .background(engine.state.stardust >= up.cost ? Color.purple : Color.gray.opacity(0.3),
+                        .background(engine.state.stardust >= up.cost ? AnyShapeStyle(DSLayer.core.gradient) : AnyShapeStyle(Color.gray.opacity(0.3)),
                                     in: RoundedRectangle(cornerRadius: 8))
                         .foregroundStyle(.white)
                 }
