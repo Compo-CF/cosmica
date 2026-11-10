@@ -4,6 +4,15 @@
   "_note": "Bundled fallback. Authoritative copy is docs/studio-games.json served from GitHub Pages at https://compo-cf.github.io/cosmica/studio-games.json. Edit docs/ to change the live shelf; this file is only used when the fetch fails and no cache is written yet.",
   "games": [
     {
+      "id": "cosmica",
+      "appStoreID": "6784340038",
+      "name": "Cosmica: Idle Universe",
+      "tagline": "Idle space game. Prestige, wonders, cosmoi.",
+      "iconURL": "https://is1-ssl.mzstatic.com/image/thumb/Purple221/v4/ff/4c/47/ff4c47b9-5705-9af7-87e6-adb8571c54ee/AppIcon-0-0-1x_U007ephone-0-1-85-220.png/512x512bb.jpg",
+      "sortWeight": 5,
+      "audienceTags": ["idle", "space"]
+    },
+    {
       "id": "ghostline",
       "appStoreID": "6830660705",
       "name": "Ghostline: Idle Racer",
