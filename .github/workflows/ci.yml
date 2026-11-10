@@ -4,7 +4,7 @@ name: iOS build and tests
 # audit). Ad-hoc signed, see scripts/ci.sh. The repo is public, so macOS minutes are free.
 on:
   push:
-    branches: [v4.0]
+    branches: [v4.0, main]
     paths:
       - 'Cosmica/**'
       - 'CosmicaTests/**'
