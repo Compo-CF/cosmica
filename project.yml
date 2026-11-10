@@ -99,6 +99,7 @@ targets:
       - path: Cosmica/Shared/WidgetSnapshot.swift
       - path: Cosmica/Game/Engine/OfflineAccrual.swift
       - path: Cosmica/Services/Formatter.swift
+      - path: Cosmica/Shared/Big.swift
     info:
       path: Generated/CosmicaWidget-Info.plist
       properties:
