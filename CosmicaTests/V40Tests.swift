@@ -179,11 +179,11 @@ final class V40Tests: XCTestCase {
         let e = riftReady()
         e.enterRift(RiftCatalog.loneHandId)
         e.state.lifetimeStardust = Big.fromLog10(241)
-        e.applyTimeWarp(hours: 0.01)                                              // any gain path checks
+        e.applyOffline()                                                          // runs the checks even at zero production
         XCTAssertNil(e.state.activeRiftId)
         XCTAssertEqual(e.state.riftTier(RiftCatalog.loneHandId), 1)
         XCTAssertEqual(e.completedRiftId, RiftCatalog.loneHandId)
-        XCTAssertEqual(e.riftGoalLog(for: RiftCatalog.loneHandId), 321)           // 80% of the 1e400 best
+        XCTAssertEqual(e.riftGoalLog(for: RiftCatalog.loneHandId), 320)           // 80% of the 1e400 best
     }
 
     func test_rift_rules() {
