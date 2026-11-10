@@ -220,135 +220,64 @@ struct BigBangView: View {
         .padding(.horizontal)
     }
 
+    // v4.0 — every hub link is a DSLinkRow in its layer's colours (UI/Design/DS.swift).
+
     private var cosmicTreeLink: some View {
         NavigationLink { CosmicTreeView() } label: {
-            HStack {
-                Image(systemName: "circle.hexagongrid.fill").foregroundStyle(.cyan)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Cosmic Tree").font(.headline).foregroundStyle(.white)
-                    Text("Spend \(Formatter.short(engine.state.cosmicShards)) ◈ Cosmic Shards on permanent upgrades")
-                        .font(.caption).foregroundStyle(.secondary)
-                }
-                Spacer()
-                Image(systemName: "chevron.right").foregroundStyle(.secondary)
-            }
-            .padding()
-            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
-            .padding(.horizontal)
+            DSLinkRow(layer: .bigBang, symbol: "circle.hexagongrid.fill", title: "Cosmic Tree",
+                      subtitle: "Spend \(Formatter.short(engine.state.cosmicShards)) ◈ on permanent upgrades")
         }
+        .buttonStyle(.plain)
     }
 
-    /// Always-visible achievements board. Populates as the player plays; opening it
-    /// early shows all 25 goals with progress bars.
+    /// Always-visible achievements board.
     private var achievementsLink: some View {
         NavigationLink { AchievementsView() } label: {
-            HStack {
-                Image(systemName: "rosette").foregroundStyle(.orange)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Achievements").font(.headline).foregroundStyle(.white)
-                    Text("\(engine.state.unlockedAchievementIds.count) / \(AchievementCatalog.all.count) unlocked  ·  ×\(String(format: "%.3f", engine.state.achievementMultiplier)) permanent")
-                        .font(.caption).foregroundStyle(.secondary)
-                }
-                Spacer()
-                Image(systemName: "chevron.right").foregroundStyle(.secondary)
-            }
-            .padding()
-            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
-            .padding(.horizontal)
+            DSLinkRow(layer: .core, symbol: "rosette", title: "Achievements",
+                      subtitle: "\(engine.state.unlockedAchievementIds.count) / \(AchievementCatalog.all.count) unlocked  ·  ×\(String(format: "%.3f", engine.state.achievementMultiplier)) permanent")
         }
+        .buttonStyle(.plain)
     }
 
-    /// Endgame Wonders. Only shown once the player has completed at least one True Cosmos
-    /// (so the intro doesn't leak the meta-loop before it's earned).
+    /// Endgame Wonders, once a True Cosmos is done.
     private var wondersLink: some View {
         NavigationLink { WondersView() } label: {
-            HStack {
-                Image(systemName: "building.columns.fill").foregroundStyle(.pink)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Cosmic Wonders").font(.headline).foregroundStyle(.white)
-                    Text("\(engine.state.builtWonderIds.count) / \(WondersCatalog.all.count) built  ·  permanent across every reset")
-                        .font(.caption).foregroundStyle(.secondary)
-                }
-                Spacer()
-                Image(systemName: "chevron.right").foregroundStyle(.secondary)
-            }
-            .padding()
-            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
-            .padding(.horizontal)
+            DSLinkRow(layer: .cosmos, symbol: "building.columns.fill", title: "Cosmic Wonders",
+                      subtitle: "\(engine.state.builtWonderIds.count) / \(WondersCatalog.all.count) built  ·  permanent across every reset")
         }
+        .buttonStyle(.plain)
     }
 
     /// v4.0 — Omniverse entry point, once the door has opened.
     private var omniverseLink: some View {
         NavigationLink { OmniverseView() } label: {
-            HStack {
-                Image(systemName: "circle.hexagonpath.fill").foregroundStyle(OmniverseView.gold)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Omniverse").font(.headline).foregroundStyle(.white)
-                    Text("\(Formatter.count(engine.state.echoes)) Echoes  ·  \(Formatter.multiplier(engine.state.echoMultiplier)) everything")
-                        .font(.caption).foregroundStyle(.secondary)
-                }
-                Spacer()
-                if engine.canCollapseOmniverse {
-                    Text("+\(Formatter.count(engine.availableEchoes))").font(.caption.bold()).foregroundStyle(OmniverseView.gold)
-                }
-                Image(systemName: "chevron.right").foregroundStyle(.secondary)
-            }
-            .padding()
-            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
-            .padding(.horizontal)
+            DSLinkRow(layer: .omniverse, symbol: "circle.hexagonpath.fill", title: "Omniverse",
+                      subtitle: "\(OmniverseView.echoes(engine.state.echoes))  ·  \(Formatter.multiplier(engine.state.echoMultiplier)) everything",
+                      badge: engine.canCollapseOmniverse ? "+\(Formatter.count(engine.availableEchoes))" : nil)
         }
+        .buttonStyle(.plain)
     }
 
     /// v3.4 — Multiverse Collapse entry point, once it has opened (10 cosmoi).
     private var multiverseLink: some View {
         NavigationLink { MultiverseView() } label: {
-            HStack {
-                Image(systemName: "circle.circle.fill")
-                    .foregroundStyle(Color(red: 0.55, green: 0.45, blue: 1.00))
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Multiverse").font(.headline).foregroundStyle(.white)
-                    Text("\(Formatter.count(engine.state.voidSparks)) Void Sparks  ·  \(Formatter.multiplier(engine.state.voidSparkMultiplier)) permanent")
-                        .font(.caption).foregroundStyle(.secondary)
-                }
-                Spacer()
-                Image(systemName: "chevron.right").foregroundStyle(.secondary)
-            }
-            .padding()
-            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
-            .padding(.horizontal)
+            DSLinkRow(layer: .multiverse, symbol: "circle.circle.fill", title: "Multiverse",
+                      subtitle: "\(Formatter.count(engine.state.voidSparks)) Void Sparks  ·  \(Formatter.multiplier(engine.state.voidSparkMultiplier)) permanent",
+                      badge: engine.canCollapseMultiverse ? "+\(Formatter.count(engine.availableSparks))" : nil)
         }
+        .buttonStyle(.plain)
     }
 
-    /// Meta-prestige entry point. Only shown once the player has crossed Absolute
-    /// (matches the `.hasAbsoluteAscended` gate in the parent VStack).
+    /// Meta-prestige entry point, once the player has crossed Absolute.
     private var trueCosmosLink: some View {
         NavigationLink { TrueCosmosView() } label: {
-            HStack {
-                Image(systemName: "infinity.circle.fill")
-                    .foregroundStyle(
-                        LinearGradient(
-                            colors: [Color(red: 1.0, green: 0.55, blue: 0.90), Color(red: 0.30, green: 0.90, blue: 1.00), Color(red: 1.0, green: 0.72, blue: 0.20)],
-                            startPoint: .leading, endPoint: .trailing
-                        )
-                    )
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("True Cosmos").font(.headline).foregroundStyle(.white)
-                    if engine.state.cosmosCount > 0 {
-                        Text("\(engine.state.cosmosCount) cosmos collapsed  ·  \(Formatter.multiplier(engine.state.realityFragmentMultiplier)) permanent")
-                            .font(.caption).foregroundStyle(.secondary)
-                    } else {
-                        Text("Collapse the universe for permanent Reality Fragments")
-                            .font(.caption).foregroundStyle(.secondary)
-                    }
-                }
-                Spacer()
-                Image(systemName: "chevron.right").foregroundStyle(.secondary)
-            }
-            .padding()
-            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
-            .padding(.horizontal)
+            DSLinkRow(layer: .cosmos, symbol: "infinity.circle.fill", title: "True Cosmos",
+                      subtitle: engine.state.cosmosCount > 0
+                        ? "\(engine.state.cosmosCount) cosmos collapsed  ·  \(Formatter.multiplier(engine.state.realityFragmentMultiplier)) permanent"
+                        : "Collapse the universe for permanent Reality Fragments",
+                      badge: engine.canTrueCosmos ? "+\(Formatter.count(engine.availableFragments))" : nil)
         }
+        .buttonStyle(.plain)
     }
 
     /// v3.0.4 — locked preview of True Cosmos, shown until the player first

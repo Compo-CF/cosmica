@@ -9,7 +9,7 @@ struct RiftsView: View {
 
     var body: some View {
         ZStack {
-            Color.black.ignoresSafeArea()
+            DSLayerBackground(layer: .omniverse)
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
                     Text("Each Rift starts a fresh run under one rule. Reach its goal in that run to complete the next tier and keep its reward forever. Goals follow your best run, so they stay a challenge.")
@@ -59,10 +59,7 @@ struct RiftsView: View {
             Button("Leave the Rift") { engine.leaveRift() }
                 .font(.caption.bold()).foregroundStyle(.red)
         }
-        .padding()
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
-        .padding(.horizontal)
+        .dsCard(.omniverse, highlighted: true)
     }
 }
 
@@ -107,8 +104,6 @@ private struct RiftRow: View {
                 Label("All tiers complete", systemImage: "checkmark.seal.fill").font(.caption.bold()).foregroundStyle(.green)
             }
         }
-        .padding()
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
-        .padding(.horizontal)
+        .dsCard(.omniverse)
     }
 }

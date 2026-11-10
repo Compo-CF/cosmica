@@ -19,9 +19,7 @@ struct OmniverseView: View {
 
     var body: some View {
         ZStack {
-            LinearGradient(colors: [.black, Color(red: 0.10, green: 0.07, blue: 0.02), .black],
-                           startPoint: .top, endPoint: .bottom)
-                .ignoresSafeArea()
+            DSLayerBackground(layer: .omniverse)
             ScrollView {
                 VStack(spacing: 22) {
                     header.padding(.top, 12)
@@ -122,18 +120,13 @@ struct OmniverseView: View {
     private var collapseButton: some View {
         Button { showConfirm = true } label: {
             Text("Collapse the Omniverse — claim \(Self.echoes(engine.availableEchoes))")
-                .font(.headline)
-                .frame(maxWidth: .infinity, minHeight: 54)
-                .background(LinearGradient(colors: [Self.gold, Self.teal], startPoint: .leading, endPoint: .trailing),
-                            in: RoundedRectangle(cornerRadius: 14))
-                .foregroundStyle(.black)
         }
-        .padding(.horizontal)
+        .buttonStyle(DSPrimaryButtonStyle(layer: .omniverse))
     }
 
     private var nodesSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Omniverse Nodes").font(.title3.bold()).foregroundStyle(.white).padding(.horizontal)
+            DSSectionHeader(title: "Omniverse Nodes", note: Self.echoes(engine.state.echoes), layer: .omniverse)
             ForEach(OmniverseTree.all) { node in
                 OmniverseNodeRow(node: node) {
                     if engine.buyOmniverseNode(id: node.id) { haptics.skillUnlock() } else { haptics.error() }
@@ -146,10 +139,7 @@ struct OmniverseView: View {
 
     private func card<C: View>(@ViewBuilder _ content: () -> C) -> some View {
         VStack(alignment: .leading, spacing: 10) { content() }
-            .padding()
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
-            .padding(.horizontal)
+            .dsCard(.omniverse)
     }
 
     private func bullet(_ text: String) -> some View {
@@ -205,8 +195,6 @@ private struct OmniverseNodeRow: View {
                 Image(systemName: "checkmark.seal.fill").foregroundStyle(.green)
             }
         }
-        .padding()
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
-        .padding(.horizontal)
+        .dsCard(.omniverse, highlighted: canBuy)
     }
 }
