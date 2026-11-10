@@ -35,11 +35,13 @@ final class LongGameTests: XCTestCase {
         s.realityFragments = Big(1e300)        // multiplier stack overflows to ∞
         s.cosmicShards = Big(1e300)
         let e = engine(s)
-        // v4.0 — Big: the stack no longer overflows to ∞, it is simply past the ceiling.
-        XCTAssertGreaterThan(e.state.tapValue, GameEngine.ceiling)
+        // v4.0 — Big: the stack no longer overflows to ∞ and there is no ceiling;
+        // the tap lands in full, far past the old 1e300 cap.
+        let tap = e.state.tapValue
+        XCTAssertGreaterThan(tap, 1e300)
         e.manualTap()
-        XCTAssertEqual(e.state.stardust, GameEngine.ceiling)
-        XCTAssertEqual(e.state.lifetimeStardust, GameEngine.ceiling)
+        XCTAssertEqual(e.state.stardust, tap, accuracy: tap * 1e-9)
+        XCTAssertEqual(e.state.lifetimeStardust, tap, accuracy: tap * 1e-9)
     }
 
     func test_formatter_bigNumbers() {

@@ -48,6 +48,10 @@ struct BigBangView: View {
                         if engine.multiverseUnlocked || engine.state.multiverseCount > 0 {
                             multiverseLink
                         }
+                        // v4.0 — fourth layer, once a run has passed 1.8e308.
+                        if engine.omniverseUnlocked {
+                            omniverseLink
+                        }
                         if automation.isActive {
                             autoBigBangCard
                         }
@@ -266,6 +270,28 @@ struct BigBangView: View {
                         .font(.caption).foregroundStyle(.secondary)
                 }
                 Spacer()
+                Image(systemName: "chevron.right").foregroundStyle(.secondary)
+            }
+            .padding()
+            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
+            .padding(.horizontal)
+        }
+    }
+
+    /// v4.0 — Omniverse entry point, once the door has opened.
+    private var omniverseLink: some View {
+        NavigationLink { OmniverseView() } label: {
+            HStack {
+                Image(systemName: "circle.hexagonpath.fill").foregroundStyle(OmniverseView.gold)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Omniverse").font(.headline).foregroundStyle(.white)
+                    Text("\(Formatter.count(engine.state.echoes)) Echoes  ·  \(Formatter.multiplier(engine.state.echoMultiplier)) everything")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+                Spacer()
+                if engine.canCollapseOmniverse {
+                    Text("+\(Formatter.count(engine.availableEchoes))").font(.caption.bold()).foregroundStyle(OmniverseView.gold)
+                }
                 Image(systemName: "chevron.right").foregroundStyle(.secondary)
             }
             .padding()

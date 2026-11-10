@@ -168,6 +168,22 @@ struct GameState: Codable {
     /// `CosmosCalculator.goal(cosmosCount:)`. Reset by True Cosmos and collapse.
     var cosmosBestRun: Big = .zero
 
+    // ───────── Omniverse (v4.0, fourth layer) ─────────
+    /// Echoes: earned by an Omniverse collapse, never reset. Unspent ones multiply
+    /// production ×(1 + Echoes) after dilation; they also buy Omniverse nodes.
+    var echoes: Big = .zero
+    var lifetimeEchoes: Big = .zero
+    var omniverseCount: Int = 0
+    /// Cosmoi since the last Omniverse collapse. The Cosmos Goal climbs with this,
+    /// so a collapse restarts the goal ladder. A pre-4.0 save starts at cosmosCount
+    /// (the goal it already had).
+    var cosmosSinceOmniverse: Int = 0
+    var omniverseLevels: [String: Int] = [:]
+    /// Set the first time a run passes 1.8e308.
+    var omniverseDoorOpen: Bool = false
+    /// Best single run since the last Omniverse collapse (sizes the Echoes it pays).
+    var omniverseBestRun: Big = .zero
+
     // ───────── Codable: lenient decode so v1.0.x saves migrate to v2 ─────────
 
     init() {}   // memberwise-equivalent default init for fresh saves.
@@ -238,6 +254,14 @@ struct GameState: Codable {
         // only help, so nobody is set back by the update.
         cosmosBestRun       = try c.decodeIfPresent(Big.self,           forKey: .cosmosBestRun)
             ?? max(lifetimeStardust, bestRunStardust)
+        echoes              = try c.decodeIfPresent(Big.self,           forKey: .echoes)              ?? .zero
+        lifetimeEchoes      = try c.decodeIfPresent(Big.self,           forKey: .lifetimeEchoes)      ?? .zero
+        omniverseCount      = try c.decodeIfPresent(Int.self,           forKey: .omniverseCount)      ?? 0
+        cosmosSinceOmniverse = try c.decodeIfPresent(Int.self,          forKey: .cosmosSinceOmniverse) ?? cosmosCount
+        omniverseLevels     = try c.decodeIfPresent([String: Int].self, forKey: .omniverseLevels)     ?? [:]
+        omniverseDoorOpen   = try c.decodeIfPresent(Bool.self,          forKey: .omniverseDoorOpen)   ?? false
+        omniverseBestRun    = try c.decodeIfPresent(Big.self,           forKey: .omniverseBestRun)
+            ?? max(lifetimeStardust, bestRunStardust)
 
         // v3.0.4 — the Autonomous Reactor node was retired (automation now covers
         // its cluster). Give back the 25 ◈ it cost. Removing the key makes this
@@ -270,7 +294,9 @@ struct GameState: Codable {
     /// v3.4 — lifetimeVoidSparks goes first: a Multiverse Collapse zeroes the
     /// fragment balance but never this, and only a collapsed save has any.
     var progressRank: [Big] {
-        [lifetimeVoidSparks,
+        [lifetimeEchoes,          // v4.0 — only an Omniverse save has any
+         Big(omniverseCount),
+         lifetimeVoidSparks,
          lifetimeRealityFragments,
          lifetimeCosmicShards,
          Big(unlockedAchievementIds.count),
@@ -408,6 +434,16 @@ struct GameState: Codable {
     /// v3.4.1 — best single run in this cosmos, including the one in progress.
     var cosmosBestSoFar: Big { max(cosmosBestRun, lifetimeStardust) }
 
+    // ───────── Omniverse (v4.0) ─────────
+    func omniverseLevel(_ id: String) -> Int { omniverseLevels[id] ?? 0 }
+    /// How much each ×10 of production past 1.8e308 counts (0.5 → 0.62 with Thin the Veil).
+    var dilationStrength: Double {
+        min(Dilation.maxStrength,
+            Dilation.baseStrength + OmniverseTree.veilStep * Double(omniverseLevel(OmniverseTree.veilId)))
+    }
+    var echoMultiplier: Big { OmniverseCalculator.multiplier(echoes: echoes) }
+    var omniverseBestSoFar: Big { max(omniverseBestRun, lifetimeStardust) }
+
     /// Full multiplier stack on Stardust production.
     /// v4.0 — `Big`. The bounded factors are folded into one Double first, then the
     /// unbounded ones (shards, fragments, sparks, tree ranks, Forge) as `Big`.
@@ -446,7 +482,9 @@ struct GameState: Codable {
         let globalUpgradeMult = upgrades
             .filter { $0.purchased && $0.isGlobal }
             .reduce(1.0) { $0 * $1.multiplier }
-        return base * globalUpgradeMult * totalMultiplier
+        // v4.0 — dilation past 1.8e308, then unspent Echoes on top (see Omniverse.swift).
+        let raw = base * globalUpgradeMult * totalMultiplier
+        return Dilation.apply(raw, strength: dilationStrength) * echoMultiplier
     }
 
     /// Value of a single manual tap.

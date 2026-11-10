@@ -76,6 +76,8 @@ final class GameEngine {
         // v3.0 Phase 3 — auto-Big-Bang when threshold crossed. Rate-limited to
         // at most one fire per 30 seconds via `state.lastAutoBangAt`.
         automation?.autoBigBangStep()
+        // v4.0 — Omniverse autopilots (earned with Echoes, separate from Automation Core).
+        omniverseAutomationStep(now: now)
     }
 
     // MARK: - Achievements (v2.0)
@@ -104,6 +106,7 @@ final class GameEngine {
     /// stamp the ascension date, grant the one-time shard bonus, and queue the
     /// celebration sheet. Called from every tick + after any offline accrual.
     private func checkAbsoluteAscension() {
+        checkOmniverseDoor()   // v4.0 — every path that adds Stardust comes through here
         guard state.absoluteAscendedAt == nil else { return }
         guard state.lifetimeStardust >= Tier.absolute.threshold else { return }
         state.absoluteAscendedAt = Date()
@@ -136,16 +139,14 @@ final class GameEngine {
     /// Highest value Stardust is allowed to reach. Far beyond any real save, but
     /// short of infinity: once a balance is ∞, costs subtract to ∞ and ∞ × 0 is
     /// NaN, which would freeze the save for good.
-    /// v4.0 — `Big` cannot become ∞ or NaN, so this ceiling no longer protects
-    /// the save; it stays only until the 4.0 economy pass lifts it (plan phase 2).
-    static let ceiling = Big(1e300)
-
     /// Every Stardust gain goes through here (tick, tap, offline, Time Warp,
-    /// daily reward).
+    /// daily reward). v4.0: no ceiling. `Big` can't become ∞ or NaN (the reason
+    /// 3.2 capped at 1e300), and dilation past 1.8e308 (Omniverse.swift) keeps
+    /// growth from running away.
     private func addStardust(_ amount: Big) {
         guard amount > 0 else { return }
-        state.stardust = min(state.stardust + amount, Self.ceiling)
-        state.lifetimeStardust = min(state.lifetimeStardust + amount, Self.ceiling)
+        state.stardust += amount
+        state.lifetimeStardust += amount
     }
 
     // MARK: - Purchases
@@ -231,6 +232,7 @@ final class GameEngine {
         checkChallenge()
         state.bestRunStardust = state.bestRunSoFar
         state.cosmosBestRun = state.cosmosBestSoFar   // v3.4.1 Cosmos Goal
+        state.omniverseBestRun = state.omniverseBestSoFar   // v4.0
         state.cosmicShards += shards
         state.lifetimeCosmicShards += shards
         state.prestigeCount += 1
@@ -271,7 +273,8 @@ final class GameEngine {
     }
 
     /// v3.4.1 — lifetime Stardust one run in this cosmos must reach first.
-    var cosmosGoal: Big { CosmosCalculator.goal(cosmosCount: state.cosmosCount) }
+    /// v4.0 — counts cosmoi since the last Omniverse collapse (pre-4.0 saves: all of them).
+    var cosmosGoal: Big { CosmosCalculator.goal(cosmosCount: state.cosmosSinceOmniverse) }
     var cosmosGoalMet: Bool { state.cosmosBestSoFar >= cosmosGoal }
 
     /// Collapse the current cosmos into Reality Fragments. Trades every Cosmic Shard,
@@ -284,9 +287,11 @@ final class GameEngine {
         guard fragments > 0, canTrueCosmos else { return .zero }
         checkChallenge()
         state.bestRunStardust = state.bestRunSoFar
+        state.omniverseBestRun = state.omniverseBestSoFar   // v4.0
         state.realityFragments += fragments
         state.lifetimeRealityFragments += fragments
         state.cosmosCount += 1
+        state.cosmosSinceOmniverse += 1   // v4.0 — the goal ladder restarts per Omniverse
 
         // v3.4 Null Seed — a share of the shards survives. Not new earnings,
         // so lifetimeCosmicShards is left alone.
@@ -339,6 +344,7 @@ final class GameEngine {
         guard canCollapseMultiverse, sparks > 0 else { return .zero }
         checkChallenge()
         state.bestRunStardust = state.bestRunSoFar
+        state.omniverseBestRun = state.omniverseBestSoFar   // v4.0
         state.voidSparks += sparks
         state.lifetimeVoidSparks += sparks
         state.multiverseCount += 1
@@ -366,6 +372,86 @@ final class GameEngine {
         state.wonderLevels[id] = state.wonderLevel(id) + 1
         save()
         return true
+    }
+
+    // MARK: - Omniverse (v4.0, fourth prestige layer)
+
+    /// Echoes a collapse would pay right now (best run since the last one).
+    var availableEchoes: Big { OmniverseCalculator.echoesEarned(bestRun: state.omniverseBestSoFar) }
+    var omniverseUnlocked: Bool { state.omniverseDoorOpen }
+    var canCollapseOmniverse: Bool { omniverseUnlocked && availableEchoes > 0 }
+
+    /// Transient: true the moment the door first opens, until the UI acknowledges it.
+    private(set) var showOmniverseDoor = false
+    func acknowledgeOmniverseDoor() { showOmniverseDoor = false }
+
+    private func checkOmniverseDoor() {
+        guard !state.omniverseDoorOpen, state.lifetimeStardust >= Dilation.threshold else { return }
+        state.omniverseDoorOpen = true
+        showOmniverseDoor = true
+        save()
+    }
+
+    /// Trade the Multiverse (sparks, Void Wonders, fragments) and everything a True
+    /// Cosmos resets for Echoes, and restart the Cosmos Goal ladder. Kept: Cosmic
+    /// Wonders, Omniverse nodes, cosmos and multiverse counts, achievements, stars,
+    /// purchases, and Spark Memory's share of the sparks. Returns the Echoes earned.
+    @discardableResult
+    func omniverseCollapse() -> Big {
+        let gained = availableEchoes
+        guard canCollapseOmniverse, gained > 0 else { return .zero }
+        checkChallenge()
+        state.bestRunStardust = state.bestRunSoFar
+        state.echoes += gained
+        state.lifetimeEchoes += gained
+        state.omniverseCount += 1
+        let memory = min(state.omniverseLevel(OmniverseTree.sparkMemoryId), OmniverseTree.node(id: OmniverseTree.sparkMemoryId)?.maxLevel ?? 5)
+        state.voidSparks = (state.voidSparks * (OmniverseTree.sparkMemoryPerLevel * Double(memory))).floored
+        for w in VoidWonderCatalog.all { state.wonderLevels.removeValue(forKey: w.id) }
+        state.realityFragments = .zero
+        state.cosmosSinceOmniverse = 0
+        state.omniverseBestRun = .zero
+        resetCosmos()
+        state.lastSeen = Date()
+        save()
+        return gained
+    }
+
+    /// Echoes for the next level of a node; nil if maxed or unknown.
+    func omniverseNodeCost(_ id: String) -> Big? {
+        guard let node = OmniverseTree.node(id: id) else { return nil }
+        let level = state.omniverseLevel(id)
+        guard node.maxLevel == 0 || level < node.maxLevel else { return nil }
+        return node.cost(toReachLevel: level + 1)
+    }
+
+    @discardableResult
+    func buyOmniverseNode(id: String) -> Bool {
+        guard let cost = omniverseNodeCost(id), state.echoes >= cost else { return false }
+        state.echoes -= cost
+        state.omniverseLevels[id] = state.omniverseLevel(id) + 1
+        save()
+        return true
+    }
+
+    @ObservationIgnored private var lastOmniverseAutoAt: Date = .distantPast
+
+    /// Cosmic Autopilot / Void Autopilot: at most one reset per 30 s, and only when
+    /// it would at least double what the player holds (the rule the model plays by).
+    /// Internal for tests.
+    func omniverseAutomationStep(now: Date) {
+        guard now.timeIntervalSince(lastOmniverseAutoAt) >= 30 else { return }
+        if state.omniverseLevel(OmniverseTree.autoCollapseId) > 0, canCollapseMultiverse,
+           availableSparks >= max(state.voidSparks, Big.one) {
+            lastOmniverseAutoAt = now
+            multiverseCollapse()
+            return
+        }
+        if state.omniverseLevel(OmniverseTree.autoCosmosId) > 0, canTrueCosmos,
+           availableFragments >= max(state.realityFragments, Big(50)) {
+            lastOmniverseAutoAt = now
+            trueCosmos()
+        }
     }
 
     // MARK: - Cosmic tree

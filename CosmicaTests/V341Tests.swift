@@ -16,8 +16,9 @@ final class V341Tests: XCTestCase {
         XCTAssertEqual(CosmosCalculator.goal(cosmosCount: 1), 1e40, accuracy: 1e26)
         XCTAssertEqual(CosmosCalculator.goal(cosmosCount: 5), 1e56, accuracy: 1e42)
         XCTAssertEqual(CosmosCalculator.goal(cosmosCount: 66), 1e300, accuracy: 1e286)
-        XCTAssertEqual(CosmosCalculator.goal(cosmosCount: 500), 1e300, accuracy: 1e286)   // never past the ceiling
-        XCTAssertLessThanOrEqual(CosmosCalculator.goal(cosmosCount: 10_000), GameEngine.ceiling)
+        // v4.0 — no ceiling: the ladder keeps climbing (it restarts per Omniverse instead).
+        XCTAssertEqual(CosmosCalculator.goal(cosmosCount: 500).log10Value, 2_036, accuracy: 1e-9)
+        XCTAssertEqual(CosmosCalculator.goal(cosmosCount: 10_000).log10Value, 40_036, accuracy: 1e-9)
     }
 
     func test_trueCosmos_waitsForTheGoal_andABigBangRemembersTheRun() {

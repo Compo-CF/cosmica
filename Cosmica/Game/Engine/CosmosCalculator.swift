@@ -83,11 +83,12 @@ enum CosmosCalculator {
 
     /// Lifetime Stardust one run in the current cosmos must reach before it can
     /// collapse: 1e40 in cosmos 1, 1e44 in cosmos 2… (cosmos 0 is gated by
-    /// Absolute itself, 1e36). Capped at the number ceiling, so a save past
-    /// cosmos 66 is never locked out, only asked for a ceiling run.
-    /// v3.4.1 review: "spamming 20 cosmic resets to gain all 8 pillars".
+    /// Absolute itself, 1e36). v3.4.1 review: "spamming 20 cosmic resets to gain
+    /// all 8 pillars". v4.0: no 1e300 cap, and `n` is cosmoi since the last
+    /// Omniverse collapse, so the ladder restarts each Omniverse instead of
+    /// outrunning dilated production (planning/endgame_v2.py: that race is the wall).
     static func goal(cosmosCount n: Int) -> Big {
         guard n > 0 else { return .zero }
-        return Big.fromLog10(min(300, 36 + goalStep * Double(n)))
+        return Big.fromLog10(36 + goalStep * Double(n))
     }
 }
