@@ -62,6 +62,11 @@ struct ShopView: View {
                             sectionHeader("Support the Developer")
                             supporterCard.seen("supporter", in: self)
                         }
+                        // v3.5 — cross-promo to Anthony's other games. Zero cost,
+                        // zero disruption; a tap opens the App Store product page
+                        // inline via SKStoreProductViewController.
+                        StudioShelfView()
+                            .padding(.top, 8)
                         restoreButton
                         BannerAdSlot()
                     }

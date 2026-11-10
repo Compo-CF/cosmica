@@ -20,6 +20,9 @@ struct CosmicaApp: App {
     @State private var notif = NotificationManager()
     /// v3.1.2 — Google consent (EEA/UK/CH) → ATT → Mobile Ads, in that order.
     @State private var consent = ConsentManager()
+    /// v3.5 — "More from After Hours Dev Studio" shelf. Seeded from bundled
+    /// JSON on init, refreshed from GitHub Pages on first appear + foreground.
+    @State private var studioShelf = StudioShelfProvider(selfID: "cosmica")
     @AppStorage("hasSeenOnboarding") private var hasSeenOnboarding: Bool = false
     /// v3.0.2 — true once this device has successfully consulted iCloud (account
     /// available + pull returned). Uploads are blocked until then, so a fresh
@@ -46,6 +49,7 @@ struct CosmicaApp: App {
                     .environment(automation)
                     .environment(notif)
                     .environment(consent)
+                    .environment(studioShelf)
                 if showSplash {
                     SplashView()
                         .transition(.opacity)
@@ -92,6 +96,8 @@ struct CosmicaApp: App {
                     if hasSeenOnboarding {
                         await startAdsFlow()
                     }
+                    // v3.5 — pull the latest studio shelf catalog once the UI has settled.
+                    await studioShelf.refresh()
                 }
             .onChange(of: hasSeenOnboarding) { _, done in
                 if done { Task { await startAdsFlow() } }
@@ -145,6 +151,8 @@ struct CosmicaApp: App {
                 // (a) iCloud not being ready yet on a freshly set-up phone, and
                 // (b) progress made on another device since we last looked.
                 Task { await syncFromCloud() }
+                // v3.5 — refresh the studio shelf; the provider throttles itself.
+                Task { await studioShelf.refresh() }
             @unknown default:
                 break
             }

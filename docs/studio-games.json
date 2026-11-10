@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "updated": "2026-11-10",
+  "games": [
+    {
+      "id": "ghostline",
+      "appStoreID": "6830660705",
+      "name": "Ghostline: Idle Racer",
+      "tagline": "Idle retro racing. Ghost laps speed up the team.",
+      "iconURL": "https://compo-cf.github.io/cosmica/studio/ghostline.png",
+      "sortWeight": 10,
+      "audienceTags": ["idle", "racing"]
+    },
+    {
+      "id": "pupdoku",
+      "appStoreID": "6797896315",
+      "name": "Pupdoku: Puppy Puzzles",
+      "tagline": "Queens-style logic puzzles with a Bones economy.",
+      "iconURL": "https://compo-cf.github.io/cosmica/studio/pupdoku.png",
+      "sortWeight": 20,
+      "audienceTags": ["puzzle", "casual"]
+    },
+    {
+      "id": "low-and-slow",
+      "appStoreID": "6823629432",
+      "name": "Merge BBQ: Low & Slow",
+      "tagline": "Merge-2 Texas BBQ town-builder and road trip.",
+      "iconURL": "https://compo-cf.github.io/cosmica/studio/low-and-slow.png",
+      "sortWeight": 30,
+      "audienceTags": ["merge", "casual"]
+    },
+    {
+      "id": "neatly",
+      "appStoreID": "6832097718",
+      "name": "Neatly: Cozy Organizing",
+      "tagline": "Cozy photoreal organizing puzzles.",
+      "iconURL": "https://compo-cf.github.io/cosmica/studio/neatly.png",
+      "sortWeight": 40,
+      "audienceTags": ["cozy", "puzzle"]
+    }
+  ]
+}

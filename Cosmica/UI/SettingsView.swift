@@ -112,6 +112,20 @@ struct SettingsView: View {
 
                 orbSection
 
+                // v3.5 — cross-promo to Anthony's other games. Full shelf is a
+                // push destination so Settings stays short; also appears inline
+                // at the bottom of the Shop tab.
+                Section("More from After Hours Dev Studio") {
+                    NavigationLink("Browse the studio") {
+                        ScrollView {
+                            StudioShelfView()
+                                .padding()
+                        }
+                        .navigationTitle("After Hours Dev Studio")
+                        .navigationBarTitleDisplayMode(.inline)
+                    }
+                }
+
                 Section("Support Cosmica") {
                     // Manual Rate button — bypasses the ReviewPrompter's 3/year
                     // limit by routing straight to the App Store review composer.
