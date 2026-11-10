@@ -9,9 +9,11 @@ struct GameState: Codable {
     var saveVersion: Int = 2
 
     // ───────── Currencies ─────────
-    var stardust: Double = 0
-    var lifetimeStardust: Double = 0
-    var cosmicShards: Double = 0
+    // v4.0 — every currency and every unbounded total is `Big` (see Shared/Big.swift).
+    // The save keys are unchanged and Big decodes the old JSON numbers directly.
+    var stardust: Big = .zero
+    var lifetimeStardust: Big = .zero
+    var cosmicShards: Big = .zero
 
     // ───────── Progression ─────────
     var prestigeCount: Int = 0
@@ -55,12 +57,12 @@ struct GameState: Codable {
     // ───────── True Cosmos meta-prestige (v1.4) ─────────
     /// Permanent meta-currency earned by True Cosmoi. Never resets. Each fragment adds
     /// +5% to `totalMultiplier` via `CosmosCalculator.multiplier(fragments:)`.
-    var realityFragments: Double = 0
+    var realityFragments: Big = .zero
     /// How many True Cosmoi the player has performed. Cosmetic — surfaces as a title.
     var cosmosCount: Int = 0
     /// Sum of Reality Fragments ever earned. Kept separate from `realityFragments` so a
     /// future fragment sink doesn't lose historical count.
-    var lifetimeRealityFragments: Double = 0
+    var lifetimeRealityFragments: Big = .zero
 
     // ───────── Achievements (v2.0) ─────────
     /// Ids of every Achievement the player has ever satisfied. Never removed once added,
@@ -68,7 +70,7 @@ struct GameState: Codable {
     var unlockedAchievementIds: Set<String> = []
     /// Sum of Cosmic Shards ever earned (grant path only — spending doesn't reduce this).
     /// Backs the `.lifetimeCosmicShards` Achievement goal.
-    var lifetimeCosmicShards: Double = 0
+    var lifetimeCosmicShards: Big = .zero
 
     // ───────── Cosmic Wonders (v2.0) ─────────
     /// Ids of every built Wonder. Persistent — survives Big Bang AND True Cosmos.
@@ -95,7 +97,7 @@ struct GameState: Codable {
     /// `AutomationManager.autoBigBangStep` fires `engine.autoBigBang()` on tick.
     /// Rate-limited to at most one fire per 30 seconds via `lastAutoBangAt`.
     var autoBigBangEnabled: Bool = false
-    var autoBigBangThreshold: Double = 100
+    var autoBigBangThreshold: Big = Big(100)
     var lastAutoBangAt: Date? = nil
     /// v3.1 — pause auto-Big-Bang until the first Absolute Ascension. Absolute
     /// needs 1e36 lifetime in ONE run, and an auto-Big-Bang firing every 30s
@@ -106,7 +108,7 @@ struct GameState: Codable {
     /// v3.1 — shards granted by the most recent Big Bang (manual or auto).
     /// Sizes the Cosmic Shard packs so they stay worth buying late game: a
     /// fixed 250 is nothing to a player earning trillions per Big Bang.
-    var lastBigBangShards: Double = 0
+    var lastBigBangShards: Big = .zero
 
     /// v3.0 Phase 4 — auto-buy Cosmic Tree upgrades. After each Big Bang (manual
     /// or auto), spend banked shards on the cheapest available NON-Autonomy node,
@@ -124,15 +126,15 @@ struct GameState: Codable {
     var totalDailyClaims: Int = 0
     /// Highest lifetime Stardust reached in any single run (recorded as a run
     /// ends; `bestRunSoFar` folds in the run in progress).
-    var bestRunStardust: Double = 0
+    var bestRunStardust: Big = .zero
 
     // ───────── Weekly Cosmic Challenge (v3.2) ─────────
     /// Week index (`WeeklyChallenge.week(for:)`) the current challenge belongs to; -1 = none yet.
     var challengeWeek: Int = -1
     var challengeKindRaw: String = ""
     /// Counter value when the week's challenge was set (unused by single-run goals).
-    var challengeBaseline: Double = 0
-    var challengeTarget: Double = 0
+    var challengeBaseline: Big = .zero
+    var challengeTarget: Big = .zero
     /// Latched once the goal is met, so a later Big Bang can't un-complete it.
     var challengeCompleted: Bool = false
     var challengeClaimed: Bool = false
@@ -144,9 +146,9 @@ struct GameState: Codable {
     // ───────── Multiverse Collapse (v3.4) ─────────
     /// Third-layer currency. Unspent sparks multiply Stardust and the Reality
     /// Fragments a True Cosmos pays (`MultiverseCalculator`). Never reset.
-    var voidSparks: Double = 0
+    var voidSparks: Big = .zero
     /// Sum of sparks ever earned (spending doesn't reduce it).
-    var lifetimeVoidSparks: Double = 0
+    var lifetimeVoidSparks: Big = .zero
     var multiverseCount: Int = 0
 
     // ───────── Free daily Time Warp (v3.4) ─────────
@@ -164,7 +166,7 @@ struct GameState: Codable {
     // ───────── Cosmos Goal (v3.4.1) ─────────
     /// Best single run in the current cosmos. A True Cosmos needs it to reach
     /// `CosmosCalculator.goal(cosmosCount:)`. Reset by True Cosmos and collapse.
-    var cosmosBestRun: Double = 0
+    var cosmosBestRun: Big = .zero
 
     // ───────── Codable: lenient decode so v1.0.x saves migrate to v2 ─────────
 
@@ -173,9 +175,9 @@ struct GameState: Codable {
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         saveVersion         = try c.decodeIfPresent(Int.self,           forKey: .saveVersion)         ?? 2
-        stardust            = try c.decodeIfPresent(Double.self,        forKey: .stardust)            ?? 0
-        lifetimeStardust    = try c.decodeIfPresent(Double.self,        forKey: .lifetimeStardust)    ?? 0
-        cosmicShards        = try c.decodeIfPresent(Double.self,        forKey: .cosmicShards)        ?? 0
+        stardust            = try c.decodeIfPresent(Big.self,           forKey: .stardust)            ?? .zero
+        lifetimeStardust    = try c.decodeIfPresent(Big.self,           forKey: .lifetimeStardust)    ?? .zero
+        cosmicShards        = try c.decodeIfPresent(Big.self,           forKey: .cosmicShards)        ?? .zero
         prestigeCount       = try c.decodeIfPresent(Int.self,           forKey: .prestigeCount)       ?? 0
         totalTaps           = try c.decodeIfPresent(Int.self,           forKey: .totalTaps)           ?? 0
         firstLaunch         = try c.decodeIfPresent(Date.self,          forKey: .firstLaunch)         ?? Date()
@@ -193,11 +195,11 @@ struct GameState: Codable {
         doublerOwned        = try c.decodeIfPresent(Bool.self,          forKey: .doublerOwned)        ?? false
         absoluteAscendedAt  = try c.decodeIfPresent(Date.self,          forKey: .absoluteAscendedAt)
         absoluteCelebrationShown = try c.decodeIfPresent(Bool.self,     forKey: .absoluteCelebrationShown) ?? false
-        realityFragments    = try c.decodeIfPresent(Double.self,        forKey: .realityFragments)    ?? 0
+        realityFragments    = try c.decodeIfPresent(Big.self,           forKey: .realityFragments)    ?? .zero
         cosmosCount         = try c.decodeIfPresent(Int.self,           forKey: .cosmosCount)         ?? 0
-        lifetimeRealityFragments = try c.decodeIfPresent(Double.self,   forKey: .lifetimeRealityFragments) ?? 0
+        lifetimeRealityFragments = try c.decodeIfPresent(Big.self,      forKey: .lifetimeRealityFragments) ?? .zero
         unlockedAchievementIds = try c.decodeIfPresent(Set<String>.self, forKey: .unlockedAchievementIds) ?? []
-        lifetimeCosmicShards = try c.decodeIfPresent(Double.self,       forKey: .lifetimeCosmicShards) ?? 0
+        lifetimeCosmicShards = try c.decodeIfPresent(Big.self,          forKey: .lifetimeCosmicShards) ?? .zero
         builtWonderIds      = try c.decodeIfPresent(Set<String>.self,   forKey: .builtWonderIds)      ?? []
         // A pre-3.3 save has built Wonders but no levels: each is level 1.
         wonderLevels        = try c.decodeIfPresent([String: Int].self, forKey: .wonderLevels)
@@ -205,28 +207,28 @@ struct GameState: Codable {
         automationTrialExpiresAt = try c.decodeIfPresent(Date.self,     forKey: .automationTrialExpiresAt)
         autoBuyEnabled      = try c.decodeIfPresent([String: Bool].self, forKey: .autoBuyEnabled)      ?? [:]
         autoBigBangEnabled  = try c.decodeIfPresent(Bool.self,          forKey: .autoBigBangEnabled)  ?? false
-        autoBigBangThreshold = try c.decodeIfPresent(Double.self,       forKey: .autoBigBangThreshold) ?? 100
+        autoBigBangThreshold = try c.decodeIfPresent(Big.self,          forKey: .autoBigBangThreshold) ?? Big(100)
         lastAutoBangAt      = try c.decodeIfPresent(Date.self,          forKey: .lastAutoBangAt)
         autoBigBangHoldForAbsolute = try c.decodeIfPresent(Bool.self,   forKey: .autoBigBangHoldForAbsolute) ?? false
-        lastBigBangShards   = try c.decodeIfPresent(Double.self,        forKey: .lastBigBangShards)   ?? 0
+        lastBigBangShards   = try c.decodeIfPresent(Big.self,           forKey: .lastBigBangShards)   ?? .zero
         autoBuyCosmicTreeEnabled = try c.decodeIfPresent(Bool.self,     forKey: .autoBuyCosmicTreeEnabled) ?? false
         // A pre-3.2 save has no lifetime count; this cosmos's prestiges are a
         // fair lower bound, so "Big Bang 250 times" isn't a full restart.
         totalBigBangs       = try c.decodeIfPresent(Int.self,           forKey: .totalBigBangs)       ?? prestigeCount
         totalGeneratorsBought = try c.decodeIfPresent(Double.self,      forKey: .totalGeneratorsBought) ?? 0
         totalDailyClaims    = try c.decodeIfPresent(Int.self,           forKey: .totalDailyClaims)    ?? 0
-        bestRunStardust     = try c.decodeIfPresent(Double.self,        forKey: .bestRunStardust)     ?? 0
+        bestRunStardust     = try c.decodeIfPresent(Big.self,           forKey: .bestRunStardust)     ?? .zero
         challengeWeek       = try c.decodeIfPresent(Int.self,           forKey: .challengeWeek)       ?? -1
         challengeKindRaw    = try c.decodeIfPresent(String.self,        forKey: .challengeKindRaw)    ?? ""
-        challengeBaseline   = try c.decodeIfPresent(Double.self,        forKey: .challengeBaseline)   ?? 0
-        challengeTarget     = try c.decodeIfPresent(Double.self,        forKey: .challengeTarget)     ?? 0
+        challengeBaseline   = try c.decodeIfPresent(Big.self,           forKey: .challengeBaseline)   ?? .zero
+        challengeTarget     = try c.decodeIfPresent(Big.self,           forKey: .challengeTarget)     ?? .zero
         challengeCompleted  = try c.decodeIfPresent(Bool.self,          forKey: .challengeCompleted)  ?? false
         challengeClaimed    = try c.decodeIfPresent(Bool.self,          forKey: .challengeClaimed)    ?? false
         challengeStars      = try c.decodeIfPresent(Int.self,           forKey: .challengeStars)      ?? 0
         challengeStreak     = try c.decodeIfPresent(Int.self,           forKey: .challengeStreak)     ?? 0
         lastChallengeClaimWeek = try c.decodeIfPresent(Int.self,        forKey: .lastChallengeClaimWeek) ?? -1
-        voidSparks          = try c.decodeIfPresent(Double.self,        forKey: .voidSparks)          ?? 0
-        lifetimeVoidSparks  = try c.decodeIfPresent(Double.self,        forKey: .lifetimeVoidSparks)  ?? 0
+        voidSparks          = try c.decodeIfPresent(Big.self,           forKey: .voidSparks)          ?? .zero
+        lifetimeVoidSparks  = try c.decodeIfPresent(Big.self,           forKey: .lifetimeVoidSparks)  ?? .zero
         multiverseCount     = try c.decodeIfPresent(Int.self,           forKey: .multiverseCount)     ?? 0
         lastFreeWarpAt      = try c.decodeIfPresent(Date.self,          forKey: .lastFreeWarpAt)
         lastAwaySeconds     = try c.decodeIfPresent(Double.self,        forKey: .lastAwaySeconds)     ?? 0
@@ -234,7 +236,7 @@ struct GameState: Codable {
         // A pre-3.4.1 save: the cosmos's best run isn't known. The current run
         // and the all-time best are both fair stand-ins; the all-time best can
         // only help, so nobody is set back by the update.
-        cosmosBestRun       = try c.decodeIfPresent(Double.self,        forKey: .cosmosBestRun)
+        cosmosBestRun       = try c.decodeIfPresent(Big.self,           forKey: .cosmosBestRun)
             ?? max(lifetimeStardust, bestRunStardust)
 
         // v3.0.4 — the Autonomous Reactor node was retired (automation now covers
@@ -267,14 +269,14 @@ struct GameState: Codable {
     ///   7. lifetimeStardust         — current-run tiebreaker only
     /// v3.4 — lifetimeVoidSparks goes first: a Multiverse Collapse zeroes the
     /// fragment balance but never this, and only a collapsed save has any.
-    var progressRank: [Double] {
+    var progressRank: [Big] {
         [lifetimeVoidSparks,
          lifetimeRealityFragments,
          lifetimeCosmicShards,
-         Double(unlockedAchievementIds.count),
-         Double(cosmosCount),
-         Double(totalTaps),
-         Double(challengeStars),
+         Big(unlockedAchievementIds.count),
+         Big(cosmosCount),
+         Big(totalTaps),
+         Big(challengeStars),
          lifetimeStardust]
     }
 
@@ -302,8 +304,8 @@ struct GameState: Codable {
 
     /// Passive multiplier from *un-spent* Cosmic Shards. Spending shards on the Cosmic tree
     /// reduces this — a real invest-or-hoard tradeoff every Big Bang.
-    var shardMultiplier: Double {
-        1.0 + (cosmicShards * 0.02)
+    var shardMultiplier: Big {
+        cosmicShards * 0.02 + 1
     }
 
     var adBoostMultiplier: Double {
@@ -352,16 +354,16 @@ struct GameState: Codable {
         1 + 0.5 * Double(wonderLevel("voidkeeper"))
     }
     /// Multiverse Engine: taps ×2 per level (×2, ×4, ×8…).
-    var wonderTapMultiplier: Double {
-        pow(2, Double(wonderLevel("multiverse_engine")))
+    var wonderTapMultiplier: Big {
+        Big.power(2, Double(wonderLevel("multiverse_engine")))
     }
     /// Absolute Aperture: +25% Reality Fragments per True Cosmos per level.
     var wonderFragmentMultiplier: Double {
         1 + 0.25 * Double(wonderLevel("absolute_aperture"))
     }
     /// Stellar Forge (v3.3): all generators ×2 per level.
-    var wonderForgeMultiplier: Double {
-        pow(2, Double(wonderLevel("stellar_forge")))
+    var wonderForgeMultiplier: Big {
+        Big.power(2, Double(wonderLevel("stellar_forge")))
     }
     /// Time Lens (v3.3): offline earnings at the full online rate instead of half.
     var wonderOfflineRateFactor: Double {
@@ -372,7 +374,7 @@ struct GameState: Codable {
 
     /// Permanent multiplier from accumulated Reality Fragments. Never resets — this is
     /// what carries power across True Cosmoi.
-    var realityFragmentMultiplier: Double {
+    var realityFragmentMultiplier: Big {
         CosmosCalculator.multiplier(fragments: realityFragments)
     }
 
@@ -386,15 +388,15 @@ struct GameState: Codable {
 
     // ───────── Multiverse (v3.4) ─────────
     /// Unspent Void Sparks: +250% Stardust each.
-    var voidSparkMultiplier: Double { MultiverseCalculator.stardustMultiplier(sparks: voidSparks) }
+    var voidSparkMultiplier: Big { MultiverseCalculator.stardustMultiplier(sparks: voidSparks) }
     /// Reality Fragments per True Cosmos: unspent sparks (v3.4.1: +25% × √sparks)
     /// × Fragment Prism (×2 per level).
-    var voidFragmentMultiplier: Double {
+    var voidFragmentMultiplier: Big {
         MultiverseCalculator.fragmentMultiplier(sparks: voidSparks)
-            * pow(2, Double(wonderLevel(VoidWonderCatalog.prismId)))
+            * Big.power(2, Double(wonderLevel(VoidWonderCatalog.prismId)))
     }
     /// Spark Furnace: Big Bang shards ×2 per level.
-    var voidBigBangMultiplier: Double { pow(2, Double(wonderLevel(VoidWonderCatalog.furnaceId))) }
+    var voidBigBangMultiplier: Big { Big.power(2, Double(wonderLevel(VoidWonderCatalog.furnaceId))) }
     /// Null Seed: share of Cosmic Shards kept through a True Cosmos (10% per level, up to 50%).
     var voidShardCarryFraction: Double {
         let cap = VoidWonderCatalog.wonder(id: VoidWonderCatalog.seedId)?.maxLevel ?? 5
@@ -402,42 +404,44 @@ struct GameState: Codable {
     }
 
     /// v3.2 — best single run including the one in progress.
-    var bestRunSoFar: Double { max(bestRunStardust, lifetimeStardust) }
+    var bestRunSoFar: Big { max(bestRunStardust, lifetimeStardust) }
     /// v3.4.1 — best single run in this cosmos, including the one in progress.
-    var cosmosBestSoFar: Double { max(cosmosBestRun, lifetimeStardust) }
+    var cosmosBestSoFar: Big { max(cosmosBestRun, lifetimeStardust) }
 
     /// Full multiplier stack on Stardust production.
-    var totalMultiplier: Double {
-        currentTier.multiplier
-        * shardMultiplier
-        * adBoostMultiplier
-        * CosmicTree.focusMultiplier(cosmicSkillLevels)
-        * CosmicTree.harvestMultiplier(cosmicSkillLevels)
-        * eventStardustMultiplier
-        * realityFragmentMultiplier
-        * achievementMultiplier
-        * challengeMultiplier
-        * doublerMultiplier
-        * wonderForgeMultiplier
-        * voidSparkMultiplier
+    /// v4.0 — `Big`. The bounded factors are folded into one Double first, then the
+    /// unbounded ones (shards, fragments, sparks, tree ranks, Forge) as `Big`.
+    /// Split into steps so the type checker doesn't stall on one long chain.
+    var totalMultiplier: Big {
+        let bounded: Double = currentTier.multiplier
+            * adBoostMultiplier
+            * eventStardustMultiplier
+            * achievementMultiplier
+            * challengeMultiplier
+            * doublerMultiplier
+        let tree: Big = CosmicTree.focusMultiplier(cosmicSkillLevels) * CosmicTree.harvestMultiplier(cosmicSkillLevels)
+        let layers: Big = shardMultiplier * realityFragmentMultiplier * voidSparkMultiplier
+        return layers * tree * wonderForgeMultiplier * bounded
     }
 
     /// Base stardust per second across all generators, with each generator's tier-cluster
     /// tree buff, per-generator upgrades, and specialization applied.
-    var stardustPerSecond: Double { productionRate(offline: false) }
+    var stardustPerSecond: Big { productionRate(offline: false) }
 
     /// v3.3 — the rate offline earnings (and the widget's projection) use: Night Shift
     /// generators at their away-from-the-game strength, and Time Lens folded in. The
     /// 50% offline factor itself is still applied by `OfflineAccrual`.
-    var offlineStardustPerSecond: Double { productionRate(offline: true) * wonderOfflineRateFactor }
+    var offlineStardustPerSecond: Big { productionRate(offline: true) * wonderOfflineRateFactor }
 
     /// v3.3 — production with Resonant generators boosting every other generator.
-    private func productionRate(offline: Bool) -> Double {
+    private func productionRate(offline: Bool) -> Big {
         let totalResonance = generators.reduce(0.0) { $0 + ($1.count > 0 ? $1.resonance : 0) }
-        let base = generators.reduce(0.0) { sum, g in
-            let tierMult = CosmicTree.generatorTierMultiplier(g.index, cosmicSkillLevels)
-            let fromOthers = 1 + totalResonance - (g.count > 0 ? g.resonance : 0)
-            return sum + g.ratePerSecond(with: upgrades, offline: offline) * tierMult * fromOthers
+        var base = Big.zero
+        for g in generators {
+            let tierMult: Big = CosmicTree.generatorTierMultiplier(g.index, cosmicSkillLevels)
+            let fromOthers: Double = 1 + totalResonance - (g.count > 0 ? g.resonance : 0)
+            let own: Double = g.ratePerSecond(with: upgrades, offline: offline) * fromOthers
+            base += tierMult * own
         }
         let globalUpgradeMult = upgrades
             .filter { $0.purchased && $0.isGlobal }
@@ -447,11 +451,9 @@ struct GameState: Codable {
 
     /// Value of a single manual tap.
     /// = max(1, one-tenth of a second of automated production) × tap-mastery × active-event tap boost × Multiverse Engine.
-    var tapValue: Double {
-        let base = max(1.0, stardustPerSecond * 0.1)
-        return base
-            * CosmicTree.tapMultiplier(cosmicSkillLevels)
-            * CosmicEventScheduler.tapMultiplier(activeEvent)
-            * wonderTapMultiplier
+    var tapValue: Big {
+        let base: Big = max(stardustPerSecond * 0.1, Big.one)
+        let tree: Big = CosmicTree.tapMultiplier(cosmicSkillLevels)
+        return base * tree * wonderTapMultiplier * CosmicEventScheduler.tapMultiplier(activeEvent)
     }
 }

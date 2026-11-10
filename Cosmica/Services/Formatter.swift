@@ -84,6 +84,37 @@ enum Formatter {
         return f.string(from: NSNumber(value: value.rounded())) ?? "\(Int(value.rounded()))"
     }
 
+    // MARK: - v4.0 Big
+
+    /// `short` for any size. Below 1e66 it is the Double ladder above (same text
+    /// as before); past it, scientific with the exponent grouped once it gets
+    /// long: "4.82e71", "1.23e4567", "1.23e12,345".
+    static func short(_ value: Big) -> String {
+        if value.exponent < Foundation.log10(scientificFrom) { return short(value.double) }
+        var mantissa = Swift.abs(value.mantissa)
+        var exponent = value.exponent
+        if mantissa >= 9.995 { mantissa /= 10; exponent += 1 }
+        let sign = value.sign < 0 ? "-" : ""
+        return String(format: "%@%.2fe%@", sign, mantissa, exponentText(exponent))
+    }
+
+    static func multiplier(_ value: Big) -> String {
+        value < 1000 ? String(format: "×%.2f", value.double) : "×" + short(value)
+    }
+
+    static func count(_ value: Big) -> String {
+        value.magnitude < 1e6 ? count(value.double) : short(value)
+    }
+
+    /// "71", "4567", then "12,345" from five digits up.
+    private static func exponentText(_ exponent: Double) -> String {
+        guard Swift.abs(exponent) >= 10_000 else { return String(format: "%.0f", exponent) }
+        let f = NumberFormatter()
+        f.numberStyle = .decimal
+        f.maximumFractionDigits = 0
+        return f.string(from: NSNumber(value: exponent)) ?? String(format: "%.0f", exponent)
+    }
+
     /// Duration like "8h 23m" / "47m 12s" / "1d 4h".
     static func duration(_ seconds: TimeInterval) -> String {
         let s = Int(seconds)

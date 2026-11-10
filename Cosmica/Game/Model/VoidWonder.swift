@@ -21,8 +21,9 @@ struct VoidWonder: Identifiable, Hashable {
     /// 0 = no limit.
     let maxLevel: Int
 
-    func cost(toReachLevel level: Int) -> Double {
-        sparkCost * pow(costGrowth, Double(max(0, level - 1)))
+    /// v4.0 — `Big` (unlimited levels).
+    func cost(toReachLevel level: Int) -> Big {
+        Big.power(costGrowth, Double(max(0, level - 1))) * sparkCost
     }
 
     func effect(atLevel level: Int) -> String {
@@ -31,9 +32,9 @@ struct VoidWonder: Identifiable, Hashable {
         case VoidWonderCatalog.seedId:
             return "Keep \(Int(VoidWonderCatalog.carryPerLevel * 100 * Double(min(l, maxLevel))))% of your Cosmic Shards through every True Cosmos"
         case VoidWonderCatalog.furnaceId:
-            return "Big Bangs pay ×\(Formatter.count(pow(2, Double(l)))) Cosmic Shards"
+            return "Big Bangs pay ×\(Formatter.count(Big.power(2, Double(l)))) Cosmic Shards"
         case VoidWonderCatalog.prismId:
-            return "True Cosmos pays ×\(Formatter.count(pow(2, Double(l)))) Reality Fragments"
+            return "True Cosmos pays ×\(Formatter.count(Big.power(2, Double(l)))) Reality Fragments"
         default:
             return ""
         }

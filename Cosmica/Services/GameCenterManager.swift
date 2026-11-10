@@ -44,7 +44,7 @@ final class GameCenterManager {
 
     func report(state: GameState) async {
         guard isAuthenticated else { return }
-        await submit(score: Self.clampedScore(state.lifetimeStardust), leaderboard: Self.leaderboardLifetimeStardust)
+        await submit(score: Self.clampedScore(state.lifetimeStardust.double), leaderboard: Self.leaderboardLifetimeStardust)
         await submit(score: state.prestigeCount,                       leaderboard: Self.leaderboardPrestigeCount)
         await submit(score: state.currentTier.rawValue,                leaderboard: Self.leaderboardTier)
     }

@@ -27,12 +27,14 @@ struct CosmicSkill: Identifiable {
 
     /// Cosmic Shard cost to buy the level *above* `level`. Double (was Int): rank
     /// costs grow without limit and an Int conversion would trap past ~9.2e18.
-    func cost(atLevel level: Int) -> Double {
+    /// v4.0 — `Big`: Stellar ranks at ×4 each pass 1e308 around rank 510.
+    func cost(atLevel level: Int) -> Big {
         if level < maxLevel {
-            return (Double(baseCost) * pow(growth, Double(level))).rounded()
+            return Big((Double(baseCost) * pow(growth, Double(level))).rounded())
         }
         let lastRegular = Double(baseCost) * pow(growth, Double(maxLevel - 1))
-        return (lastRegular * pow(Self.rankCostGrowth, Double(level - maxLevel + 1))).rounded()
+        let ranked = Big.power(Self.rankCostGrowth, Double(level - maxLevel + 1)) * lastRegular
+        return ranked.fitsInDouble ? Big(ranked.double.rounded()) : ranked
     }
 
     /// Whether another level (regular or Stellar rank) can be bought.
@@ -81,31 +83,32 @@ enum CosmicTree {
     }
 
     /// Effect of a node: `perLevel` per regular level, then × its rank multiplier per rank.
-    static func effect(_ id: String, _ l: [String: Int], perLevel: Double) -> Double {
+    /// v4.0 — `Big`: ranks multiply without limit.
+    static func effect(_ id: String, _ l: [String: Int], perLevel: Double) -> Big {
         let (regular, ranks) = split(id, l)
         let rank = skill(id)?.rankMultiplier ?? 1
-        return (1 + perLevel * Double(regular)) * pow(rank, Double(ranks))
+        return Big.power(rank, Double(ranks)) * (1 + perLevel * Double(regular))
     }
 
     // MARK: - Effect accessors
 
-    static func focusMultiplier(_ l: [String: Int]) -> Double { effect("focus", l, perLevel: 0.08) }
-    static func harvestMultiplier(_ l: [String: Int]) -> Double { effect("harvest", l, perLevel: 0.10) }
-    static func bigBangYieldMultiplier(_ l: [String: Int]) -> Double { effect("big_bang", l, perLevel: 0.15) }
-    static func tapMultiplier(_ l: [String: Int]) -> Double { effect("tap_mastery", l, perLevel: 0.25) }
+    static func focusMultiplier(_ l: [String: Int]) -> Big { effect("focus", l, perLevel: 0.08) }
+    static func harvestMultiplier(_ l: [String: Int]) -> Big { effect("harvest", l, perLevel: 0.10) }
+    static func bigBangYieldMultiplier(_ l: [String: Int]) -> Big { effect("big_bang", l, perLevel: 0.15) }
+    static func tapMultiplier(_ l: [String: Int]) -> Big { effect("tap_mastery", l, perLevel: 0.25) }
     static func boostExtensionSeconds(_ l: [String: Int]) -> TimeInterval { 300 * Double(split("boost_extend", l).regular) }
     static func offlineCapBonus(_ l: [String: Int]) -> TimeInterval { 2 * 3600 * Double(split("nightwatch", l).regular) }
 
-    static func startingStardust(_ l: [String: Int]) -> Double {
+    static func startingStardust(_ l: [String: Int]) -> Big {
         let lvl = split("vanguard", l).regular
-        guard lvl > 0 else { return 0 }
-        return 100 * pow(10, Double(lvl))   // 1K, 10K, 100K…
+        guard lvl > 0 else { return .zero }
+        return Big(100 * pow(10, Double(lvl)))   // 1K, 10K, 100K…
     }
 
     /// Per-tier generator multiplier: the "Deep Field / Wormhole / Multiverse / Chronal"
     /// clusters. Generator index 0-3 = Deep Field, 4-7 = Wormhole, 8-11 = Multiverse,
     /// 12-15 = Chronal (v1.3).
-    static func generatorTierMultiplier(_ generatorIndex: Int, _ l: [String: Int]) -> Double {
+    static func generatorTierMultiplier(_ generatorIndex: Int, _ l: [String: Int]) -> Big {
         let skillId: String
         switch generatorIndex {
         case 0...3:  skillId = "deep_field"

@@ -310,13 +310,13 @@ extension WidgetSnapshot {
     static var preview: WidgetSnapshot {
         WidgetSnapshot(
             savedAt: Date().addingTimeInterval(-3 * 3600),
-            baseRate: 4.2e13,
+            baseRate: Big(4.2e13),
             adBoostMultiplier: 1,
             adBoostExpiresAt: nil,
             eventMultiplier: 1,
             eventExpiresAt: nil,
             offlineCap: OfflineAccrual.baseCap,
-            cosmicShards: 1_250,
+            cosmicShards: Big(1_250),
             prestigeCount: 14,
             cosmosCount: 1,
             tierTitle: "Cosmologist",

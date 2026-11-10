@@ -4,7 +4,7 @@ import Foundation
 struct DailyReward: Equatable {
     let day: Int          // 1…7 position in the reward cycle
     let streak: Int       // consecutive-day streak
-    let stardust: Double
+    let stardust: Big
     let cosmicShards: Int
     let boostHours: Double
 

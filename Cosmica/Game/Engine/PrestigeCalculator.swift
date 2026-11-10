@@ -6,6 +6,9 @@ import Foundation
 /// `unlockFloor`). They receive Cosmic Shards equal to
 /// `floor(150 * sqrt(lifetime / threshold))`.
 /// Each shard grants +2% permanent earnings (compounding via [GameState.shardMultiplier]).
+///
+/// v4.0 — amounts are `Big` (v2.1.1 had moved them from Int to Double). `Big`
+/// has no infinity or NaN, so the old isFinite guards are gone.
 enum PrestigeCalculator {
     /// Scale of the shard curve (150 shards at exactly this lifetime) and the
     /// standard unlock floor once a player is past the first-cosmos ramp.
@@ -29,17 +32,9 @@ enum PrestigeCalculator {
         }
     }
 
-    /// v2.1.1: shards return as `Double` (was `Int`, which pinned rewards at
-    /// Int64.max ≈ 9.22e18 once lifetime crossed ~3.8e33 — well within reach
-    /// of Absolute Observers running True Cosmos loops). `state.cosmicShards`
-    /// was already Double, so no save migration.
-    static func shardsEarned(lifetimeStardust: Double, floor: Double = threshold) -> Double {
-        guard lifetimeStardust.isFinite, lifetimeStardust >= floor else { return 0 }
-        // Double natively holds up to ~1.7e308; the Int clamp we needed before
-        // is gone. Keep the isFinite / >0 guards for defense.
-        let raw = 150.0 * sqrt(lifetimeStardust / threshold)
-        guard raw.isFinite, raw > 0 else { return 0 }
-        return raw.rounded(.down)
+    static func shardsEarned(lifetimeStardust: Big, floor: Double = threshold) -> Big {
+        guard lifetimeStardust >= floor else { return .zero }
+        return ((lifetimeStardust / threshold).squareRoot * 150).floored
     }
 
     // MARK: - v3.3 Kindling
@@ -52,26 +47,25 @@ enum PrestigeCalculator {
     /// full tree, most of the road to Absolute; Kindling cuts that to ~3.
     static let kindlingCap: Double = 6_000
 
-    static func kindlingActive(lifetimeShards: Double, cosmosCount: Int) -> Bool {
+    static func kindlingActive(lifetimeShards: Big, cosmosCount: Int) -> Bool {
         cosmosCount == 0 && lifetimeShards < kindlingCap
     }
 
     /// `shards` with Kindling applied. Only the part that fits under the cap is
     /// tripled, so the payout stays continuous: a huge first run can't turn into
     /// a windfall, and crossing the cap never pays less than not crossing it.
-    static func kindled(_ shards: Double, lifetimeShards: Double, cosmosCount: Int) -> Double {
+    static func kindled(_ shards: Big, lifetimeShards: Big, cosmosCount: Int) -> Big {
         guard shards > 0, kindlingActive(lifetimeShards: lifetimeShards, cosmosCount: cosmosCount) else { return shards }
-        let room = kindlingCap - lifetimeShards
+        let room = Big(kindlingCap) - lifetimeShards
         let tripled = shards * kindlingMultiplier
         if tripled <= room { return tripled }
         return room + (shards - room / kindlingMultiplier)
     }
 
     /// Lifetime stardust required to earn at least `targetShards` shards.
-    static func lifetimeRequired(forShards targetShards: Double) -> Double {
-        guard targetShards > 0 else { return threshold }
-        let ratio = pow(targetShards / 150.0, 2.0)
-        return threshold * ratio
+    static func lifetimeRequired(forShards targetShards: Big) -> Big {
+        guard targetShards > 0 else { return Big(threshold) }
+        return (targetShards / 150).raised(to: 2) * threshold
     }
 
     /// Lifetime needed to earn the very next shard above what would currently be awarded.
@@ -80,23 +74,23 @@ enum PrestigeCalculator {
     /// curve says 1 shard at threshold/150² (~44.4M), but nothing pays out
     /// until the floor. Showing 44.4M told players at 5B they were past the
     /// goal (review, 2026-09-26).
-    static func nextShardThreshold(lifetimeStardust: Double, floor: Double = threshold) -> Double {
+    static func nextShardThreshold(lifetimeStardust: Big, floor: Double = threshold) -> Big {
         let current = shardsEarned(lifetimeStardust: lifetimeStardust, floor: floor)
-        guard current > 0 else { return floor }
+        guard current > 0 else { return Big(floor) }
         return lifetimeRequired(forShards: current + 1)
     }
 
     /// Progress in [0, 1] toward the next shard (toward unlock, before the first).
-    static func progressToNextShard(lifetimeStardust: Double, floor: Double = threshold) -> Double {
+    static func progressToNextShard(lifetimeStardust: Big, floor: Double = threshold) -> Double {
         let current = shardsEarned(lifetimeStardust: lifetimeStardust, floor: floor)
         guard current > 0 else {
-            guard lifetimeStardust.isFinite, floor > 0 else { return 0 }
-            return min(max(lifetimeStardust / floor, 0), 1)
+            guard floor > 0 else { return 0 }
+            return min(max((lifetimeStardust / floor).double, 0), 1)
         }
         let lower = lifetimeRequired(forShards: current)
         let upper = lifetimeRequired(forShards: current + 1)
         guard upper > lower else { return 0 }
-        let p = (lifetimeStardust - lower) / (upper - lower)
+        let p = ((lifetimeStardust - lower) / (upper - lower)).double
         return min(max(p, 0), 1)
     }
 }

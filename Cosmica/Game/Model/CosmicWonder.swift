@@ -27,8 +27,9 @@ struct CosmicWonder: Identifiable, Codable, Hashable {
     /// Levels already built keep their effect; only new levels cost more.
     static let levelCostGrowth: Double = 100
 
-    func cost(toReachLevel level: Int) -> Double {
-        shardCost * pow(Self.levelCostGrowth, Double(max(0, level - 1)))
+    /// v4.0 — `Big`: unlimited levels at ×100 each pass 1e308 around level 150.
+    func cost(toReachLevel level: Int) -> Big {
+        Big.power(Self.levelCostGrowth, Double(max(0, level - 1))) * shardCost
     }
 
     /// What the Wonder does at `level` (level 0 describes level 1, for unbuilt rows).
@@ -38,9 +39,9 @@ struct CosmicWonder: Identifiable, Codable, Hashable {
         case "chronosphere":      return "+\(12 * l) hours to offline earnings cap"
         case "nexus_lattice":     return "×\(1 + 2 * l) Stardust while any Cosmic Event is active"
         case "voidkeeper":        return "+\(50 * l)% Cosmic Shards from every Big Bang"
-        case "multiverse_engine": return "Manual taps are worth ×\(Formatter.count(pow(2, Double(l))))"
+        case "multiverse_engine": return "Manual taps are worth ×\(Formatter.count(Big.power(2, Double(l))))"
         case "absolute_aperture": return "+\(25 * l)% Reality Fragments per True Cosmos"
-        case "stellar_forge":     return "All generators ×\(Formatter.count(pow(2, Double(l))))"
+        case "stellar_forge":     return "All generators ×\(Formatter.count(Big.power(2, Double(l))))"
         default:                  return effect
         }
     }

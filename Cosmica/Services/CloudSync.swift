@@ -64,7 +64,8 @@ actor CloudSync {
         }
         let data = try JSONEncoder().encode(state)
         record["state"] = data as CKRecordValue
-        record["lifetimeStardust"] = state.lifetimeStardust as CKRecordValue
+        // v4.0 — CloudKit's field is a Double: clamped copy (the save JSON holds the real value).
+        record["lifetimeStardust"] = state.lifetimeStardust.double as CKRecordValue
         record["updatedAt"] = Date() as CKRecordValue
         do {
             _ = try await privateDB.save(record)
@@ -79,7 +80,7 @@ actor CloudSync {
                 return .remoteAhead(serverState)
             }
             server["state"] = data as CKRecordValue
-            server["lifetimeStardust"] = state.lifetimeStardust as CKRecordValue
+            server["lifetimeStardust"] = state.lifetimeStardust.double as CKRecordValue
             server["updatedAt"] = Date() as CKRecordValue
             _ = try await privateDB.save(server)
         }

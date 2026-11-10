@@ -20,9 +20,10 @@ struct WeeklyChallenge: Equatable {
     let week: Int
     let kind: ChallengeKind
     /// Counter value when the week began (0 for single-run goals).
-    let baseline: Double
+    /// v4.0 — `Big`: the single-run goal is a Stardust amount.
+    let baseline: Big
     /// Counter value that completes the goal.
-    let target: Double
+    let target: Big
 
     /// Permanent earnings per Challenge Star, additive (10 stars = ×2).
     static let starBonus = 0.10
@@ -57,26 +58,27 @@ struct WeeklyChallenge: Equatable {
         case .bigBangs:
             let neverBanged = state.totalBigBangs == 0 && state.prestigeCount == 0 && state.cosmosCount == 0
             let count: Double = neverBanged ? 1 : (state.autoBigBangEnabled ? 25 : 5)
-            let base = Double(state.totalBigBangs)
+            let base = Big(state.totalBigBangs)
             return WeeklyChallenge(week: week, kind: kind, baseline: base, target: base + count)
         case .beatBestRun:
-            let target = max(1e9, state.bestRunSoFar * 10)
-            return WeeklyChallenge(week: week, kind: kind, baseline: 0, target: target.isFinite ? target : 1e300)
+            // v3.2 capped this at 1e300 (the old ceiling); Big has no infinity.
+            let target = max(Big(1e9), state.bestRunSoFar * 10)
+            return WeeklyChallenge(week: week, kind: kind, baseline: .zero, target: target)
         case .taps:
-            let base = Double(state.totalTaps)
+            let base = Big(state.totalTaps)
             return WeeklyChallenge(week: week, kind: kind, baseline: base, target: base + 1_000)
         case .generators:
             let auto = state.autoBuyEnabled.values.contains(true)
-            let base = state.totalGeneratorsBought
+            let base = Big(state.totalGeneratorsBought)
             return WeeklyChallenge(week: week, kind: kind, baseline: base, target: base + (auto ? 10_000 : 500))
         case .dailyRewards:
             // Never ask for more days than the week has left (a player who
             // first opens 3.2 on a Saturday gets 2, not 5).
             let daysLeft = max(1, Int((weekEnd(week).timeIntervalSince(now) / 86_400).rounded(.up)))
-            let base = Double(state.totalDailyClaims)
+            let base = Big(state.totalDailyClaims)
             return WeeklyChallenge(week: week, kind: kind, baseline: base, target: base + Double(min(5, daysLeft)))
         case .trueCosmos:
-            let base = Double(state.cosmosCount)
+            let base = Big(state.cosmosCount)
             return WeeklyChallenge(week: week, kind: kind, baseline: base, target: base + 1)
         }
     }
@@ -91,14 +93,14 @@ struct WeeklyChallenge: Equatable {
     // MARK: - Measuring
 
     /// The counter this goal reads.
-    func current(_ state: GameState) -> Double {
+    func current(_ state: GameState) -> Big {
         switch kind {
-        case .bigBangs:     return Double(state.totalBigBangs)
+        case .bigBangs:     return Big(state.totalBigBangs)
         case .beatBestRun:  return state.lifetimeStardust
-        case .taps:         return Double(state.totalTaps)
-        case .generators:   return state.totalGeneratorsBought
-        case .dailyRewards: return Double(state.totalDailyClaims)
-        case .trueCosmos:   return Double(state.cosmosCount)
+        case .taps:         return Big(state.totalTaps)
+        case .generators:   return Big(state.totalGeneratorsBought)
+        case .dailyRewards: return Big(state.totalDailyClaims)
+        case .trueCosmos:   return Big(state.cosmosCount)
         }
     }
 
@@ -108,20 +110,20 @@ struct WeeklyChallenge: Equatable {
     /// same reasoning as the tier bar: each ×10 is an equal step of effort).
     func progress(_ state: GameState) -> Double {
         if kind == .beatBestRun {
-            let cur = max(1, current(state)), goal = max(10, target)
-            return min(1, max(0, log10(cur) / log10(goal)))
+            let cur = max(current(state), Big.one), goal = max(target, Big(10))
+            return min(1, max(0, cur.log10Value / goal.log10Value))
         }
         let span = target - baseline
         guard span > 0 else { return 1 }
-        return min(1, max(0, (current(state) - baseline) / span))
+        return min(1, max(0, ((current(state) - baseline) / span).double))
     }
 
     /// How much of the goal is done, in the goal's own units.
-    func doneAmount(_ state: GameState) -> Double {
-        kind == .beatBestRun ? current(state) : max(0, current(state) - baseline)
+    func doneAmount(_ state: GameState) -> Big {
+        kind == .beatBestRun ? current(state) : max(current(state) - baseline, Big.zero)
     }
 
-    var goalAmount: Double { kind == .beatBestRun ? target : target - baseline }
+    var goalAmount: Big { kind == .beatBestRun ? target : target - baseline }
 
     // MARK: - Copy
 

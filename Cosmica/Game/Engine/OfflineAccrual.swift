@@ -9,7 +9,8 @@ enum OfflineAccrual {
     static let offlineRate: Double = 0.5                 // 50% of online rate
 
     struct Result: Equatable {
-        let stardustEarned: Double
+        /// v4.0 — `Big` (Shared/Big.swift is compiled into the widget too).
+        let stardustEarned: Big
         let secondsElapsed: TimeInterval
         let secondsCounted: TimeInterval
         let capUsed: TimeInterval
@@ -18,14 +19,14 @@ enum OfflineAccrual {
 
     static func compute(now: Date,
                         lastSeen: Date,
-                        ratePerSecond: Double,
+                        ratePerSecond: Big,
                         extended: Bool = false,
                         extraCap: TimeInterval = 0) -> Result {
         let elapsed = max(0, now.timeIntervalSince(lastSeen))
         let baseline = extended ? extendedCap : baseCap
         let cap = baseline + max(0, extraCap)
         let counted = min(elapsed, cap)
-        let earned = max(0, ratePerSecond) * counted * offlineRate
+        let earned = max(ratePerSecond, Big.zero) * (counted * offlineRate)
         return Result(
             stardustEarned: earned,
             secondsElapsed: elapsed,

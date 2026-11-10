@@ -129,7 +129,7 @@ final class NotificationManager: NSObject {
             interval = 3600
         } else if state.stardustPerSecond > 0, state.lifetimeStardust < engine.bigBangUnlockAt {
             let remaining = engine.bigBangUnlockAt - state.lifetimeStardust
-            let etaSec = remaining / state.stardustPerSecond
+            let etaSec = (remaining / state.stardustPerSecond).double
             // Cap at 24h — anything longer is noise and battery.
             interval = min(max(60, etaSec), 24 * 3600)
         } else {

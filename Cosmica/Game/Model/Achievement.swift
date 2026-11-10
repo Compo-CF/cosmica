@@ -120,9 +120,9 @@ enum AchievementGoal: Codable, Hashable {
     /// v3.2 — huge targets (1e100 Stardust, 1e24 shards) on a log scale, so the
     /// bar moves with every ×10 instead of sitting at 0% until the last step.
     /// Small targets stay linear, matching how they read before.
-    private func scaled(_ current: Double, _ target: Double) -> Double {
-        guard target >= 1e6 else { return clamped(current, target) }
-        return min(1, max(0, log10(max(1, current)) / log10(target)))
+    private func scaled(_ current: Big, _ target: Double) -> Double {
+        guard target >= 1e6 else { return clamped(current.double, target) }
+        return min(1, max(0, max(current, Big.one).log10Value / log10(target)))
     }
 }
 

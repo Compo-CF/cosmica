@@ -70,7 +70,7 @@ final class AutomationManager {
         guard budgetCap > 0 else { return }
 
         // Build the eligible set once, walk once.
-        var best: (id: String, cost: Double)?
+        var best: (id: String, cost: Big)?
         for (i, gen) in state.generators.enumerated() {
             // Unlock cascade: gen 0 always unlocked, others need previous owned.
             let unlocked = (i == 0) || (state.generators[i - 1].count >= 1)
@@ -112,7 +112,7 @@ final class AutomationManager {
             engine.setAutoBigBangHoldForAbsolute(false)
         }
         guard engine.canPrestige else { return }
-        // engine.availableShards is Double post-v2.1.1 — direct comparison.
+        // Both `Big` since v4.0.
         guard engine.availableShards >= engine.state.autoBigBangThreshold else { return }
         if let last = engine.state.lastAutoBangAt,
            Date().timeIntervalSince(last) < autoBigBangMinInterval {
@@ -147,7 +147,7 @@ final class AutomationManager {
             safety += 1
             let candidates = CosmicTree.skills
                 .filter { !$0.id.hasPrefix("autonomy_") }
-                .compactMap { skill -> (id: String, cost: Double)? in
+                .compactMap { skill -> (id: String, cost: Big)? in
                     let lvl = engine.state.cosmicSkillLevels[skill.id] ?? 0
                     // Regular levels only. v3.3 Stellar ranks are a deliberate
                     // invest-or-hoard choice; auto-spend would pour every shard into them.

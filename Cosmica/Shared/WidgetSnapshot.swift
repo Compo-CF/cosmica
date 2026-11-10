@@ -21,14 +21,15 @@ struct WidgetSnapshot: Codable, Equatable {
     /// When the player stopped playing (`GameState.lastSeen` at background).
     var savedAt: Date
     /// ✦/s with the transient boosts (ad boost, cosmic event) divided out.
-    var baseRate: Double
+    /// v4.0 — `Big` (still a plain JSON number below 1e300, so the stored format is unchanged).
+    var baseRate: Big
     var adBoostMultiplier: Double
     var adBoostExpiresAt: Date?
     var eventMultiplier: Double
     var eventExpiresAt: Date?
     /// Full offline window: base 8h + Cosmic Tree Nightwatch + Chronosphere.
     var offlineCap: TimeInterval
-    var cosmicShards: Double
+    var cosmicShards: Big
     var prestigeCount: Int
     var cosmosCount: Int
     var tierTitle: String
@@ -40,7 +41,7 @@ struct WidgetSnapshot: Codable, Equatable {
     /// ✦/s the app will apply if the player returns at `date`. The app evaluates
     /// boosts at return time and uses that rate for the whole away window, so a
     /// boost that has expired by `date` contributes nothing.
-    func rate(at date: Date) -> Double {
+    func rate(at date: Date) -> Big {
         var r = baseRate
         if let exp = adBoostExpiresAt, date < exp { r *= adBoostMultiplier }
         if let exp = eventExpiresAt, date < exp { r *= eventMultiplier }
@@ -48,7 +49,7 @@ struct WidgetSnapshot: Codable, Equatable {
     }
 
     /// Stardust waiting to be collected if the player opens the app at `date`.
-    func waiting(at date: Date) -> Double {
+    func waiting(at date: Date) -> Big {
         OfflineAccrual.compute(
             now: date,
             lastSeen: savedAt,

@@ -6,6 +6,8 @@ import Foundation
 /// Cosmos — a second reset that trades all Cosmic Shards + tree + generators + upgrades
 /// for a permanent per-Fragment multiplier. Fragments never reset; each new Cosmos stacks
 /// them, so the game keeps a real endless-progression curve past Absolute.
+///
+/// v4.0 — amounts are `Big` (v3.2 had moved them from Int to Double).
 enum CosmosCalculator {
     /// Minimum Cosmic Shard balance before True Cosmos begins yielding fragments.
     /// Below this, the button stays locked so the reset always feels worthwhile.
@@ -18,14 +20,9 @@ enum CosmosCalculator {
     /// Reality Fragments a player would earn if they True Cosmoi'd right now.
     /// Formula: floor(50 · √(shards / 1M)) up to 1B shards, then a gentler
     /// curve (v3.4.1, see `lateExponent`). Requires ≥ 1M shards to yield any.
-    ///
-    /// v3.2: `Double` (was `Int`). Converting a Double above Int64.max (~9.2e18)
-    /// to Int traps, and that point is ~3.4e40 shards — within reach of the
-    /// longest-running saves. Same fix 2.1.1 made for Big Bang shards.
-    static func fragmentsEarned(cosmicShards: Double) -> Double {
-        guard cosmicShards >= firstCosmosThreshold else { return 0 }
-        let raw = rawFragments(cosmicShards).rounded(.down)
-        return raw.isFinite ? raw : 0
+    static func fragmentsEarned(cosmicShards: Big) -> Big {
+        guard cosmicShards >= firstCosmosThreshold else { return .zero }
+        return rawFragments(cosmicShards).floored
     }
 
     // MARK: - v3.4.1 softer curve past a billion shards
@@ -38,45 +35,45 @@ enum CosmosCalculator {
     /// reached the 1e300 ceiling in days (planning/endgame_v1.py).
     static let lateExponent: Double = 0.45
 
-    private static var kneeFragments: Double { scaleFactor * sqrt(lateKnee / firstCosmosThreshold) }
+    private static var kneeFragments: Double { scaleFactor * (lateKnee / firstCosmosThreshold).squareRoot() }
 
     /// Unrounded fragments for `shards` (continuous at the knee).
-    static func rawFragments(_ shards: Double) -> Double {
-        guard shards > 0 else { return 0 }
-        if shards <= lateKnee { return scaleFactor * sqrt(shards / firstCosmosThreshold) }
-        return kneeFragments * pow(shards / lateKnee, lateExponent)
+    static func rawFragments(_ shards: Big) -> Big {
+        guard shards > 0 else { return .zero }
+        if shards <= lateKnee { return (shards / firstCosmosThreshold).squareRoot * scaleFactor }
+        return (shards / lateKnee).raised(to: lateExponent) * kneeFragments
     }
 
     /// Cosmic Shards required to earn at least `target` fragments.
-    static func shardsRequired(forFragments target: Double) -> Double {
-        guard target > 0 else { return firstCosmosThreshold }
+    static func shardsRequired(forFragments target: Big) -> Big {
+        guard target > 0 else { return Big(firstCosmosThreshold) }
         if target <= kneeFragments {
-            return firstCosmosThreshold * pow(target / scaleFactor, 2.0)
+            return (target / scaleFactor).raised(to: 2) * firstCosmosThreshold
         }
-        return lateKnee * pow(target / kneeFragments, 1 / lateExponent)
+        return (target / kneeFragments).raised(to: 1 / lateExponent) * lateKnee
     }
 
     /// Shard threshold at which the *next* fragment would be earned.
-    static func nextFragmentThreshold(cosmicShards: Double) -> Double {
+    static func nextFragmentThreshold(cosmicShards: Big) -> Big {
         let current = fragmentsEarned(cosmicShards: cosmicShards)
         return shardsRequired(forFragments: current + 1)
     }
 
     /// Progress in [0, 1] toward the next fragment.
-    static func progressToNextFragment(cosmicShards: Double) -> Double {
+    static func progressToNextFragment(cosmicShards: Big) -> Double {
         let current = fragmentsEarned(cosmicShards: cosmicShards)
         let lower = shardsRequired(forFragments: current)
         let upper = shardsRequired(forFragments: current + 1)
         guard upper > lower else { return 0 }
-        let p = (cosmicShards - lower) / (upper - lower)
+        let p = ((cosmicShards - lower) / (upper - lower)).double
         return min(max(p, 0), 1)
     }
 
     /// Permanent multiplier the player is enjoying right now from their accumulated
     /// Reality Fragments. Each fragment contributes +5% additively, so the multiplier
     /// stays readable (100 fragments = ×6, 500 = ×26).
-    static func multiplier(fragments: Double) -> Double {
-        1.0 + fragments * 0.05
+    static func multiplier(fragments: Big) -> Big {
+        fragments * 0.05 + 1
     }
 
     // MARK: - v3.4.1 Cosmos Goal
@@ -89,8 +86,8 @@ enum CosmosCalculator {
     /// Absolute itself, 1e36). Capped at the number ceiling, so a save past
     /// cosmos 66 is never locked out, only asked for a ceiling run.
     /// v3.4.1 review: "spamming 20 cosmic resets to gain all 8 pillars".
-    static func goal(cosmosCount n: Int) -> Double {
-        guard n > 0 else { return 0 }
-        return pow(10, min(300, 36 + goalStep * Double(n)))
+    static func goal(cosmosCount n: Int) -> Big {
+        guard n > 0 else { return .zero }
+        return Big.fromLog10(min(300, 36 + goalStep * Double(n)))
     }
 }

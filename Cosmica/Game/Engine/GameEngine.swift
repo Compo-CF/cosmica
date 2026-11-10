@@ -124,7 +124,7 @@ final class GameEngine {
     // MARK: - Manual tap
 
     @discardableResult
-    func manualTap() -> Double {
+    func manualTap() -> Big {
         let v = state.tapValue
         addStardust(v)
         state.totalTaps += 1
@@ -136,13 +136,14 @@ final class GameEngine {
     /// Highest value Stardust is allowed to reach. Far beyond any real save, but
     /// short of infinity: once a balance is ∞, costs subtract to ∞ and ∞ × 0 is
     /// NaN, which would freeze the save for good.
-    static let ceiling: Double = 1e300
+    /// v4.0 — `Big` cannot become ∞ or NaN, so this ceiling no longer protects
+    /// the save; it stays only until the 4.0 economy pass lifts it (plan phase 2).
+    static let ceiling = Big(1e300)
 
     /// Every Stardust gain goes through here (tick, tap, offline, Time Warp,
-    /// daily reward). A non-finite gain from a runaway multiplier stack lands
-    /// on the ceiling instead of turning the balance into ∞.
-    private func addStardust(_ amount: Double) {
-        guard !amount.isNaN, amount > 0 else { return }
+    /// daily reward).
+    private func addStardust(_ amount: Big) {
+        guard amount > 0 else { return }
         state.stardust = min(state.stardust + amount, Self.ceiling)
         state.lifetimeStardust = min(state.lifetimeStardust + amount, Self.ceiling)
     }
@@ -195,17 +196,17 @@ final class GameEngine {
     /// endgame players past ~3.8e33 lifetime; Double handles up to ~1.7e308.
     /// The .nextDown clamp is gone — it was only there because of the Int
     /// conversion, which no longer happens. Keep isFinite/>0 for defense.
-    var availableShards: Double {
-        let base = PrestigeCalculator.shardsEarned(lifetimeStardust: state.lifetimeStardust,
-                                                   floor: bigBangUnlockAt)
-        let treeMult = CosmicTree.bigBangYieldMultiplier(state.cosmicSkillLevels)
-        let eventMult = CosmicEventScheduler.bigBangYieldMultiplier(state.activeEvent)
-        let wonderMult = state.wonderBigBangYieldMultiplier * state.voidBigBangMultiplier   // v3.4 Spark Furnace
-        let raw = PrestigeCalculator.kindled(base * treeMult * eventMult * wonderMult,
+    var availableShards: Big {
+        let base: Big = PrestigeCalculator.shardsEarned(lifetimeStardust: state.lifetimeStardust,
+                                                        floor: bigBangUnlockAt)
+        let treeMult: Big = CosmicTree.bigBangYieldMultiplier(state.cosmicSkillLevels)
+        let eventMult: Double = CosmicEventScheduler.bigBangYieldMultiplier(state.activeEvent)
+        let wonderMult: Big = state.voidBigBangMultiplier * state.wonderBigBangYieldMultiplier   // v3.4 Spark Furnace
+        let raw = PrestigeCalculator.kindled(base * treeMult * wonderMult * eventMult,
                                              lifetimeShards: state.lifetimeCosmicShards,
                                              cosmosCount: state.cosmosCount)
-        guard raw.isFinite, raw > 0 else { return 0 }
-        return raw.rounded(.down)
+        guard raw > 0 else { return .zero }
+        return raw.floored
     }
 
     /// v3.3 — Big Bangs pay ×3 until the player has earned enough shards for the
@@ -223,9 +224,9 @@ final class GameEngine {
     }
 
     @discardableResult
-    func bigBang() -> Double {
+    func bigBang() -> Big {
         let shards = availableShards
-        guard shards > 0 else { return 0 }
+        guard shards > 0 else { return .zero }
         // v3.2 — latch a single-run challenge and record the run before it resets.
         checkChallenge()
         state.bestRunStardust = state.bestRunSoFar
@@ -236,7 +237,7 @@ final class GameEngine {
         state.totalBigBangs += 1
         state.lastBigBangShards = shards
         state.stardust = CosmicTree.startingStardust(state.cosmicSkillLevels)
-        state.lifetimeStardust = 0
+        state.lifetimeStardust = .zero
         // Reset generators/upgrades (also resets specialization to nil per default).
         state.generators = GameContent.defaultGenerators
         state.upgrades = GameContent.defaultUpgrades
@@ -256,11 +257,10 @@ final class GameEngine {
     /// v3.2: `Double` (was `Int`, which trapped past Int64.max — see
     /// `CosmosCalculator.fragmentsEarned`). This is read every time the Big
     /// Bang tab draws, so the old conversion would crash on open, not on tap.
-    var availableFragments: Double {
-        let base = CosmosCalculator.fragmentsEarned(cosmicShards: state.cosmicShards)
+    var availableFragments: Big {
+        let base: Big = CosmosCalculator.fragmentsEarned(cosmicShards: state.cosmicShards)
         // v3.4 — unspent Void Sparks and the Fragment Prism multiply it too.
-        let raw = (base * state.wonderFragmentMultiplier * state.voidFragmentMultiplier).rounded(.down)
-        return raw.isFinite ? raw : 0
+        return (base * state.voidFragmentMultiplier * state.wonderFragmentMultiplier).floored
     }
 
     /// True Cosmos unlocks after Absolute Ascension AND when the shard balance yields
@@ -271,7 +271,7 @@ final class GameEngine {
     }
 
     /// v3.4.1 — lifetime Stardust one run in this cosmos must reach first.
-    var cosmosGoal: Double { CosmosCalculator.goal(cosmosCount: state.cosmosCount) }
+    var cosmosGoal: Big { CosmosCalculator.goal(cosmosCount: state.cosmosCount) }
     var cosmosGoalMet: Bool { state.cosmosBestSoFar >= cosmosGoal }
 
     /// Collapse the current cosmos into Reality Fragments. Trades every Cosmic Shard,
@@ -279,9 +279,9 @@ final class GameEngine {
     /// Fragment multiplier that stacks across all future Cosmoi. Keeps the Absolute
     /// Observer title.
     @discardableResult
-    func trueCosmos() -> Double {
+    func trueCosmos() -> Big {
         let fragments = availableFragments
-        guard fragments > 0, canTrueCosmos else { return 0 }
+        guard fragments > 0, canTrueCosmos else { return .zero }
         checkChallenge()
         state.bestRunStardust = state.bestRunSoFar
         state.realityFragments += fragments
@@ -290,9 +290,9 @@ final class GameEngine {
 
         // v3.4 Null Seed — a share of the shards survives. Not new earnings,
         // so lifetimeCosmicShards is left alone.
-        let carried = (state.cosmicShards * state.voidShardCarryFraction).rounded(.down)
+        let carried = (state.cosmicShards * state.voidShardCarryFraction).floored
         resetCosmos()
-        if carried.isFinite, carried > 0 { state.cosmicShards = carried }
+        if carried > 0 { state.cosmicShards = carried }
 
         state.lastSeen = Date()
         save()
@@ -302,11 +302,11 @@ final class GameEngine {
     /// Everything a True Cosmos (and a Multiverse Collapse) resets: what a Big
     /// Bang resets, plus Cosmic Shards and the tree.
     private func resetCosmos() {
-        state.stardust = 0
-        state.lifetimeStardust = 0
-        state.cosmicShards = 0
+        state.stardust = .zero
+        state.lifetimeStardust = .zero
+        state.cosmicShards = .zero
         state.prestigeCount = 0
-        state.cosmosBestRun = 0     // v3.4.1 — a new cosmos, a new goal
+        state.cosmosBestRun = .zero     // v3.4.1 — a new cosmos, a new goal
         state.generators = GameContent.defaultGenerators
         state.upgrades = GameContent.defaultUpgrades
         // v3.0 — Autonomy branch keys survive True Cosmos. Same class of
@@ -321,7 +321,7 @@ final class GameEngine {
     // MARK: - Multiverse Collapse (v3.4, third prestige layer)
 
     /// Void Sparks a collapse would pay right now.
-    var availableSparks: Double {
+    var availableSparks: Big {
         MultiverseCalculator.sparksEarned(realityFragments: state.realityFragments)
     }
 
@@ -334,15 +334,15 @@ final class GameEngine {
     /// Void Sparks. Kept: Wonders (shard and void), achievements, challenge
     /// stars, cosmos count, Absolute, purchases. Returns the sparks earned.
     @discardableResult
-    func multiverseCollapse() -> Double {
+    func multiverseCollapse() -> Big {
         let sparks = availableSparks
-        guard canCollapseMultiverse, sparks > 0 else { return 0 }
+        guard canCollapseMultiverse, sparks > 0 else { return .zero }
         checkChallenge()
         state.bestRunStardust = state.bestRunSoFar
         state.voidSparks += sparks
         state.lifetimeVoidSparks += sparks
         state.multiverseCount += 1
-        state.realityFragments = 0
+        state.realityFragments = .zero
         resetCosmos()
         state.lastSeen = Date()
         save()
@@ -350,7 +350,7 @@ final class GameEngine {
     }
 
     /// Sparks to build or raise a Void Wonder; nil if maxed or unknown.
-    func voidWonderCost(_ id: String) -> Double? {
+    func voidWonderCost(_ id: String) -> Big? {
         guard let w = VoidWonderCatalog.wonder(id: id) else { return nil }
         let level = state.wonderLevel(id)
         guard w.maxLevel == 0 || level < w.maxLevel else { return nil }
@@ -361,7 +361,7 @@ final class GameEngine {
     func buildVoidWonder(id: String) -> Bool {
         guard let w = VoidWonderCatalog.wonder(id: id), let cost = voidWonderCost(id) else { return false }
         guard state.multiverseCount >= w.multiverseRequired else { return false }
-        guard cost.isFinite, state.voidSparks >= cost else { return false }
+        guard state.voidSparks >= cost else { return false }
         state.voidSparks -= cost
         state.wonderLevels[id] = state.wonderLevel(id) + 1
         save()
@@ -373,7 +373,7 @@ final class GameEngine {
     func cosmicSkillLevel(_ id: String) -> Int { state.cosmicSkillLevels[id] ?? 0 }
 
     /// Cosmic-shard cost of the next level or Stellar rank, or nil if maxed / unknown.
-    func cosmicSkillCost(_ id: String) -> Double? {
+    func cosmicSkillCost(_ id: String) -> Big? {
         guard let skill = CosmicTree.skill(id) else { return nil }
         let lvl = cosmicSkillLevel(id)
         guard skill.canLevel(from: lvl) else { return nil }
@@ -386,7 +386,7 @@ final class GameEngine {
         let lvl = cosmicSkillLevel(id)
         guard skill.canLevel(from: lvl) else { return false }
         let cost = skill.cost(atLevel: lvl)
-        guard cost.isFinite, state.cosmicShards >= cost else { return false }
+        guard state.cosmicShards >= cost else { return false }
         state.cosmicShards -= cost
         state.cosmicSkillLevels[id] = lvl + 1
         save()
@@ -426,13 +426,13 @@ final class GameEngine {
         return days == 1 ? state.dailyStreak + 1 : 1
     }
 
-    private func dailyStardust(_ mult: Double) -> Double {
-        max(500, state.stardustPerSecond * 1800 * mult)
+    private func dailyStardust(_ mult: Double) -> Big {
+        max(state.stardustPerSecond * (1800 * mult), Big(500))
     }
 
     private func reward(forStreak streak: Int) -> DailyReward {
         let day = ((streak - 1) % 7) + 1
-        var stardust = 0.0, shards = 0, boostHours = 0.0
+        var stardust = Big.zero, shards = 0, boostHours = 0.0
         switch day {
         case 1: stardust = dailyStardust(1)
         case 2: shards = 1
@@ -543,7 +543,7 @@ final class GameEngine {
     /// `BigBangView.triggerBigBang()` path. Shard grant, prestige counter,
     /// GameCenter score, achievements — all identical to the manual path.
     @discardableResult
-    func autoBigBang() -> Double {
+    func autoBigBang() -> Big {
         let shards = bigBang()
         if shards > 0 {
             state.lastAutoBangAt = Date()
@@ -557,8 +557,8 @@ final class GameEngine {
         save()
     }
 
-    func setAutoBigBangThreshold(_ threshold: Double) {
-        state.autoBigBangThreshold = max(1, threshold)
+    func setAutoBigBangThreshold(_ threshold: Big) {
+        state.autoBigBangThreshold = max(threshold, Big.one)
         save()
     }
 
@@ -582,10 +582,10 @@ final class GameEngine {
 
     /// Direct grant of Cosmic Shards (paid IAP, daily reward, cosmic event).
     /// Applies the active-event shard multiplier if any.
-    func grantShards(_ amount: Double) {
+    func grantShards(_ amount: Big) {
         let mult = CosmicEventScheduler.shardGrantMultiplier(state.activeEvent)
         let gain = amount * mult
-        guard gain.isFinite, gain > 0 else { return }
+        guard gain > 0 else { return }
         state.cosmicShards += gain
         state.lifetimeCosmicShards += gain
         save()
@@ -595,10 +595,9 @@ final class GameEngine {
     /// fixed amount, and otherwise `multiple` × the player's latest Big Bang
     /// (or what a Big Bang would pay right now, if that's more). Keeps the
     /// packs meaningful at every stage instead of rounding to nothing late game.
-    func shardPackAmount(base: Double, multiple: Double) -> Double {
+    func shardPackAmount(base: Double, multiple: Double) -> Big {
         let reference = max(state.lastBigBangShards, availableShards)
-        let scaled = multiple * reference
-        return scaled.isFinite ? max(base, scaled) : base
+        return max(reference * multiple, Big(base))
     }
 
     /// v3.4 shard packs, sized in Big Bangs (was 1 and 10). Kindling (3.3)
@@ -612,12 +611,12 @@ final class GameEngine {
     /// player buy that they can't afford now: a Cosmic Tree level or a Wonder.
     /// Lets a pack say what it's for instead of only how big it is. nil when
     /// nothing new comes into reach.
-    func shardPackTarget(amount: Double) -> (name: String, cost: Double)? {
+    func shardPackTarget(amount: Big) -> (name: String, cost: Big)? {
         let have = state.cosmicShards
         let budget = have + amount
-        var best: (name: String, cost: Double)?
-        func consider(_ name: String, _ cost: Double?) {
-            guard let cost, cost.isFinite, cost > have, cost <= budget else { return }
+        var best: (name: String, cost: Big)?
+        func consider(_ name: String, _ cost: Big?) {
+            guard let cost, cost > have, cost <= budget else { return }
             if best == nil || cost > best!.cost { best = (name, cost) }
         }
         for skill in CosmicTree.skills where !skill.id.hasPrefix("autonomy_") {
@@ -632,15 +631,14 @@ final class GameEngine {
     /// v3.1 Time Warp — `hours` of production at the full online rate, right
     /// now. Scales with the player, unlike a fixed-amount pack. Counts toward
     /// this run's lifetime (tier, Big Bang reward, Absolute) like any earning.
-    func timeWarpAmount(hours: Double) -> Double {
-        let amount = state.stardustPerSecond * hours * 3600
-        return amount.isFinite ? max(0, amount) : 0
+    func timeWarpAmount(hours: Double) -> Big {
+        max(state.stardustPerSecond * (hours * 3600), Big.zero)
     }
 
     @discardableResult
-    func applyTimeWarp(hours: Double) -> Double {
+    func applyTimeWarp(hours: Double) -> Big {
         let amount = timeWarpAmount(hours: hours)
-        guard amount > 0 else { return 0 }
+        guard amount > 0 else { return .zero }
         addStardust(amount)
         checkAbsoluteAscension()
         checkAchievements()
@@ -663,8 +661,8 @@ final class GameEngine {
     /// Grants the free warp and stamps the day. Nothing is stamped when the
     /// warp would be worth nothing (no production yet), so the day isn't lost.
     @discardableResult
-    func claimFreeWarp(now: Date = Date()) -> Double {
-        guard freeWarpAvailable(now: now), timeWarpAmount(hours: Self.freeWarpHours) > 0 else { return 0 }
+    func claimFreeWarp(now: Date = Date()) -> Big {
+        guard freeWarpAvailable(now: now), timeWarpAmount(hours: Self.freeWarpHours) > 0 else { return .zero }
         state.lastFreeWarpAt = now
         return applyTimeWarp(hours: Self.freeWarpHours)   // saves
     }
@@ -685,9 +683,8 @@ final class GameEngine {
     }
 
     /// Stardust `applyOfflineCatchUp(cap:)` would pay right now.
-    func offlineCatchUpAmount(cap: TimeInterval) -> Double {
-        let amount = state.offlineStardustPerSecond * catchUpSeconds(cap: cap) * OfflineAccrual.offlineRate
-        return amount.isFinite ? max(0, amount) : 0
+    func offlineCatchUpAmount(cap: TimeInterval) -> Big {
+        max(state.offlineStardustPerSecond * (catchUpSeconds(cap: cap) * OfflineAccrual.offlineRate), Big.zero)
     }
 
     /// Pays the part of the last absence the base cap cut off, up to `cap`.
@@ -741,7 +738,7 @@ final class GameEngine {
     // MARK: - Cosmic Wonders (v2.0)
 
     /// Shards to build (level 0 → 1) or upgrade a Wonder; nil if it's at its max level.
-    func wonderCost(_ id: String) -> Double? {
+    func wonderCost(_ id: String) -> Big? {
         guard let wonder = WondersCatalog.wonder(id: id) else { return nil }
         let level = state.wonderLevel(id)
         guard wonder.maxLevel == 0 || level < wonder.maxLevel else { return nil }
@@ -755,7 +752,7 @@ final class GameEngine {
     func buildWonder(id: String) -> Bool {
         guard let wonder = WondersCatalog.wonder(id: id), let cost = wonderCost(id) else { return false }
         guard state.cosmosCount >= wonder.cosmosRequired else { return false }
-        guard cost.isFinite, state.cosmicShards >= cost else { return false }
+        guard state.cosmicShards >= cost else { return false }
         state.cosmicShards -= cost
         state.wonderLevels[id] = state.wonderLevel(id) + 1
         state.builtWonderIds.insert(id)
@@ -772,7 +769,7 @@ final class GameEngine {
 
     /// Shards a challenge pays on top of its star: half a Big Bang at the
     /// player's level, never less than 25 (same sizing rule as the shard packs).
-    var challengeRewardShards: Double { shardPackAmount(base: 25, multiple: 0.5) }
+    var challengeRewardShards: Big { shardPackAmount(base: 25, multiple: 0.5) }
 
     /// When the week has changed, pay out any unclaimed reward from the week
     /// that ended, then set this week's challenge. An Int compare when nothing
@@ -802,13 +799,13 @@ final class GameEngine {
     /// Claim a completed challenge: +1 Challenge Star and the shard reward.
     /// Returns the shards granted (0 if there was nothing to claim).
     @discardableResult
-    func claimChallenge() -> Double {
-        guard challengeClaimable else { return 0 }
+    func claimChallenge() -> Big {
+        guard challengeClaimable else { return .zero }
         return grantChallengeReward(week: state.challengeWeek)
     }
 
     @discardableResult
-    private func grantChallengeReward(week: Int) -> Double {
+    private func grantChallengeReward(week: Int) -> Big {
         let shards = challengeRewardShards
         state.challengeStars += 1
         state.challengeStreak = state.lastChallengeClaimWeek == week - 1 ? state.challengeStreak + 1 : 1

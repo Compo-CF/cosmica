@@ -112,7 +112,7 @@ enum Tier: Int, CaseIterable, Codable, Comparable {
         }
     }
 
-    static func current(forLifetime stardust: Double) -> Tier {
+    static func current(forLifetime stardust: Big) -> Tier {
         Self.allCases.last { stardust >= $0.threshold } ?? .stargazer
     }
 

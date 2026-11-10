@@ -33,36 +33,36 @@ enum MultiverseCalculator {
 
     /// Void Sparks a collapse would pay for `fragments` Reality Fragments:
     /// floor(5 · √(fragments / 1000)), nothing below 1,000.
-    static func sparksEarned(realityFragments fragments: Double) -> Double {
-        guard fragments >= firstFragments else { return 0 }
-        let raw = (scale * sqrt(fragments / firstFragments)).rounded(.down)
-        return raw.isFinite ? raw : 0
+    static func sparksEarned(realityFragments fragments: Big) -> Big {
+        guard fragments >= firstFragments else { return .zero }
+        return ((fragments / firstFragments).squareRoot * scale).floored
     }
 
     /// Reality Fragments needed for at least `target` sparks.
-    static func fragmentsRequired(forSparks target: Double) -> Double {
-        guard target > 0 else { return firstFragments }
-        return max(firstFragments, firstFragments * pow(target / scale, 2))
+    static func fragmentsRequired(forSparks target: Big) -> Big {
+        guard target > 0 else { return Big(firstFragments) }
+        return max(Big(firstFragments), (target / scale).raised(to: 2) * firstFragments)
     }
 
-    static func nextSparkThreshold(realityFragments: Double) -> Double {
+    static func nextSparkThreshold(realityFragments: Big) -> Big {
         fragmentsRequired(forSparks: sparksEarned(realityFragments: realityFragments) + 1)
     }
 
     /// Progress in [0, 1] toward the next spark (toward the first one below 1,000).
-    static func progressToNextSpark(realityFragments f: Double) -> Double {
+    static func progressToNextSpark(realityFragments f: Big) -> Double {
         let current = sparksEarned(realityFragments: f)
-        let lower = current > 0 ? fragmentsRequired(forSparks: current) : 0
+        let lower = current > 0 ? fragmentsRequired(forSparks: current) : Big.zero
         let upper = fragmentsRequired(forSparks: current + 1)
         guard upper > lower else { return 0 }
-        return min(max((f - lower) / (upper - lower), 0), 1)
+        return min(max(((f - lower) / (upper - lower)).double, 0), 1)
     }
 
-    static func stardustMultiplier(sparks: Double) -> Double { 1 + stardustPerSpark * max(0, sparks) }
+    /// v4.0 — `Big` (sparks and their multipliers grow without limit).
+    static func stardustMultiplier(sparks: Big) -> Big { max(sparks, Big.zero) * stardustPerSpark + 1 }
     /// v3.4.1: grows with √sparks (was linear). Sparks already multiply
     /// Stardust linearly; paying fragments linearly too made every collapse
     /// worth 100–1,000× the one before it, and players hit the 1e300 ceiling
     /// within days (planning/endgame_v1.py). 1 spark is unchanged; 100 sparks
     /// is ×3.5 fragments instead of ×26.
-    static func fragmentMultiplier(sparks: Double) -> Double { 1 + fragmentBonusPerSpark * max(0, sparks).squareRoot() }
+    static func fragmentMultiplier(sparks: Big) -> Big { max(sparks, Big.zero).squareRoot * fragmentBonusPerSpark + 1 }
 }

@@ -20,15 +20,16 @@ struct Generator: Codable, Identifiable, Hashable {
     /// v3.3 — Overcharged doubles the price, Thrifty halves it.
     var costMultiplier: Double { specializationDetail?.costMultiplier ?? 1 }
 
-    var nextCost: Double {
+    /// v4.0 — `Big`: a generator owned thousands of times costs more than a Double holds.
+    var nextCost: Big {
         CostCurve.cost(base: baseCost, growth: costGrowth, owned: count) * costMultiplier
     }
 
-    func bulkCost(amount: Int) -> Double {
+    func bulkCost(amount: Int) -> Big {
         CostCurve.bulkCost(base: baseCost, growth: costGrowth, owned: count, buying: amount) * costMultiplier
     }
 
-    func maxAffordable(budget: Double) -> Int {
+    func maxAffordable(budget: Big) -> Int {
         CostCurve.maxAffordable(base: baseCost, growth: costGrowth, owned: count, budget: budget / costMultiplier)
     }
 
