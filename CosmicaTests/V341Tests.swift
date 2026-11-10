@@ -25,6 +25,7 @@ final class V341Tests: XCTestCase {
         var s = GameState()
         s.absoluteAscendedAt = Date()
         s.cosmosCount = 3                       // goal 1e48
+        s.cosmosSinceOmniverse = 3              // v4.0 — the goal reads this (a decoded pre-4.0 save copies cosmosCount)
         s.cosmicShards = Big(1e8)
         s.lifetimeStardust = Big(1e47)
         let e = engine(s)
