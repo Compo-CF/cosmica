@@ -110,7 +110,9 @@ struct TrialEndOfferSheet: View {
             onDismiss()
             // Same happy-moment review ask as the Shop, after the sheet is gone.
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-                reviewPrompter.maybePrompt(reason: "purchase_\(productId)")
+                if let state = automation.engine?.state {
+                    reviewPrompter.maybePrompt(reason: "purchase_\(productId)", state: state)
+                }
             }
         } else if let msg = iap.lastError, !msg.isEmpty {
             // User cancels leave lastError empty, and stay quiet.

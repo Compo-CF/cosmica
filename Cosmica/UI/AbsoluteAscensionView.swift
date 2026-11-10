@@ -103,7 +103,7 @@ struct AbsoluteAscensionView: View {
         // Delay so the dismiss animation finishes and the prompt lands in the
         // "wow that was cool" beat rather than on top of the cover transition.
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
-            reviewPrompter.maybePrompt(reason: "absolute_ascension")
+            reviewPrompter.maybePrompt(reason: "absolute_ascension", state: engine.state)
         }
     }
 

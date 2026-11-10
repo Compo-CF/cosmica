@@ -127,13 +127,8 @@ struct RootView: View {
             }
             notif.pendingTab = nil
         }
-        // v2.1: achievement-burst rating trigger. Fires when a play session pushes
-        // total unlocked achievements across a multiple of 5. ReviewPrompter's 30-day
-        // floor keeps this from ever feeling spammy.
-        .onChange(of: engine.state.unlockedAchievementIds.count) { oldValue, newValue in
-            guard newValue > oldValue, newValue > 0, newValue % 5 == 0 else { return }
-            reviewPrompter.maybePrompt(reason: "achievement_burst_\(newValue)")
-        }
+        // v4.0 — the every-5-achievements rating ask is gone: it fired in the first
+        // session, before players cared (ReviewPrompter: big moments only).
         // v2.1: view-layer tip trigger. First True Cosmos and first Wonder built
         // both set pendingTipTrigger; here we honor it if the "big moment" gate
         // agrees (opt-out, hasEverTipped, products loaded, past 7-day grace).

@@ -22,7 +22,7 @@ final class LongGameTests: XCTestCase {
         s.cosmicShards = Big(1e45)            // ~5e20 fragments: past Int64.max
         let e = engine(s)
         let f = e.availableFragments
-        XCTAssertTrue(f.isFinite)
+        XCTAssertTrue(f > 0)
         XCTAssertGreaterThan(f, 9.3e18)
         XCTAssertTrue(e.canTrueCosmos)
         XCTAssertEqual(e.trueCosmos(), f)
@@ -35,9 +35,9 @@ final class LongGameTests: XCTestCase {
         s.realityFragments = Big(1e300)        // multiplier stack overflows to ∞
         s.cosmicShards = Big(1e300)
         let e = engine(s)
-        XCTAssertFalse(e.state.tapValue.isFinite)
+        // v4.0 — Big: the stack no longer overflows to ∞, it is simply past the ceiling.
+        XCTAssertGreaterThan(e.state.tapValue, GameEngine.ceiling)
         e.manualTap()
-        XCTAssertTrue(e.state.stardust.isFinite)
         XCTAssertEqual(e.state.stardust, GameEngine.ceiling)
         XCTAssertEqual(e.state.lifetimeStardust, GameEngine.ceiling)
     }

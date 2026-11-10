@@ -87,16 +87,7 @@ struct DailyRewardView: View {
         guard engine.dailyRewardAvailable else { onClaim(); return }
         _ = engine.claimDaily(multiplier: multiplier)
         haptics.dailyClaim()
-        // v2.1: retention celebration. A 7+ day streak is a strong
-        // signal the player is enjoying Cosmica. Fire the rating
-        // prompt after the sheet dismisses so the moment isn't
-        // stepped on.
-        let streak = engine.state.dailyStreak
-        if streak >= 7 {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
-                reviewPrompter.maybePrompt(reason: "daily_streak_\(streak)")
-            }
-        }
+        // v4.0 — the 7-day-streak rating ask is gone (ReviewPrompter: big moments only).
         onClaim()
     }
 }

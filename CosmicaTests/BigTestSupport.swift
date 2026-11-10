@@ -21,6 +21,17 @@ func XCTAssertEqual(_ a: Big, _ b: Big, accuracy: Double, _ message: @autoclosur
     XCTAssertEqual(a.double, b.double, accuracy: accuracy, message(), file: file, line: line)
 }
 
+/// `accuracy` given as a Big (e.g. `rate * 1e-9` where `rate` is now Big).
+func XCTAssertEqual(_ a: Big, _ b: Big, accuracy: Big, _ message: @autoclosure () -> String = "",
+                    file: StaticString = #filePath, line: UInt = #line) {
+    XCTAssertTrue((a - b).magnitude <= accuracy.magnitude, "\(a) vs \(b) (±\(accuracy)). \(message())", file: file, line: line)
+}
+
+/// Test-only: "didn't run away to Big.max" (Big has no infinity).
+extension Big {
+    var isFinite: Bool { self < Big.max && self > -Big.max }
+}
+
 func XCTAssertEqual(_ a: Big?, _ b: Double, _ message: @autoclosure () -> String = "",
                     file: StaticString = #filePath, line: UInt = #line) {
     guard let a else { return XCTFail("nil is not \(b). \(message())", file: file, line: line) }

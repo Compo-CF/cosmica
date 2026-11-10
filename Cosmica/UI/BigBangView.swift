@@ -499,7 +499,7 @@ struct BigBangView: View {
             // ruins a review prompt like landing it on top of an animation.
             if shards >= 10 {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                    reviewPrompter.maybePrompt(reason: "big_bang")
+                    reviewPrompter.maybePrompt(reason: "big_bang", state: engine.state)
                 }
             }
             // v2.1: IAP nudge. Only fires on the 3rd, 7th, 15th prestige, only if

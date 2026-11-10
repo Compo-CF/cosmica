@@ -24,7 +24,7 @@ struct WondersView: View {
                                 // Happy-moment: they just spent a mountain of shards on
                                 // something permanent. Rate-limited on ReviewPrompter's side.
                                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
-                                    reviewPrompter.maybePrompt(reason: "wonder_built")
+                                    reviewPrompter.maybePrompt(reason: "wonder_built", state: engine.state)
                                 }
                                 // v2.1: first Wonder is a strong "the game is delivering"
                                 // moment — good time for a tip nudge (bypasses cooldown

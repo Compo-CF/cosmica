@@ -8,6 +8,7 @@ struct TrueCosmosView: View {
     @Environment(GameEngine.self) var engine
     @Environment(HapticsManager.self) var haptics
     @Environment(IAPManager.self) var iap
+    @Environment(ReviewPrompter.self) var reviewPrompter
 
     @State private var showConfirm = false
     @State private var collapseAnim = false
@@ -349,6 +350,12 @@ struct TrueCosmosView: View {
             if engine.state.cosmosCount == 1 {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
                     iap.pendingTipTrigger = true
+                }
+            } else {
+                // v4.0 — a True Cosmos is one of the big moments for the rating ask
+                // (the first one is the tip nudge's).
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+                    reviewPrompter.maybePrompt(reason: "true_cosmos", state: engine.state)
                 }
             }
         }

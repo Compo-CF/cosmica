@@ -46,12 +46,12 @@ final class MonetizationTests: XCTestCase {
         let e = engine(s)
         let rate = e.state.stardustPerSecond
         XCTAssertGreaterThan(rate, 0)
-        XCTAssertEqual(e.timeWarpAmount(hours: 8), rate * 8 * 3600, accuracy: rate * 1e-6)
+        XCTAssertEqual(e.timeWarpAmount(hours: 8), rate * 8 * 3600, accuracy: (rate * 1e-6).double)
 
         let before = e.state.lifetimeStardust
         let added = e.applyTimeWarp(hours: 8)
-        XCTAssertEqual(added, rate * 8 * 3600, accuracy: rate * 1e-6)
-        XCTAssertEqual(e.state.lifetimeStardust - before, added, accuracy: added * 1e-9)
+        XCTAssertEqual(added, rate * 8 * 3600, accuracy: (rate * 1e-6).double)
+        XCTAssertEqual(e.state.lifetimeStardust - before, added, accuracy: (added * 1e-9).double)
     }
 
     func test_timeWarp_withNoProduction_grantsNothing() {

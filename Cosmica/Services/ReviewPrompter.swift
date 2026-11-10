@@ -1,59 +1,69 @@
 import SwiftUI
 import StoreKit
 
-/// Rate-limited wrapper around `AppStore.requestReview(in:)`. Callers fire this at
-/// genuinely happy moments (first Big Bang with a real shard reward, Absolute
-/// Ascension, building a Cosmic Wonder). We gate on our own side so we never
-/// nag — iOS makes the final decision and may silently skip.
+/// Rate-limited wrapper around `AppStore.requestReview(in:)`. iOS makes the final
+/// call and may silently skip; we gate on our side so the few asks Apple allows
+/// land on players who already like the game, at a moment that shows it.
 ///
-/// Apple's own hard limit is 3 prompts per 365 days per app version; we respect
-/// it and add a 60-day floor between our own attempts, so version-bump releases
-/// like v2.0 refresh the prompt budget cleanly.
+/// v4.0 rules (planning/v4.0-plan.md, phase 5). Before 4.0 the first ask usually
+/// came in the first session (achievement #5, or the first Big Bang worth 10
+/// shards) and every app update re-armed it, on the mistaken belief that Apple
+/// resets its own budget per version. It doesn't: iOS shows the prompt at most
+/// 3 times in 365 days per app, whatever the version.
+///   • only invested players: ≥ 2 days since install and ≥ 3 Big Bangs
+///   • only big moments: a Big Bang, a Wonder, Absolute, a True Cosmos, a purchase
+///   • ≤ 3 asks in any 365 days, ≥ 90 days apart, no reset on update
+///   • every ask is counted in ShopStats as `review.ask.<reason>`
 @MainActor
 @Observable
 final class ReviewPrompter {
-    @ObservationIgnored @AppStorage("review.lastPromptedAt")  private var lastPromptedRaw: Double = 0
-    @ObservationIgnored @AppStorage("review.promptCount")     private var promptCount: Int = 0
-    @ObservationIgnored @AppStorage("review.promptedVersion") private var promptedVersion: String = ""
+    static let minDaysInstalled: Double = 2
+    static let minBigBangs = 3
+    static let maxAsksPerYear = 3
+    static let minDaysBetween: Double = 90
 
-    /// Minimum days between our own prompts. Apple's system-wide cap is 3 per 365 days
-    /// per app version; 30 days lets us capture more happy moments while staying
-    /// comfortably under the ceiling (a 30-day floor caps at ~12 attempts, of which
-    /// iOS silently suppresses all but the first 3).
-    private let minDaysBetween: Double = 30
+    /// When we asked, as comma-separated Unix timestamps (newest last).
+    @ObservationIgnored @AppStorage("review.askDates") private var askDatesRaw: String = ""
+    /// Pre-4.0 key, read once so an ask made under the old rules still counts.
+    @ObservationIgnored @AppStorage("review.lastPromptedAt") private var legacyLastPromptedRaw: Double = 0
 
-    private var currentVersion: String {
-        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? ""
+    private var askDates: [Date] {
+        get {
+            var dates = askDatesRaw.split(separator: ",").compactMap { Double($0) }.map(Date.init(timeIntervalSince1970:))
+            if dates.isEmpty, legacyLastPromptedRaw > 0 {
+                dates = [Date(timeIntervalSince1970: legacyLastPromptedRaw)]
+            }
+            return dates
+        }
+        set {
+            askDatesRaw = newValue.map { String(Int($0.timeIntervalSince1970)) }.joined(separator: ",")
+        }
     }
 
-    private var eligible: Bool {
-        // Version bump resets our counter — Apple resets its own 3-per-year budget
-        // on version change too, so the two stay aligned.
-        if promptedVersion != currentVersion { return true }
-        let last = Date(timeIntervalSince1970: lastPromptedRaw)
-        return Date().timeIntervalSince(last) > minDaysBetween * 86_400
+    /// Pure rule, unit-tested in `V40Tests`.
+    static func isEligible(now: Date, installedAt: Date, bigBangs: Int, previousAsks: [Date]) -> Bool {
+        let day: TimeInterval = 86_400
+        guard now.timeIntervalSince(installedAt) >= minDaysInstalled * day else { return false }
+        guard bigBangs >= minBigBangs else { return false }
+        let lastYear = previousAsks.filter { now.timeIntervalSince($0) < 365 * day }
+        guard lastYear.count < maxAsksPerYear else { return false }
+        if let last = previousAsks.max(), now.timeIntervalSince(last) < minDaysBetween * day { return false }
+        return true
     }
 
-    /// Ask iOS to consider showing the review prompt. Cheap to call from anywhere
-    /// on the main actor; returns immediately whether or not the sheet appears.
-    /// `reason` is kept for future analytics — currently unused.
-    func maybePrompt(reason: String = "") {
-        guard eligible else { return }
-
-        // Grab the active scene. Idle games are single-window; the first
-        // foreground-active window scene is always the right one.
-        if let scene = UIApplication.shared.connectedScenes
-            .first(where: { $0.activationState == .foregroundActive }) as? UIWindowScene {
-            AppStore.requestReview(in: scene)
-        }
-
-        // Record even when iOS may silently suppress — we don't want to spam
-        // the requestReview call itself. Reset our count when the version changes.
-        if promptedVersion != currentVersion {
-            promptCount = 0
-            promptedVersion = currentVersion
-        }
-        promptCount += 1
-        lastPromptedRaw = Date().timeIntervalSince1970
+    /// Ask iOS to consider showing the review prompt. Cheap to call; returns at
+    /// once whether or not the sheet appears. `reason` names the moment (counted).
+    func maybePrompt(reason: String, state: GameState) {
+        let now = Date()
+        let previous = askDates
+        guard Self.isEligible(now: now, installedAt: state.firstLaunch,
+                              bigBangs: state.totalBigBangs, previousAsks: previous) else { return }
+        // Idle games are single-window; the first foreground-active scene is right.
+        guard let scene = UIApplication.shared.connectedScenes
+            .first(where: { $0.activationState == .foregroundActive }) as? UIWindowScene else { return }
+        AppStore.requestReview(in: scene)
+        // Recorded even when iOS suppresses the sheet, so we never spam the call.
+        askDates = Array((previous + [now]).suffix(10))
+        ShopStats.shared.record("review.ask.\(ShopStats.key(reason))")
     }
 }
