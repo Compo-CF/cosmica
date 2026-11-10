@@ -807,9 +807,7 @@ struct ShopView: View {
     @ViewBuilder
     private func cardBackground<C: View>(@ViewBuilder content: () -> C) -> some View {
         content()
-            .padding()
-            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
-            .padding(.horizontal)
+            .dsCard(.core)
     }
 }
 

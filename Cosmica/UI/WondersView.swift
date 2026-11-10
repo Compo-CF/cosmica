@@ -80,9 +80,7 @@ struct WondersView: View {
             ProgressView(value: total > 0 ? Double(built) / Double(total) : 0)
                 .tint(.pink)
         }
-        .padding()
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
-        .padding(.horizontal)
+        .dsCard(.cosmos)
     }
 }
 

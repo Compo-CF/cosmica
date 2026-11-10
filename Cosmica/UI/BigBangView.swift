@@ -148,9 +148,7 @@ struct BigBangView: View {
                     .font(.caption).foregroundStyle(.secondary).monospacedDigit()
             }
         }
-        .padding()
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
-        .padding(.horizontal)
+        .dsCard(.bigBang)
     }
 
     /// v3.1 — fraction of the way from `lo` to `hi` measured in powers of ten.
@@ -215,9 +213,7 @@ struct BigBangView: View {
                 }
             }
         }
-        .padding()
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
-        .padding(.horizontal)
+        .dsCard(.bigBang)
     }
 
     // v4.0 — every hub link is a DSLinkRow in its layer's colours (UI/Design/DS.swift).
@@ -307,9 +303,7 @@ struct BigBangView: View {
                 .font(.caption2).foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
         }
-        .padding()
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
-        .padding(.horizontal)
+        .dsCard(.bigBang)
     }
 
     // v3.0 Phase 3 — Auto-Big-Bang panel. Only visible when Automation Core is
@@ -392,9 +386,7 @@ struct BigBangView: View {
                     .foregroundStyle(.secondary)
             }
         }
-        .padding()
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
-        .padding(.horizontal)
+        .dsCard(.bigBang)
     }
 
     /// Live status line under the threshold picker. Tells the player what's
@@ -438,9 +430,7 @@ struct BigBangView: View {
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
         }
-        .padding()
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
-        .padding(.horizontal)
+        .dsCard(.bigBang)
     }
 
     private func triggerBigBang() {

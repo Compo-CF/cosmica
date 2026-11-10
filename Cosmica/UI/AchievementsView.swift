@@ -68,9 +68,7 @@ struct AchievementsView: View {
             ProgressView(value: total > 0 ? Double(unlocked) / Double(total) : 0)
                 .tint(.orange)
         }
-        .padding()
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
-        .padding(.horizontal)
+        .dsCard(.core)
     }
 }
 

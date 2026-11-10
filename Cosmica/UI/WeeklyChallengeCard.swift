@@ -81,10 +81,7 @@ struct WeeklyChallengeCard: View {
                 .font(.caption2).foregroundStyle(Self.star)
             }
         }
-        .padding()
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
-        .overlay(RoundedRectangle(cornerRadius: 14).stroke(Self.star.opacity(done && !claimed ? 0.8 : 0), lineWidth: 1.5))
-        .padding(.horizontal)
+        .dsCard(.core, highlighted: done && !claimed)   // v4.0 design system
     }
 
     private func progressLabel(_ c: WeeklyChallenge, _ state: GameState) -> String {

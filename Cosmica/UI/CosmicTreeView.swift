@@ -9,7 +9,7 @@ struct CosmicTreeView: View {
 
     var body: some View {
         ZStack {
-            Color.black.ignoresSafeArea()
+            DSLayerBackground(layer: .bigBang)
             ScrollView {
                 VStack(spacing: 12) {
                     balanceHeader
