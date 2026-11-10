@@ -60,6 +60,12 @@ enum AchievementGoal: Codable, Hashable {
     case totalBigBangs(Int)
     case challengeStars(Int)
     case wondersBuilt(Int)
+    // v4.0 — past 1.8e308 a Double can't hold the target, so single-run goals are
+    // orders of magnitude (log10), and the Omniverse gets its own counters.
+    case runMagnitude(Double)
+    case omniverseCount(Int)
+    case lifetimeEchoes(Double)
+    case omniverseNodeLevel(id: String, level: Int)
 
     func isMet(state: GameState) -> Bool {
         switch self {
@@ -82,6 +88,10 @@ enum AchievementGoal: Codable, Hashable {
         case .totalBigBangs(let n):          return state.totalBigBangs >= n
         case .challengeStars(let n):         return state.challengeStars >= n
         case .wondersBuilt(let n):           return state.builtWonderIds.count >= n
+        case .runMagnitude(let m):           return state.lifetimeStardust.log10Value >= m
+        case .omniverseCount(let n):         return state.omniverseCount >= n
+        case .lifetimeEchoes(let v):         return state.lifetimeEchoes >= v
+        case .omniverseNodeLevel(let id, let l): return state.omniverseLevel(id) >= l
         }
     }
 
@@ -98,6 +108,10 @@ enum AchievementGoal: Codable, Hashable {
         case .totalBigBangs(let n):          return clamped(Double(state.totalBigBangs), Double(n))
         case .challengeStars(let n):         return clamped(Double(state.challengeStars), Double(n))
         case .wondersBuilt(let n):           return clamped(Double(state.builtWonderIds.count), Double(n))
+        case .runMagnitude(let m):           return clamped(max(0, state.lifetimeStardust.log10Value), m)
+        case .omniverseCount(let n):         return clamped(Double(state.omniverseCount), Double(n))
+        case .lifetimeEchoes(let v):         return scaled(state.lifetimeEchoes, v)
+        case .omniverseNodeLevel(let id, let l): return clamped(Double(state.omniverseLevel(id)), Double(l))
         case .ownGenerator(let i, let c):
             guard i < state.generators.count else { return 0 }
             return clamped(Double(state.generators[i].count), Double(c))
@@ -209,6 +223,18 @@ enum AchievementCatalog {
 
         // ─── Wonders ─────────────────────────────────────────────────
         Achievement(id: "wonders_all", title: "Wonder of Wonders", detail: "Build every Cosmic Wonder", symbol: "building.columns.fill", tier: .mythic, goal: .wondersBuilt(WondersCatalog.all.count)),
+
+        // ─── v4.0 Beyond the ceiling (single run, in orders of magnitude) ─
+        Achievement(id: "sd_door",    title: "Beyond the Ceiling",   detail: "Pass 1.8e308 ✦ in a single run", symbol: "circle.hexagonpath.fill", tier: .mythic, goal: .runMagnitude(Dilation.threshold.log10Value)),
+        Achievement(id: "sd_1e500",   title: "Five Hundred Zeros",   detail: "Reach 1e500 ✦ in a single run",  symbol: "sparkles", tier: .mythic, goal: .runMagnitude(500)),
+        Achievement(id: "sd_1e1000",  title: "The Thousandfold",     detail: "Reach 1e1000 ✦ in a single run", symbol: "sparkles", tier: .mythic, goal: .runMagnitude(1_000)),
+        Achievement(id: "sd_1e10000", title: "Ten Thousand Zeros",   detail: "Reach 1e10,000 ✦ in a single run", symbol: "sparkles", tier: .mythic, goal: .runMagnitude(10_000)),
+
+        // ─── v4.0 Omniverse ──────────────────────────────────────────
+        Achievement(id: "omni_1",     title: "Echo of Everything",   detail: "Collapse the Omniverse",          symbol: "circle.hexagonpath.fill", tier: .mythic, goal: .omniverseCount(1)),
+        Achievement(id: "omni_10",    title: "A Choir of Echoes",    detail: "Collapse the Omniverse 10 times", symbol: "circle.hexagonpath.fill", tier: .mythic, goal: .omniverseCount(10)),
+        Achievement(id: "echo_1k",    title: "Resonance",            detail: "Earn 1,000 lifetime Echoes",      symbol: "waveform", tier: .mythic, goal: .lifetimeEchoes(1_000)),
+        Achievement(id: "veil_max",   title: "Through the Veil",     detail: "Thin the Veil all the way",       symbol: "aqi.medium", tier: .mythic, goal: .omniverseNodeLevel(id: OmniverseTree.veilId, level: 12)),
     ]
 
     static func achievement(id: String) -> Achievement? {
