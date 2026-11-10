@@ -11,6 +11,9 @@ final class GameCenterManager {
     static let leaderboardLifetimeStardust = "cosmica.lifetime_stardust"
     static let leaderboardPrestigeCount    = "cosmica.prestige_count"
     static let leaderboardTier             = "cosmica.tier"
+    /// v4.0 — orders of magnitude of the best run ever ("321 zeros" = 1e321). The lifetime board is an
+    /// Int and pins at ~9.2e18, so past that only this one still ranks anybody.
+    static let leaderboardMagnitude        = "cosmica.highest_magnitude"
 
     private(set) var isAuthenticated = false
 
@@ -46,6 +49,10 @@ final class GameCenterManager {
         guard isAuthenticated else { return }
         await submit(score: Self.clampedScore(state.lifetimeStardust.double), leaderboard: Self.leaderboardLifetimeStardust)
         await submit(score: state.prestigeCount,                       leaderboard: Self.leaderboardPrestigeCount)
+        let magnitude = state.bestRunSoFar.log10Value
+        if magnitude.isFinite, magnitude >= 0 {
+            await submit(score: Int(min(magnitude, 1e15).rounded(.down)), leaderboard: Self.leaderboardMagnitude)
+        }
         await submit(score: state.currentTier.rawValue,                leaderboard: Self.leaderboardTier)
     }
 
