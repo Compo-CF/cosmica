@@ -130,3 +130,4 @@ targets:
     settings:
       base:
         PRODUCT_NAME: CosmicaTests
+        GENERATE_INFOPLIST_FILE: YES   # needed to sign the test bundle (CI ad-hoc signs)
