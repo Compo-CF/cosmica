@@ -69,6 +69,9 @@ targets:
       base:
         PRODUCT_NAME: Cosmica
         PRODUCT_BUNDLE_IDENTIFIER: com.centricfiber.cosmica
+        # Pinned per target: newer XcodeGen (2.46, CI) defaults iOS targets to iPhone+iPad, which
+        # made build 126 universal (iPad screenshots demanded). Cosmica has always been iPhone-only.
+        TARGETED_DEVICE_FAMILY: "1"
         CODE_SIGN_STYLE: Automatic
         # CI only (scripts/ci/testflight-ci.sh): empty on the Mac, so automatic signing is untouched.
         PROVISIONING_PROFILE_SPECIFIER: "$(COSMICA_APP_PROFILE)"
@@ -121,6 +124,7 @@ targets:
       base:
         PRODUCT_NAME: CosmicaWidget
         PRODUCT_BUNDLE_IDENTIFIER: com.centricfiber.cosmica.widget
+        TARGETED_DEVICE_FAMILY: "1"
         CODE_SIGN_STYLE: Automatic
         PROVISIONING_PROFILE_SPECIFIER: "$(COSMICA_WIDGET_PROFILE)"
         GENERATE_INFOPLIST_FILE: NO
