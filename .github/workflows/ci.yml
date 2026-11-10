@@ -32,4 +32,6 @@ jobs:
       - name: Failed tests
         if: failure()
         run: |
-          grep -E "error: -\[|failed \(" build.log | head -80 || true
+          grep -E "error: -\[|Test Case .* failed|failed \(|Fatal error|crashed|unexpected exit|Restarting after" build.log | head -120 || true
+          echo "----- tail of build.log -----"
+          tail -60 build.log || true
