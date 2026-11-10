@@ -27,7 +27,9 @@ jobs:
         run: bash scripts/ci.sh
       - name: Errors
         if: failure()
-        run: grep -E "error:" build.log | sort -u | head -120 || true
+        run: |
+          grep -E "error:" build.log | sort -u | head -150 || true
       - name: Failed tests
         if: failure()
-        run: grep -E "error: -\[|failed \(" build.log | head -80 || true
+        run: |
+          grep -E "error: -\[|failed \(" build.log | head -80 || true
