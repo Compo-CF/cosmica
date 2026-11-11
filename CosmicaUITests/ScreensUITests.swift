@@ -40,6 +40,19 @@ final class ScreensUITests: XCTestCase {
         }
     }
 
+    /// v4.0.1 — the main screens at a large accessibility text size, to catch clipping.
+    func test_captureLargeText() {
+        app.terminate()
+        app.launchArguments = ["-cosmicaDemo", "-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityL"]
+        app.launch()
+        sleep(4)
+        snap("40-xl-observatory")
+        tab("Upgrades"); snap("41-xl-upgrades")
+        tab("Shop");     snap("42-xl-shop")
+        tab("Big Bang"); snap("43-xl-bigbang"); app.swipeUp(); snap("44-xl-bigbang-lower")
+        if open("Omniverse") { sleep(1); snap("45-xl-omniverse") }
+    }
+
     // MARK: Helpers
 
     private func tab(_ label: String) {
