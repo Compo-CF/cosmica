@@ -149,6 +149,7 @@ struct ShopView: View {
                 VStack(alignment: .leading, spacing: 12) {
                     HStack(spacing: 10) {
                         Text(ultimate ? "EVERYTHING" : "UPGRADE YOUR BUNDLE")
+                            .lineLimit(1).minimumScaleFactor(0.6)   // v4.0.1 — tags stay on one line
                             .font(.caption2.bold())
                             .foregroundStyle(.black)
                             .padding(.horizontal, 8)
@@ -204,6 +205,7 @@ struct ShopView: View {
                 VStack(alignment: .leading, spacing: 12) {
                     HStack(spacing: 10) {
                         Text("COMPLETE YOUR SET")
+                            .lineLimit(1).minimumScaleFactor(0.6)   // v4.0.1 — tags stay on one line
                             .font(.caption2.bold())
                             .foregroundStyle(.black)
                             .padding(.horizontal, 8)
@@ -290,6 +292,7 @@ struct ShopView: View {
             VStack(alignment: .leading, spacing: 12) {
                 HStack(spacing: 10) {
                     Text("BEST VALUE")
+                        .lineLimit(1).minimumScaleFactor(0.6)   // v4.0.1 — tags stay on one line
                         .font(.caption2.bold())
                         .foregroundStyle(.black)
                         .padding(.horizontal, 8)

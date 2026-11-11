@@ -123,6 +123,7 @@ struct GeneratorRow: View {
                     .buttonStyle(.plain)
                     Text("\(owned)")
                         .font(.subheadline.bold())
+                        .lineLimit(1).fixedSize()   // v4.0.1 — the count never wraps
                         .foregroundStyle(.secondary)
                         .monospacedDigit()
                 }
