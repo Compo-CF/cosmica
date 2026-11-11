@@ -210,6 +210,9 @@ struct SettingsView: View {
                     }
                 }
             }
+            // v4.0.1 design system: the list floats over the core layer's sky like every other tab.
+            .scrollContentBackground(.hidden)
+            .background(DSLayerBackground(layer: .core))
             .navigationTitle("Settings")
             .task { devToolsAvailable = await DevTools.isAvailable() }
             .confirmationDialog("Restore previous save?",
