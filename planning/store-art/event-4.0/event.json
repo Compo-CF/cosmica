@@ -1,0 +1,24 @@
+{
+  "_doc": "DRAFT, not created in ASC. In-App Event spec for Neatly's generic uploader: python C:/Users/anthony.compofelice/Neatly/scripts/asc/app_event.py planning/store-art/event-4.0/event.json (creates/updates, never submits; --status to check). Times UTC (16:00Z = 8am Pacific). Max 31 days; publishStart at most 14 days before eventStart. RE-DATE before running: eventStart must be after 4.0.0 is live (it is still in review), and publishStart = eventStart so nothing is announced before the features ship. Media made by ../cosmica_event_art_40.py. Submit by adding the appEvent to a reviewSubmission (standalone, or with 4.0.1).",
+  "app_id": "6784340038",
+  "referenceName": "Cosmica 4.0 Beyond the Ceiling",
+  "badge": "MAJOR_UPDATE",
+  "purpose": "APPROPRIATE_FOR_ALL_USERS",
+  "priority": "HIGH",
+  "purchaseRequirement": "NO_COST_ASSOCIATED",
+  "primaryLocale": "en-US",
+  "deepLink": "cosmica://observatory",
+  "publishStart": "2026-11-17T16:00:00Z",
+  "eventStart": "2026-11-17T16:00:00Z",
+  "eventEnd": "2026-12-15T16:00:00Z",
+  "localization": {
+    "locale": "en-US",
+    "name": "Beyond the Ceiling",
+    "shortDescription": "The 1e300 ceiling is gone. Open the Omniverse.",
+    "longDescription": "Push a run past 1.8e308 to open the Omniverse, earn Echoes that multiply everything, and take on five new Rifts."
+  },
+  "media": {
+    "EVENT_CARD": "event40_card_1920x1080.png",
+    "EVENT_DETAILS_PAGE": "event40_details_1080x1920.png"
+  }
+}
