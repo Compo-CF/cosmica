@@ -115,7 +115,15 @@ struct SettingsView: View {
                 // v3.5 — cross-promo to Anthony's other games. Full shelf is a
                 // push destination so Settings stays short; also appears inline
                 // at the bottom of the Shop tab.
-                Section("More from After Hours Dev Studio") {
+                Section("After Hours Dev Studio") {
+                    Link(destination: URL(string: "https://compo-cf.github.io/afterhoursdevstudio/")!) {
+                        HStack {
+                            Image(systemName: "moon.stars.fill").foregroundStyle(.purple)
+                            Text("More from After Hours Dev Studio").foregroundStyle(.primary)
+                            Spacer()
+                            Image(systemName: "arrow.up.forward.square").font(.footnote).foregroundStyle(.secondary)
+                        }
+                    }
                     NavigationLink("Browse the studio") {
                         ScrollView {
                             StudioShelfView()
@@ -191,11 +199,8 @@ struct SettingsView: View {
                         Spacer()
                         Text(versionString).foregroundStyle(.secondary).monospacedDigit()
                     }
-                    HStack {
-                        Text("Developer")
-                        Spacer()
-                        Text("Anthony Compofelice").foregroundStyle(.secondary)
-                    }
+                    Text("Made by After Hours Dev Studio")
+                        .foregroundStyle(.secondary)
                 }
 
                 if devToolsAvailable {
