@@ -72,13 +72,9 @@ struct DailyRewardView: View {
                 claim(multiplier: 1)
             } label: {
                 Text("Claim")
-                    .font(.headline)
-                    .frame(maxWidth: .infinity, minHeight: 50)
-                    .background(.cyan, in: RoundedRectangle(cornerRadius: 14))
-                    .foregroundStyle(.black)
             }
+            .buttonStyle(DSPrimaryButtonStyle(layer: .cosmos))   // v4.0.1 design system
             .disabled(adBusy)
-            .padding(.horizontal)
             .padding(.bottom, 24)
         }
     }

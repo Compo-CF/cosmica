@@ -20,7 +20,7 @@ struct ShopView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                Color.black.ignoresSafeArea()
+                DSLayerBackground(layer: .core)   // v4.0.1 design system
                 ScrollView {
                     // v3.4 — Lazy, so a card's onAppear means it actually scrolled
                     // on screen (ShopStats counts it as seen).
@@ -153,7 +153,7 @@ struct ShopView: View {
                             .foregroundStyle(.black)
                             .padding(.horizontal, 8)
                             .padding(.vertical, 3)
-                            .background(LinearGradient(colors: [.pink, .orange], startPoint: .leading, endPoint: .trailing),
+                            .background(DSLayer.core.gradient,
                                         in: Capsule())
                         if let worth = separatePrice(parts) {
                             Text("\(worth) if bought separately")
@@ -178,7 +178,7 @@ struct ShopView: View {
                         Text(price)
                             .font(.headline)
                             .frame(maxWidth: .infinity, minHeight: 46)
-                            .background(LinearGradient(colors: [.pink, .orange], startPoint: .leading, endPoint: .trailing),
+                            .background(DSLayer.core.gradient,
                                         in: RoundedRectangle(cornerRadius: 12))
                             .foregroundStyle(.black)
                     }
@@ -208,7 +208,7 @@ struct ShopView: View {
                             .foregroundStyle(.black)
                             .padding(.horizontal, 8)
                             .padding(.vertical, 3)
-                            .background(LinearGradient(colors: [.pink, .orange], startPoint: .leading, endPoint: .trailing),
+                            .background(DSLayer.core.gradient,
                                         in: Capsule())
                         Text("You own \(owned) of \(IAPManager.setPieceIds.count)")
                             .font(.caption)
@@ -263,7 +263,7 @@ struct ShopView: View {
                     .font(.subheadline.bold())
                     .padding(.horizontal, 14)
                     .frame(minHeight: 36)
-                    .background(LinearGradient(colors: [.pink, .orange], startPoint: .leading, endPoint: .trailing),
+                    .background(DSLayer.core.gradient,
                                 in: RoundedRectangle(cornerRadius: 10))
                     .foregroundStyle(.black)
             }

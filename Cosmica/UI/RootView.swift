@@ -302,12 +302,8 @@ struct OfflineWelcomeBackSheet: View {
 
             Button(action: onDismiss) {
                 Text("Continue")
-                    .font(.headline)
-                    .frame(maxWidth: .infinity, minHeight: 50)
-                    .background(.purple, in: RoundedRectangle(cornerRadius: 14))
-                    .foregroundStyle(.white)
             }
-            .padding(.horizontal)
+            .buttonStyle(DSPrimaryButtonStyle(layer: .core))   // v4.0.1 design system
             .padding(.bottom, 24)
         }
     }
