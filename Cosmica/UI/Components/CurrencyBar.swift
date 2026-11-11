@@ -19,6 +19,7 @@ struct CurrencyBar: View {
                 Image(systemName: "sparkles").foregroundStyle(tier.color)
                 Text(Formatter.short(engine.state.stardust))
                     .font(.system(size: 34, weight: .heavy, design: .rounded))
+                    .lineLimit(1).minimumScaleFactor(0.4)   // v4.0.1 — never wraps at large text sizes
                     .foregroundStyle(.white)
                     .monospacedDigit()
                     .contentTransition(.numericText())
@@ -80,6 +81,7 @@ struct CurrencyBar: View {
             Image(systemName: "diamond.fill").font(.caption).foregroundStyle(.cyan)
             Text(Formatter.short(engine.state.cosmicShards))
                 .font(.system(.subheadline, design: .rounded).weight(.semibold))
+                .lineLimit(1).minimumScaleFactor(0.5)
                 .foregroundStyle(.white)
                 .monospacedDigit()
             Text("◈").font(.caption2).foregroundStyle(.secondary)

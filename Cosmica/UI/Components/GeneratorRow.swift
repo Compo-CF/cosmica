@@ -95,6 +95,7 @@ struct GeneratorRow: View {
                 HStack {
                     Text(generator.name)
                         .font(.headline)
+                        .lineLimit(2).minimumScaleFactor(0.6)   // v4.0.1 — no mid-word breaks at large sizes
                         .foregroundStyle(.white)
                     if let spec = liveGenerator?.specializationDetail {
                         Image(systemName: spec.symbol)

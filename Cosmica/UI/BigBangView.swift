@@ -130,6 +130,7 @@ struct BigBangView: View {
                 Spacer()
                 Text("+\(Formatter.short(engine.availableShards)) ◈")
                     .font(.title2.bold())
+                    .lineLimit(1).minimumScaleFactor(0.5)   // v4.0.1
                     .foregroundStyle(.cyan)
             }
             if engine.kindlingActive {
