@@ -27,6 +27,7 @@ struct GeneratorRow: View {
     @Environment(HapticsManager.self) var haptics
     @Environment(AutomationManager.self) var automation
     @AppStorage("generatorBuyMode") private var buyMode: GeneratorBuyMode = .one
+    @Environment(\.dynamicTypeSize) private var typeSize
 
     let generator: Generator
     @State private var showDetail: Bool = false
@@ -92,11 +93,40 @@ struct GeneratorRow: View {
                 .foregroundStyle(.purple)
 
             VStack(alignment: .leading, spacing: 2) {
-                HStack {
-                    Text(generator.name)
-                        .font(.headline)
-                        .lineLimit(2).minimumScaleFactor(0.6)   // v4.0.1 — no mid-word breaks at large sizes
-                        .foregroundStyle(.white)
+                // v4.0.1 — at accessibility text sizes the name gets its own line so the
+                // count and buttons can't squeeze it to "Bac ky…" on a 6.1" screen.
+                if typeSize.isAccessibilitySize {
+                    nameText
+                    HStack { controls }
+                } else {
+                    HStack { nameText; controls }
+                }
+                Text("\(Formatter.short((liveGenerator ?? generator).unitRate(with: engine.state.upgrades)))/s each")
+                    .font(.caption)
+                    .foregroundStyle(.green)
+                    .monospacedDigit()
+            }
+
+            buyButton
+        }
+        .padding(12)
+        // v4.0 design system: the hairline lights up when the next buy is affordable.
+        .background {
+            RoundedRectangle(cornerRadius: DS.radius, style: .continuous)
+                .fill(.ultraThinMaterial)
+                .overlay(RoundedRectangle(cornerRadius: DS.radius, style: .continuous)
+                    .strokeBorder(DSLayer.core.accent.opacity(canAfford ? 0.45 : 0.12), lineWidth: 1))
+        }
+    }
+
+    private var nameText: some View {
+        Text(generator.name)
+            .font(.headline)
+            .lineLimit(2).minimumScaleFactor(0.6)   // v4.0.1 — no mid-word breaks at large sizes
+            .foregroundStyle(.white)
+    }
+
+    @ViewBuilder private var controls: some View {
                     if let spec = liveGenerator?.specializationDetail {
                         Image(systemName: spec.symbol)
                             .font(.caption2.bold())
@@ -126,13 +156,9 @@ struct GeneratorRow: View {
                         .lineLimit(1).fixedSize()   // v4.0.1 — the count never wraps
                         .foregroundStyle(.secondary)
                         .monospacedDigit()
-                }
-                Text("\(Formatter.short((liveGenerator ?? generator).unitRate(with: engine.state.upgrades)))/s each")
-                    .font(.caption)
-                    .foregroundStyle(.green)
-                    .monospacedDigit()
-            }
+    }
 
+    private var buyButton: some View {
             Button {
                 let n = purchaseAmount
                 if engine.buy(generatorId: generator.id, amount: n) {
@@ -154,15 +180,6 @@ struct GeneratorRow: View {
                 .foregroundStyle(canAfford ? Color.black : Color.secondary)
             }
             .disabled(!canAfford)
-        }
-        .padding(12)
-        // v4.0 design system: the hairline lights up when the next buy is affordable.
-        .background {
-            RoundedRectangle(cornerRadius: DS.radius, style: .continuous)
-                .fill(.ultraThinMaterial)
-                .overlay(RoundedRectangle(cornerRadius: DS.radius, style: .continuous)
-                    .strokeBorder(DSLayer.core.accent.opacity(canAfford ? 0.45 : 0.12), lineWidth: 1))
-        }
     }
 
     private var lockedView: some View {

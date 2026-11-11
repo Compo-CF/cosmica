@@ -81,7 +81,7 @@ struct CurrencyBar: View {
             Image(systemName: "diamond.fill").font(.caption).foregroundStyle(.cyan)
             Text(Formatter.short(engine.state.cosmicShards))
                 .font(.system(.subheadline, design: .rounded).weight(.semibold))
-                .lineLimit(1).minimumScaleFactor(0.5)
+                .lineLimit(1).fixedSize()   // v4.0.1 — never "330…"; the Stardust total shrinks instead
                 .foregroundStyle(.white)
                 .monospacedDigit()
             Text("◈").font(.caption2).foregroundStyle(.secondary)
