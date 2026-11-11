@@ -46,4 +46,26 @@ for test in manifest:
         n += 1
 print(f"exported {n} screenshots")
 PY
+# v4.0.1 — small-screen pass: the large-text walk again on the smallest iPhone available.
+SMALL=$(xcrun simctl list devices available | grep -E "iPhone (SE|16e|1[0-9] mini)" | grep -oE '[0-9A-F]{8}-([0-9A-F]{4}-){3}[0-9A-F]{12}' | head -1 || true)
+if [ -n "$SMALL" ]; then
+  echo "Small-screen simulator: $(xcrun simctl list devices | grep "$SMALL" | head -1)"
+  rm -rf small.xcresult
+  xcodebuild -project Cosmica.xcodeproj -scheme CosmicaScreens -destination "id=$SMALL" \
+    -resultBundlePath small.xcresult -only-testing:CosmicaUITests/ScreensUITests/test_captureLargeText \
+    -skipPackagePluginValidation -skipMacroValidation \
+    CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM= PROVISIONING_PROFILE_SPECIFIER= \
+    test > small.log 2>&1 || true
+  rm -rf small-raw && xcrun xcresulttool export attachments --path small.xcresult --output-path small-raw || true
+  python3 - <<'PY'
+import json, os, re, shutil
+raw = "small-raw"
+if os.path.exists(os.path.join(raw, "manifest.json")):
+    for t in json.load(open(os.path.join(raw, "manifest.json"))):
+        for a in t.get("attachments", []):
+            name = re.sub(r"_\d+_[0-9A-F-]{36}", "", os.path.splitext(a.get("suggestedHumanReadableName") or a["exportedFileName"])[0])
+            shutil.copy(os.path.join(raw, a["exportedFileName"]), os.path.join("shots", "se-" + name + ".png"))
+    print("small-screen shots exported")
+PY
+fi
 ls shots
