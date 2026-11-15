@@ -873,6 +873,7 @@ final class GameEngine {
             state.lastAwayPaidSeconds = result.secondsCounted
         }
         state.lastSeen = Date()
+        offlinePending = false   // v4.0.2 — paid; saves may stamp lastSeen again
         checkAbsoluteAscension()
         checkAchievements()
         checkChallenge()
@@ -963,8 +964,25 @@ final class GameEngine {
 
     // MARK: - Persistence
 
+    /// v4.0.2 — true from launch, and again from backgrounding, until `applyOffline()` has
+    /// paid the absence. While it's true `save()` leaves `lastSeen` alone: any save in that
+    /// window (the Doubler/Ultimate entitlement arriving during `iap.start()`, an iCloud
+    /// adopt) used to stamp `lastSeen = now`, and the welcome-back sheet then said
+    /// "away 0s" and paid a fraction of a second (App Store review, 13 Nov 2026).
+    private(set) var offlinePending = true
+
+    /// v4.0.2 — the app is going to the background: stamp the moment play stopped, stop the
+    /// tick (a stale tick on return used to pay or drop the whole absence at random), and
+    /// leave the absence for `applyOffline()` when the player comes back.
+    func enterBackground() {
+        offlinePending = false
+        save()
+        stop()
+        offlinePending = true
+    }
+
     func save() {
-        state.lastSeen = Date()
+        if !offlinePending { state.lastSeen = Date() }
         try? persistence.save(state: state)
     }
 }

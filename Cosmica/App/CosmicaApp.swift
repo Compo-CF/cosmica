@@ -14,6 +14,8 @@ struct CosmicaApp: App {
     @State private var gameCenter = GameCenterManager()
     @State private var cloud = CloudSync.shared
     @State private var offlineSummary: OfflineAccrual.Result?
+    /// v4.0.2 — the cold-launch offline payout has run; from here `.active` pays warm resumes.
+    @State private var launched = false
     @State private var showSplash = true
     @State private var reviewPrompter = ReviewPrompter()
     @State private var automation = AutomationManager()
@@ -94,7 +96,8 @@ struct CosmicaApp: App {
                         return
                     }
                     gameCenter.authenticate()
-                    offlineSummary = engine.applyOffline()
+                    settleOffline()
+                    launched = true
                     engine.start()
                     await syncFromCloud()
 
@@ -131,7 +134,9 @@ struct CosmicaApp: App {
             switch phase {
             case .background, .inactive:
                 if phase == .background { sound.suspend() }
-                engine.save()
+                // v4.0.2 — background stamps lastSeen and stops the tick; the absence is
+                // paid by applyOffline on return. .inactive (Control Center) only saves.
+                if phase == .background { engine.enterBackground() } else { engine.save() }
                 // v3.0.3 — offline accrual starts now; hand the widget its baseline.
                 // Background only: .inactive also fires for Control Center pulls,
                 // and each publish costs a widget reload.
@@ -152,6 +157,9 @@ struct CosmicaApp: App {
                 notif.scheduleAll(engine: engine)
             case .active:
                 sound.resume()
+                // v4.0.2 — a warm resume (app kept in memory) used to skip offline
+                // earnings entirely: no Night Shift ×4, no cap, no welcome-back sheet.
+                if launched, engine.offlinePending, !DemoMode.isActive { settleOffline() }
                 engine.start()
                 // Coming back — nothing to remind them about now that they're here.
                 notif.cancelAll()
@@ -167,6 +175,17 @@ struct CosmicaApp: App {
                 break
             }
         }
+    }
+
+    /// v4.0.2 — shortest absence that gets the welcome-back sheet; shorter ones pay quietly.
+    static let welcomeBackMinSeconds: TimeInterval = 60
+
+    /// v4.0.2 — pay the time away (cold launch or warm resume) and show the sheet for a real
+    /// absence. A quick app switch pays silently and leaves an open sheet alone.
+    @MainActor
+    private func settleOffline() {
+        let r = engine.applyOffline()
+        if r.secondsElapsed >= Self.welcomeBackMinSeconds { offlineSummary = r }
     }
 
     /// v3.1.2 — Google's required order: consent form (only where regulations apply), then
@@ -189,9 +208,11 @@ struct CosmicaApp: App {
             if let remote = try await cloud.pull(), remote.isAhead(of: engine.state) {
                 engine.state = remote
                 engine.state.doublerOwned = iap.doublerOwned   // v3.3 — ownership is per Apple ID, not per save
-                engine.save()
                 // Credit the time since that save was last active on the other device.
-                offlineSummary = engine.applyOffline()
+                // v4.0.2 — no save() first: it stamped lastSeen = now, so this always paid
+                // "0s". applyOffline saves. The earlier summary was for the replaced save.
+                let r = engine.applyOffline()
+                offlineSummary = r.secondsElapsed >= Self.welcomeBackMinSeconds ? r : nil
             }
             cloudChecked = true
         } catch {
