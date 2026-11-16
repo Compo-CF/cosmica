@@ -37,6 +37,34 @@ final class V403Tests: XCTestCase {
         XCTAssertFalse(e.adBoostFull(now: now.addingTimeInterval(e.adBoostGrant + 60)))
     }
 
+    // MARK: Shards Huge
+
+    private func packs(_ e: GameEngine) -> [Big] {
+        [GameEngine.smallShardPack, GameEngine.largeShardPack, GameEngine.hugeShardPack]
+            .map { e.shardPackAmount(base: $0.base, multiple: $0.bigBangs) }
+    }
+
+    func test_shardPacks_growSmallLargeHuge_atEveryStage() {
+        for lastBang in [Big(0), Big(1e6), Big(1e40)] {
+            let e = engine()
+            e.state.lastBigBangShards = lastBang
+            let p = packs(e)
+            XCTAssertLessThan(p[0], p[1], "small < large at \(lastBang)")
+            XCTAssertLessThan(p[1], p[2], "large < huge at \(lastBang)")
+        }
+    }
+
+    func test_shardsPerDollar_riseWithEachTier() {
+        let e = engine()
+        e.state.lastBigBangShards = Big(1e6)
+        let p = packs(e), prices = [1.99, 9.99, 19.99]
+        let perDollar = zip(p, prices).map { $0.0 / Big($0.1) }
+        XCTAssertLessThan(perDollar[0], perDollar[1])
+        XCTAssertLessThan(perDollar[1], perDollar[2])
+        XCTAssertTrue(IAPManager.consumableIds.contains(IAPManager.shardsHugeProductId))
+        XCTAssertTrue(IAPManager.allProductIds.contains(IAPManager.shardsHugeProductId))
+    }
+
     func test_aPaidBoostIsNeverShortened_andReadsAsFull() {
         let e = engine()
         e.grantBoost(duration: 24 * 3600)   // boost_2x_24hr purchase

@@ -776,6 +776,9 @@ final class GameEngine {
     /// ratio between the two as before.
     static let smallShardPack = (base: 500.0, bigBangs: 3.0)
     static let largeShardPack = (base: 5_000.0, bigBangs: 30.0)
+    /// v4.0.3 Shards Huge ($19.99 vs Large $9.99): 4x Large, so shards per dollar double
+    /// again, the same step Small -> Large takes (10x the shards for 5x the price).
+    static let hugeShardPack = (base: 20_000.0, bigBangs: 120.0)
 
     /// v3.4 — the biggest single thing `amount` more shards would let the
     /// player buy that they can't afford now: a Cosmic Tree level or a Wonder.

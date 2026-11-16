@@ -56,6 +56,13 @@ struct ShopView: View {
                         shardsPackCard(productId: IAPManager.shardsLargeProductId,
                                        pack: GameEngine.largeShardPack, icon: "diamond.fill", color: .teal)
                             .seen("shards_pack_large", in: self)
+                        // v4.0.3 — only once StoreKit has it, so a new product never shows "Loading…".
+                        if iap.product(for: IAPManager.shardsHugeProductId) != nil {
+                            shardsPackCard(productId: IAPManager.shardsHugeProductId,
+                                           pack: GameEngine.hugeShardPack, icon: "sparkles", color: .indigo,
+                                           tag: "Best value")
+                                .seen("shards_pack_huge", in: self)
+                        }
                         sectionHeader("Automation")
                         automationCard.seen("automation_core", in: self)
                         if iap.supporterOwned || iap.product(for: IAPManager.supporterProductId) != nil {
@@ -518,7 +525,7 @@ struct ShopView: View {
     // v3.4 — packs are sized in Big Bangs (3 and 30) and say what they'd let
     // the player buy next, not just how many shards they are.
     private func shardsPackCard(productId: String, pack: (base: Double, bigBangs: Double),
-                                icon: String, color: Color) -> some View {
+                                icon: String, color: Color, tag: String? = nil) -> some View {
         let price = iap.priceLabel(for: productId)
         let amount = engine.shardPackAmount(base: pack.base, multiple: pack.bigBangs)
         let target = engine.shardPackTarget(amount: amount)
@@ -529,6 +536,13 @@ struct ShopView: View {
                     .foregroundStyle(color)
                     .frame(width: 50)
                 VStack(alignment: .leading, spacing: 4) {
+                    if let tag {
+                        Text(tag.uppercased())
+                            .font(.caption2.bold())
+                            .padding(.horizontal, 6).padding(.vertical, 2)
+                            .background(color, in: Capsule())
+                            .foregroundStyle(.white)
+                    }
                     Text("+\(Formatter.short(amount)) Cosmic Shards ◈").font(.headline).foregroundStyle(.white)
                     Text("Worth \(Int(pack.bigBangs)) Big Bangs at your progress.")
                         .font(.caption).foregroundStyle(.secondary)

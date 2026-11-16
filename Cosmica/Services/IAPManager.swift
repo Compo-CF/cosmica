@@ -5,6 +5,7 @@ import StoreKit
 /// StoreKit 2 wrapper covering all of Cosmica's in-app purchases:
 /// - Non-consumables: `removeads`, automation_core, everything_bundle, supporter (v3.1)
 /// - Consumables: boost_2x_24hr, offline_7day, shards_pack_small, shards_pack_large,
+///   shards_pack_huge (v4.0.3),
 ///   timewarp_8h / timewarp_24h (v3.1)
 /// - Three consumable tips (v1.2): tip.small, tip.medium, tip.large
 ///
@@ -24,6 +25,7 @@ final class IAPManager {
     static let offline7dayProductId    = "com.centricfiber.cosmica.offline_7day"
     static let shardsSmallProductId    = "com.centricfiber.cosmica.shards_pack_small"
     static let shardsLargeProductId    = "com.centricfiber.cosmica.shards_pack_large"
+    static let shardsHugeProductId     = "com.centricfiber.cosmica.shards_pack_huge"   // v4.0.3
 
     // v3.0: Automation Core — one-time non-consumable that unlocks the whole
     // automation feature set (auto-buy generators, auto-Big-Bang, auto-spend
@@ -80,6 +82,7 @@ final class IAPManager {
         offline7dayProductId,
         shardsSmallProductId,
         shardsLargeProductId,
+        shardsHugeProductId,
         automationCoreProductId,
         everythingBundleProductId,
         timeWarp8hProductId,
@@ -168,6 +171,7 @@ final class IAPManager {
         offline7dayProductId,
         shardsSmallProductId,
         shardsLargeProductId,
+        shardsHugeProductId,
         timeWarp8hProductId,
         timeWarp24hProductId,
         tipSmallProductId, tipMediumProductId, tipLargeProductId,
