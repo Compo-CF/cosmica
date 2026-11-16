@@ -93,7 +93,7 @@ struct ObservatoryView: View {
             } else if ads.rewardedReady && engine.state.totalGeneratorsBought >= 10 {
                 Button {
                     ads.watch(placement: "chip_boost", onReward: {
-                        engine.grantBoost(duration: 3600)
+                        engine.grantAdBoost()   // v4.0.3 — capped ad grant
                         haptics.upgrade()
                     })
                 } label: {

@@ -71,7 +71,7 @@ struct BoostNudgeSheet: View {
                     guard let root = Self.topViewController() else { dismiss(); return }
                     busy = true
                     ads.showRewarded(from: root, onReward: {
-                        engine.grantBoost(duration: 3600) // free 1-hour version
+                        engine.grantAdBoost() // free 1-hour version (v4.0.3: capped ad grant)
                         haptics.upgrade()
                     }, onDismiss: {
                         busy = false

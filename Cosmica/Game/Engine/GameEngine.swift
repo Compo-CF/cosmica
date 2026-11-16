@@ -720,9 +720,34 @@ final class GameEngine {
         save()
     }
 
-    /// Back-compat shim for the rewarded-ad call site. New code should use `grantBoost(duration:)`.
-    func grantAdBoost(duration: TimeInterval = 3600) {
-        grantBoost(duration: duration)
+    // MARK: - v4.0.3 ad-boost cap
+
+    /// v4.0.3 — the most 2× time a player can bank from rewarded ads. Before this every
+    /// ad stacked another hour with no ceiling: one device watched 208 rewarded ads on
+    /// 15 Nov 2026 (207 of them the Shop boost) and Cosmica Rewarded's CTR hit 23%, the
+    /// pattern AdMob's invalid-traffic checks act on. Paid and daily-reward boosts are
+    /// not capped; they share the same expiry, so a long paid boost also reads as "full".
+    static let adBoostBankCap: TimeInterval = 8 * 3600
+
+    /// What one rewarded ad adds: an hour plus the Cosmic Tree "Boost Extension" bonus.
+    var adBoostGrant: TimeInterval {
+        3600 + CosmicTree.boostExtensionSeconds(state.cosmicSkillLevels)
+    }
+
+    /// v4.0.3 — true when another ad's hour would push the bank past the cap, so the
+    /// Shop shows "Boost full" instead of offering an ad that grants nothing.
+    func adBoostFull(now: Date = Date()) -> Bool {
+        let left = max(0, (state.adBoostExpiresAt ?? .distantPast).timeIntervalSince(now))
+        return left + adBoostGrant > Self.adBoostBankCap
+    }
+
+    /// v4.0.3 — the rewarded-ad boost. Same stacking as `grantBoost`, but the expiry
+    /// never goes past `now + adBoostBankCap` (it never shortens a longer paid boost).
+    func grantAdBoost(now: Date = Date()) {
+        let base = max(now, state.adBoostExpiresAt ?? .distantPast)
+        let capped = min(base.addingTimeInterval(adBoostGrant), now.addingTimeInterval(Self.adBoostBankCap))
+        state.adBoostExpiresAt = max(base, capped)
+        save()
     }
 
     /// Direct grant of Cosmic Shards (paid IAP, daily reward, cosmic event).

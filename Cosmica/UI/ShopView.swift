@@ -435,13 +435,15 @@ struct ShopView: View {
                     Spacer()
                 }
                 HStack(spacing: 10) {
+                    // v4.0.3 — at most 8h banked from ads (GameEngine.adBoostBankCap).
+                    let full = engine.adBoostFull()
                     actionButton(
-                        title: ads.rewardedReady ? "Watch Ad" : "Loading…",
-                        subtitle: engine.boostLabel(3600),
+                        title: full ? "Boost Full" : (ads.rewardedReady ? "Watch Ad" : "Loading…"),
+                        subtitle: full ? "8h max from ads" : engine.boostLabel(3600),
                         color: .orange,
-                        disabled: false
+                        disabled: full
                     ) {
-                        watchAd(placement: "boost") { engine.grantBoost(duration: 3600); haptics.upgrade() }
+                        watchAd(placement: "boost") { engine.grantAdBoost(); haptics.upgrade() }
                     }
                     actionButton(
                         title: iap.priceLabel(for: IAPManager.boost2x24hrProductId),
