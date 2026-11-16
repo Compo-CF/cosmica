@@ -33,7 +33,7 @@ struct CurrencyBar: View {
             // Row 2 — rate pill + optional boost badge
             HStack(spacing: 8) {
                 ratePill(rate: rate, color: tier.color)
-                if engine.state.adBoostMultiplier > 1.0 {
+                if engine.state.boostMultiplier > 1.0 {
                     boostBadge
                 }
                 Spacer()
@@ -94,7 +94,7 @@ struct CurrencyBar: View {
     private var boostBadge: some View {
         HStack(spacing: 4) {
             Image(systemName: "bolt.fill").font(.caption2).foregroundStyle(.orange)
-            Text("2× BOOST").font(.caption2.bold()).foregroundStyle(.orange)
+            Text("\(GameState.boostText(engine.state.boostMultiplier)) BOOST").font(.caption2.bold()).foregroundStyle(.orange)   // v4.0.3: 2×, 3× or 6×
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 4)

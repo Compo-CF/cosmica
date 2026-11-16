@@ -65,13 +65,67 @@ final class V403Tests: XCTestCase {
         XCTAssertTrue(IAPManager.allProductIds.contains(IAPManager.shardsHugeProductId))
     }
 
-    func test_aPaidBoostIsNeverShortened_andReadsAsFull() {
+    func test_aLongDailyRewardBoostIsNeverShortened_andReadsAsFull() {
         let e = engine()
-        e.grantBoost(duration: 24 * 3600)   // boost_2x_24hr purchase
+        e.grantBoost(duration: 24 * 3600)   // uncapped grant on the ad timer (daily reward path)
         let before = e.state.adBoostExpiresAt
         let now = Date()
         XCTAssertTrue(e.adBoostFull(now: now))
         e.grantAdBoost(now: now)
         XCTAssertEqual(e.state.adBoostExpiresAt, before)
+    }
+
+    // MARK: Paid 3x boost (own timer, multiplies with the ad boost)
+
+    func test_boostMultiplier_none_ad_paid_both() {
+        let e = engine()
+        XCTAssertEqual(e.state.boostMultiplier, 1)
+        e.grantAdBoost()
+        XCTAssertEqual(e.state.boostMultiplier, 2)
+        e.state.adBoostExpiresAt = nil
+        e.grantPaidBoost(duration: 24 * 3600)
+        XCTAssertEqual(e.state.boostMultiplier, 3)
+        e.grantAdBoost()
+        XCTAssertEqual(e.state.boostMultiplier, 6)
+        XCTAssertEqual(GameState.boostText(e.state.boostMultiplier), "6×")
+    }
+
+    func test_paidBoost_stacksOnItsOwnTimer_andLeavesAdsWatchable() {
+        let e = engine()
+        e.grantPaidBoost(duration: 24 * 3600)
+        e.grantPaidBoost(duration: 24 * 3600)
+        XCTAssertEqual(e.state.paidBoostExpiresAt!.timeIntervalSinceNow, 48 * 3600, accuracy: 5)
+        XCTAssertNil(e.state.adBoostExpiresAt)
+        XCTAssertFalse(e.adBoostFull(), "buying the boost must not switch off the ad button")
+    }
+
+    func test_paidBoost_raisesProduction_threefold() {
+        let e = engine()
+        e.state.generators[0].count = 50
+        let before = e.state.totalMultiplier
+        e.grantPaidBoost(duration: 3600)
+        XCTAssertEqual(e.state.totalMultiplier / before, 3, accuracy: 1e-9)
+    }
+
+    func test_oldSaveWithoutThePaidTimer_decodes() throws {
+        var s = GameState()
+        s.paidBoostExpiresAt = Date().addingTimeInterval(3600)
+        var json = try JSONSerialization.jsonObject(with: JSONEncoder().encode(s)) as! [String: Any]
+        XCTAssertNotNil(json["paidBoostExpiresAt"])
+        json["paidBoostExpiresAt"] = nil
+        let old = try JSONDecoder().decode(GameState.self, from: JSONSerialization.data(withJSONObject: json))
+        XCTAssertNil(old.paidBoostExpiresAt)
+        XCTAssertEqual(old.paidBoostMultiplier, 1)
+    }
+
+    func test_widget_projectsThePaidBoost_untilItEnds() {
+        var s = GameState()
+        s.generators[0].count = 50
+        s.paidBoostExpiresAt = Date().addingTimeInterval(3600)
+        let snap = WidgetSnapshot(state: s)
+        XCTAssertEqual(snap.paidBoostMultiplier, 3)
+        let soon = Date().addingTimeInterval(60), later = Date().addingTimeInterval(7200)
+        XCTAssertEqual(snap.rate(at: soon) / snap.rate(at: later), 3, accuracy: 1e-9)
+        XCTAssertTrue(snap.timelineDates(from: Date()).contains(s.paidBoostExpiresAt!))
     }
 }

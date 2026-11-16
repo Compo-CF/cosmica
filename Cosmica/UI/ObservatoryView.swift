@@ -83,7 +83,7 @@ struct ObservatoryView: View {
         TimelineView(.periodic(from: .now, by: 1)) { context in
             let left = max(0, engine.state.adBoostExpiresAt?.timeIntervalSince(context.date) ?? 0)
             if left > 0 {
-                Label("2× · \(Formatter.duration(left))", systemImage: "bolt.fill")
+                Label("\(GameState.boostText(engine.state.boostMultiplier)) · \(Formatter.duration(left))", systemImage: "bolt.fill")   // v4.0.3: ×paid
                     .font(.caption.weight(.bold))
                     .monospacedDigit()
                     .foregroundStyle(.black)

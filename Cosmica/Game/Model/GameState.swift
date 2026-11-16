@@ -39,6 +39,9 @@ struct GameState: Codable {
 
     // ───────── Boosts ─────────
     var adBoostExpiresAt: Date? = nil
+    /// v4.0.3 — the paid boost (product `boost_2x_24hr`, now 3×) runs on its own timer and
+    /// multiplies with the ad boost, so ads stay worth watching after a purchase.
+    var paidBoostExpiresAt: Date? = nil
     var removeAdsOwned: Bool = false
     /// v3.3 — owns the Stardust Doubler (permanent ×2 earnings). StoreKit is the
     /// source of truth: CosmicaApp copies `IAPManager.doublerOwned` here at launch,
@@ -215,6 +218,7 @@ struct GameState: Codable {
         activeEventExpiresAt = try c.decodeIfPresent(Date.self,         forKey: .activeEventExpiresAt)
         lastEventEndedAt    = try c.decodeIfPresent(Date.self,          forKey: .lastEventEndedAt)
         adBoostExpiresAt    = try c.decodeIfPresent(Date.self,          forKey: .adBoostExpiresAt)
+        paidBoostExpiresAt  = try c.decodeIfPresent(Date.self,          forKey: .paidBoostExpiresAt)
         removeAdsOwned      = try c.decodeIfPresent(Bool.self,          forKey: .removeAdsOwned)      ?? false
         doublerOwned        = try c.decodeIfPresent(Bool.self,          forKey: .doublerOwned)        ?? false
         absoluteAscendedAt  = try c.decodeIfPresent(Date.self,          forKey: .absoluteAscendedAt)
@@ -350,6 +354,20 @@ struct GameState: Codable {
         return 2.0
     }
 
+    /// v4.0.3 — what the paid boost multiplies by while it runs.
+    static let paidBoostRate = 3.0
+
+    var paidBoostMultiplier: Double {
+        guard let exp = paidBoostExpiresAt, Date() < exp else { return 1.0 }
+        return Self.paidBoostRate
+    }
+
+    /// v4.0.3 — every timed boost together: ad 2× × paid 3× = 6× while both run.
+    var boostMultiplier: Double { adBoostMultiplier * paidBoostMultiplier }
+
+    /// "2×", "3×", "6×" for the boost badges (Formatter.multiplier would print "×6.00").
+    static func boostText(_ m: Double) -> String { "\(Int(m.rounded()))×" }
+
     /// The currently active `CosmicEvent`, or nil if the window has expired.
     var activeEvent: CosmicEvent? {
         guard let id = activeEventId,
@@ -472,7 +490,7 @@ struct GameState: Codable {
     /// Split into steps so the type checker doesn't stall on one long chain.
     var totalMultiplier: Big {
         let bounded: Double = currentTier.multiplier
-            * adBoostMultiplier
+            * boostMultiplier
             * eventStardustMultiplier
             * achievementMultiplier
             * challengeMultiplier

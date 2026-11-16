@@ -459,7 +459,7 @@ struct BigBangView: View {
             // double-hit players in one Big Bang cycle. Remove Ads owners always
             // skip. AdManager enforces a 3-min rate limit internally, so tight
             // Big Bang sessions don't spam ads.
-            let noActiveBoost = (engine.state.adBoostExpiresAt.map { $0 < Date() } ?? true)
+            let noActiveBoost = engine.state.boostMultiplier <= 1.0   // v4.0.3 — ad or paid
             let isBoostNudgePrestige = [3, 7, 15].contains(engine.state.prestigeCount)
                 && iap.boostNudgeEligible
                 && noActiveBoost

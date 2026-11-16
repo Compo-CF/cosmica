@@ -35,6 +35,9 @@ struct WidgetSnapshot: Codable, Equatable {
     var tierTitle: String
     var tierSymbol: String
     var lastDailyClaim: Date?
+    /// v4.0.3 — the paid 3× boost. Optional so snapshots written by older builds still decode.
+    var paidBoostMultiplier: Double? = nil
+    var paidBoostExpiresAt: Date? = nil
 
     // MARK: - Projection
 
@@ -44,6 +47,7 @@ struct WidgetSnapshot: Codable, Equatable {
     func rate(at date: Date) -> Big {
         var r = baseRate
         if let exp = adBoostExpiresAt, date < exp { r *= adBoostMultiplier }
+        if let exp = paidBoostExpiresAt, date < exp { r *= paidBoostMultiplier ?? 1 }
         if let exp = eventExpiresAt, date < exp { r *= eventMultiplier }
         return r
     }
@@ -91,6 +95,7 @@ struct WidgetSnapshot: Codable, Equatable {
         }
         var keyMoments: [Date] = [fullAt]
         if let exp = adBoostExpiresAt { keyMoments.append(exp) }
+        if let exp = paidBoostExpiresAt { keyMoments.append(exp) }
         if let exp = eventExpiresAt { keyMoments.append(exp) }
         if let midnight = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: now)) {
             keyMoments.append(midnight)

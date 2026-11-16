@@ -32,7 +32,7 @@ struct BoostNudgeSheet: View {
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 28)
 
-            Text("Supercharge it 2× for \(engine.boostLabel(24 * 3600)).")
+            Text("Supercharge it 3× for \(engine.boostLabel(24 * 3600)).")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
 
@@ -44,14 +44,14 @@ struct BoostNudgeSheet: View {
                             let ok = await iap.purchase(product.id)
                             busy = false
                             if ok {
-                                engine.grantBoost(duration: 24 * 3600)
+                                engine.grantPaidBoost(duration: 24 * 3600)   // v4.0.3 — 3×, own timer
                                 haptics.upgrade()
                                 dismiss()
                             }
                         }
                     } label: {
                         VStack(spacing: 3) {
-                            Text("Buy — 2× for \(engine.boostLabel(24 * 3600))")
+                            Text("Buy — 3× for \(engine.boostLabel(24 * 3600))")
                                 .font(.headline)
                             Text(product.displayPrice)
                                 .font(.subheadline)

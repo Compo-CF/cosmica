@@ -18,7 +18,8 @@ extension WidgetSnapshot {
     init(state: GameState) {
         let adMult = state.adBoostMultiplier
         let eventMult = state.eventStardustMultiplier
-        let transient = adMult * eventMult
+        let paidMult = state.paidBoostMultiplier
+        let transient = adMult * paidMult * eventMult
         let rate = state.offlineStardustPerSecond   // v3.3 — the widget shows away-from-game earnings
         self.init(
             savedAt: state.lastSeen,
@@ -35,7 +36,9 @@ extension WidgetSnapshot {
             cosmosCount: state.cosmosCount,
             tierTitle: state.currentTier.title,
             tierSymbol: state.currentTier.symbol,
-            lastDailyClaim: state.lastDailyClaim
+            lastDailyClaim: state.lastDailyClaim,
+            paidBoostMultiplier: paidMult > 1 ? paidMult : nil,
+            paidBoostExpiresAt: paidMult > 1 ? state.paidBoostExpiresAt : nil
         )
     }
 }

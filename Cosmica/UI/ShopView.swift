@@ -424,7 +424,7 @@ struct ShopView: View {
     }
 
     private var boost2xCard: some View {
-        let boosted = engine.state.adBoostMultiplier > 1.0
+        let boosted = engine.state.boostMultiplier > 1.0
         return cardBackground {
             VStack(alignment: .leading, spacing: 12) {
                 HStack(spacing: 14) {
@@ -433,10 +433,11 @@ struct ShopView: View {
                         .foregroundStyle(.orange)
                         .frame(width: 50)
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("2× Earnings Boost").font(.headline).foregroundStyle(.white)
+                        Text("Earnings Boost").font(.headline).foregroundStyle(.white)
+                        // v4.0.3 — ads give 2×, the paid boost 3×, and the two multiply.
                         Text(boosted
-                             ? "Active — \(formattedBoostRemaining())"
-                             : "Doubles all Stardust earnings for the duration.")
+                             ? "\(GameState.boostText(engine.state.boostMultiplier)) active — \(formattedBoostRemaining())"
+                             : "Ads: 2× Stardust. Paid: 3× for a day. Together: 6×.")
                             .font(.caption).foregroundStyle(.secondary)
                     }
                     Spacer()
@@ -454,13 +455,13 @@ struct ShopView: View {
                     }
                     actionButton(
                         title: iap.priceLabel(for: IAPManager.boost2x24hrProductId),
-                        subtitle: engine.boostLabel(24 * 3600),
+                        subtitle: "3× · \(engine.boostLabel(24 * 3600)) · stacks",
                         color: .purple,
                         disabled: iap.purchaseInFlight
                     ) {
                         Task {
                             await attemptPurchase(IAPManager.boost2x24hrProductId) {
-                                engine.grantBoost(duration: 24 * 3600)
+                                engine.grantPaidBoost(duration: 24 * 3600)   // v4.0.3 — own 3× timer
                                 haptics.purchase()
                             }
                         }
@@ -757,10 +758,15 @@ struct ShopView: View {
         .disabled(disabled)
     }
 
+    /// v4.0.3 — one line per running timer ("2× 1h 20m · 3× 23h 5m left").
     private func formattedBoostRemaining() -> String {
-        guard let exp = engine.state.adBoostExpiresAt else { return "" }
-        let remaining = max(0, exp.timeIntervalSinceNow)
-        return Formatter.duration(remaining) + " remaining"
+        let s = engine.state
+        let parts: [String] = [(2.0, s.adBoostExpiresAt), (GameState.paidBoostRate, s.paidBoostExpiresAt)]
+            .compactMap { rate, exp in
+                guard let exp, exp > Date() else { return nil }
+                return "\(GameState.boostText(rate)) \(Formatter.duration(exp.timeIntervalSinceNow))"
+            }
+        return parts.joined(separator: " · ") + " left"
     }
 
     /// Attempts an IAP purchase and surfaces failures with a user-visible alert.
