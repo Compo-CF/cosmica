@@ -11,7 +11,7 @@ struct TermsOfServiceView: View {
                     .foregroundStyle(.secondary)
 
                 section(title: "Agreement", body: """
-                By installing or using Cosmica ("the app"), you agree to these Terms of Service. If you don't agree, please uninstall the app. Cosmica is provided by Anthony Compofelice ("the developer"), an independent developer.
+                By installing or using Cosmica ("the app"), you agree to these Terms of Service. If you don't agree, please uninstall the app. Cosmica is provided by After Hours Dev Studio ("the developer"), an independent developer.
                 """)
 
                 section(title: "License", body: """
@@ -66,7 +66,7 @@ struct TermsOfServiceView: View {
                 """)
 
                 section(title: "Contact", body: """
-                Questions about these Terms: contact Anthony Compofelice via the support link in the Shop screen.
+                Questions about these Terms: contact After Hours Dev Studio via the support link in the Shop screen.
                 """)
 
                 Spacer().frame(height: 24)

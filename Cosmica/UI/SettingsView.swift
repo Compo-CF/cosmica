@@ -194,7 +194,7 @@ struct SettingsView: View {
                     HStack {
                         Text("Developer")
                         Spacer()
-                        Text("Anthony Compofelice").foregroundStyle(.secondary)
+                        Text("After Hours Dev Studio").foregroundStyle(.secondary)
                     }
                 }
 

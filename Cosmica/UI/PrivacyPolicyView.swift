@@ -11,7 +11,7 @@ struct PrivacyPolicyView: View {
                     .foregroundStyle(.secondary)
 
                 section(title: "TL;DR", body: """
-                Cosmica is a single-player idle game. Anthony Compofelice (the developer) does not operate a server and does not collect any personal information. The only thing the developer sees is an anonymous daily count of Shop activity, described below, which you can switch off. Your game progress lives on your device and, if you're signed into iCloud, in your private iCloud account. Three third-party services are involved — Apple, Google, and StoreKit — each governed by their own privacy policies linked below.
+                Cosmica is a single-player idle game. After Hours Dev Studio (the developer) does not operate a server and does not collect any personal information. The only thing the developer sees is an anonymous daily count of Shop activity, described below, which you can switch off. Your game progress lives on your device and, if you're signed into iCloud, in your private iCloud account. Three third-party services are involved — Apple, Google, and StoreKit — each governed by their own privacy policies linked below.
                 """)
 
                 section(title: "What the developer collects", body: """
@@ -62,7 +62,7 @@ struct PrivacyPolicyView: View {
                 """)
 
                 section(title: "Contact", body: """
-                Questions, concerns, or feedback: open an issue at the Cosmica project page, or contact Anthony Compofelice directly via the support link in the Shop screen.
+                Questions, concerns, or feedback: open an issue at the Cosmica project page, or email hello@afterhoursdevstudio.com.
                 """)
 
                 Spacer().frame(height: 24)
