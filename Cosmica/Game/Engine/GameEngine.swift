@@ -1052,7 +1052,7 @@ final class GameEngine {
         guard let ev = trailEvent, ev.isOpen(now), state.solsticeMet.count < ev.steps.count else { return }
         var changed = false
         for step in ev.steps where !SeasonalTrails.isMet(step, state) {
-            if SeasonalTrails.current(step, state) >= SeasonalTrails.target(step, state) {
+            if SeasonalTrails.reached(step, state) {
                 state.solsticeMet.append(step.rawValue)
                 changed = true
             }

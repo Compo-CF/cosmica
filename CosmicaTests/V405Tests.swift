@@ -35,7 +35,8 @@ final class V405Tests: XCTestCase {
         e.state.totalDailyClaims = 30
         e.refreshTrail(now: during)
         XCTAssertEqual(e.trailEvent?.id, binary.id)
-        XCTAssertEqual(SeasonalTrails.goalAmount(.dailies, e.state), Big(7))
+        XCTAssertEqual(SeasonalTrails.goalAmount(.dailies, e.state).double, 7, accuracy: 1e-9)
+        XCTAssertEqual(SeasonalTrails.target(.dailies, e.state), Big(37), "exact, not 30 + 7 through Big")
         XCTAssertEqual(SeasonalTrails.goalAmount(.weeklies, e.state), Big(2))
         XCTAssertEqual(SeasonalTrails.goalAmount(.bigBangs, e.state), Big(2), "a new player's first two Big Bangs")
         XCTAssertNil(e.state.solsticeTargets[TrailStep.generators.rawValue], "Binary Stars has no generator goal")
@@ -48,6 +49,30 @@ final class V405Tests: XCTestCase {
         e.state.challengeStars = 6
         e.checkTrail(now: during)
         XCTAssertTrue(SeasonalTrails.isMet(.weeklies, e.state))
+    }
+
+    /// Exactly N more must complete a goal, for every starting count (Big's base-10 mantissa).
+    func test_exactlyEnough_completesTheGoal() {
+        for start in [0, 3, 7, 13, 29, 30, 99, 101, 999, 12_345] {
+            let e = engine()
+            e.state.challengeStars = start
+            e.state.totalDailyClaims = start
+            e.refreshTrail(now: during)
+            e.state.challengeStars = start + 2
+            e.state.totalDailyClaims = start + 7
+            e.checkTrail(now: during)
+            XCTAssertTrue(SeasonalTrails.isMet(.weeklies, e.state), "weeklies from \(start)")
+            XCTAssertTrue(SeasonalTrails.isMet(.dailies, e.state), "dailies from \(start)")
+        }
+    }
+
+    /// A 4.0.4-style target built with Big addition still completes.
+    func test_bigAddedTarget_stillReached() {
+        let e = engine()
+        e.refreshTrail(now: during)
+        e.state.solsticeTargets[TrailStep.dailies.rawValue] = Big(30) + Big(7)
+        e.state.totalDailyClaims = 37
+        XCTAssertTrue(SeasonalTrails.reached(.dailies, e.state))
     }
 
     func test_allFive_payBinaryOrb() {

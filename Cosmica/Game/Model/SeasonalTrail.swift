@@ -148,9 +148,20 @@ enum SeasonalTrails {
             case .bestRun:
                 amount = 0
             }
-            out[step] = (base, base + Big(amount))
+            // Integer counters: add in Double (exact below 2^53). `base + Big(amount)` goes through
+            // Big's base-10 mantissa and can land a hair above Big(counter), so a goal that needs
+            // exactly N more (2 weekly challenges) might never be reached.
+            out[step] = (base, Big(base.double + amount))
         }
         return out
+    }
+
+    /// Has the running trail's goal been reached? Counter goals allow half a unit of slack
+    /// (targets set by 4.0.4 were built with Big addition, see `make`).
+    static func reached(_ step: TrailStep, _ s: GameState) -> Bool {
+        let cur = current(step, s), goal = target(step, s)
+        if step == .bestRun { return cur >= goal }
+        return cur.double >= goal.double - 0.5
     }
 
     // MARK: - Reading a save (the running trail)
