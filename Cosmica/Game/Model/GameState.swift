@@ -195,15 +195,19 @@ struct GameState: Codable {
     /// Completed tiers per Rift (0–3). Rewards scale with these and are kept forever.
     var riftTiers: [String: Int] = [:]
 
-    // ───────── Winter Solstice Trail (v4.0.4, time-limited event) ─────────
-    /// Per-goal baseline and target (keys = `SolsticeStep.rawValue`), set the first
-    /// time the game runs inside the event window. Empty = trail not started.
+    // ───────── Seasonal Trails (v4.0.4 Solstice; v4.0.5 any trail, see SeasonalTrail.swift) ─────────
+    /// The running trail (`TrailEvent.id`), "" = none. A 4.0.4 save with goals set is the Solstice.
+    var trailEventId: String = ""
+    /// Trails whose orb was earned (all five claimed). Never reset.
+    var trailOrbsEarned: [String] = []
+    /// Per-goal baseline and target of the running trail (keys = `TrailStep.rawValue`), set the
+    /// first time the game runs inside its window. Empty = no trail running. (Key names from 4.0.4.)
     var solsticeBaselines: [String: Big] = [:]
     var solsticeTargets: [String: Big] = [:]
     /// Goals met (latched) and goals claimed.
     var solsticeMet: [String] = []
     var solsticeClaimed: [String] = []
-    /// The Frost orb: all five goals claimed during the event. Kept forever.
+    /// 4.0.4: the Frost orb. Kept for old saves; `trailOrbsEarned` is the source of truth now.
     var solsticeOrbEarned: Bool = false
 
     // ───────── Codable: lenient decode so v1.0.x saves migrate to v2 ─────────
@@ -293,6 +297,10 @@ struct GameState: Codable {
         solsticeMet         = try c.decodeIfPresent([String].self,      forKey: .solsticeMet)         ?? []
         solsticeClaimed     = try c.decodeIfPresent([String].self,      forKey: .solsticeClaimed)     ?? []
         solsticeOrbEarned   = try c.decodeIfPresent(Bool.self,          forKey: .solsticeOrbEarned)   ?? false
+        trailEventId        = try c.decodeIfPresent(String.self,        forKey: .trailEventId)
+            ?? (solsticeTargets.isEmpty ? "" : SeasonalTrails.solsticeId)
+        trailOrbsEarned     = try c.decodeIfPresent([String].self,      forKey: .trailOrbsEarned)
+            ?? (solsticeOrbEarned ? [SeasonalTrails.solsticeId] : [])
 
         // v3.0.4 — the Autonomous Reactor node was retired (automation now covers
         // its cluster). Give back the 25 ◈ it cost. Removing the key makes this

@@ -11,6 +11,8 @@ enum OrbSkin: String, CaseIterable, Identifiable {
     case tier, golden, singularity, aurora, nebula, pulsar, void
     // v4.0.4 — frost: earned only during the Winter Solstice Trail (Dec 2026–Jan 2027).
     case frost
+    // v4.0.5 — binary: earned only during Binary Stars (Jan 15–Feb 14 2027).
+    case binary
 
     var id: String { rawValue }
 
@@ -30,6 +32,7 @@ enum OrbSkin: String, CaseIterable, Identifiable {
         case .pulsar: return "Pulsar"
         case .void:   return "Void"
         case .frost:  return "Frost"
+        case .binary: return "Binary"
         }
     }
 
@@ -43,9 +46,12 @@ enum OrbSkin: String, CaseIterable, Identifiable {
         case .nebula: return "Complete a True Cosmos"
         case .pulsar: return "Earn 5 Challenge Stars"
         case .void:   return "Complete 10 True Cosmoi"
-        case .frost:  return Date() < SolsticeTrail.end
+        case .frost:  return Date() < SeasonalTrails.solstice.end
             ? "Finish the Winter Solstice Trail (until Jan 10)"
             : "Winter Solstice Trail 2026 (event ended)"
+        case .binary: return Date() < SeasonalTrails.binaryStars.end
+            ? "Finish Binary Stars (Jan 15 – Feb 14)"
+            : "Binary Stars 2027 (event ended)"
         }
     }
 
@@ -60,6 +66,7 @@ enum OrbSkin: String, CaseIterable, Identifiable {
         case .pulsar: return Color(red: 0.40, green: 0.75, blue: 1.00)
         case .void:   return Color(red: 0.45, green: 0.20, blue: 0.95)
         case .frost:  return Color(red: 0.86, green: 0.96, blue: 1.00)
+        case .binary: return Color(red: 1.00, green: 0.50, blue: 0.74)
         }
     }
 
@@ -75,6 +82,7 @@ enum OrbSkin: String, CaseIterable, Identifiable {
         case .pulsar: return .white
         case .void:   return Color(red: 0.85, green: 0.75, blue: 1.00)
         case .frost:  return Color(red: 0.45, green: 0.80, blue: 1.00)
+        case .binary: return Color(red: 0.50, green: 0.75, blue: 1.00)
         }
     }
 
@@ -87,7 +95,8 @@ enum OrbSkin: String, CaseIterable, Identifiable {
         case .nebula: return state.cosmosCount >= 1
         case .pulsar: return state.challengeStars >= 5
         case .void:   return state.cosmosCount >= 10
-        case .frost:  return state.solsticeOrbEarned
+        case .frost:  return state.trailOrbsEarned.contains(SeasonalTrails.solsticeId) || state.solsticeOrbEarned
+        case .binary: return state.trailOrbsEarned.contains(SeasonalTrails.binaryStarsId)
         }
     }
 

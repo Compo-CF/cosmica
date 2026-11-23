@@ -40,7 +40,7 @@ final class GameEngine {
         timer?.invalidate()
         lastTickAt = Date()
         refreshChallenge(now: lastTickAt)
-        refreshSolstice(now: lastTickAt)
+        refreshTrail(now: lastTickAt)
         let interval = 1.0 / tickHz
         timer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { [weak self] _ in
             Task { @MainActor in self?.tickFromTimer() }
@@ -64,8 +64,8 @@ final class GameEngine {
         updateCosmicEvent(now: now)
         // v3.2 — start the new week's challenge if the week turned over.
         refreshChallenge(now: now)
-        // v4.0.4 — Winter Solstice Trail: start it inside the window, settle it after.
-        refreshSolstice(now: now)
+        // v4.0.4/4.0.5 — Seasonal Trails: start one inside its window, settle it after.
+        refreshTrail(now: now)
 
         addStardust(state.stardustPerSecond * dt)
 
@@ -978,7 +978,7 @@ final class GameEngine {
     /// Latch completion the moment the goal is met. Called from the tick and
     /// just before anything that resets a run. Internal (not private) for tests.
     func checkChallenge() {
-        checkSolstice()
+        checkTrail()
         guard !state.challengeCompleted, let c = challenge, c.isMet(state) else { return }
         state.challengeCompleted = true
         save()
@@ -1004,41 +1004,55 @@ final class GameEngine {
         return shards
     }
 
-    // MARK: - Winter Solstice Trail (v4.0.4)
+    // MARK: - Seasonal Trails (v4.0.4 Winter Solstice, v4.0.5 Binary Stars)
 
-    /// Shards one Solstice goal pays: a Big Bang's worth at the player's level (min 50).
-    var solsticeRewardShards: Big {
-        shardPackAmount(base: SolsticeTrail.shardsPerStepFloor, multiple: SolsticeTrail.shardsPerStepBigBangs)
+    /// Shards one trail goal pays: a Big Bang's worth at the player's level (min 50).
+    var trailRewardShards: Big {
+        shardPackAmount(base: SeasonalTrails.shardsPerStepFloor, multiple: SeasonalTrails.shardsPerStepBigBangs)
     }
 
-    var solsticeStarted: Bool { !state.solsticeTargets.isEmpty }
+    /// The trail this save is running (goals set), if any.
+    var trailEvent: TrailEvent? {
+        state.solsticeTargets.isEmpty ? nil : SeasonalTrails.event(id: state.trailEventId)
+    }
 
-    /// Inside the window: set the five goals once. After it: pay any goal that was met
-    /// but not claimed (and the orb if that completes the set). Cheap when nothing changes.
-    func refreshSolstice(now: Date = Date()) {
-        if SolsticeTrail.isOpen(now) {
-            guard !solsticeStarted else { return }
-            for (step, goal) in SolsticeTrail.make(state) {
-                state.solsticeBaselines[step.rawValue] = goal.base
-                state.solsticeTargets[step.rawValue] = goal.target
-            }
-            save()
-        } else if now >= SolsticeTrail.end, solsticeStarted {
-            let unpaid = SolsticeStep.allCases.filter {
-                SolsticeTrail.isMet($0, state) && !SolsticeTrail.isClaimed($0, state)
-            }
-            for step in unpaid { grantSolstice(step) }
+    /// After a trail's window: pay goals met but not claimed, then clear it. Inside a window:
+    /// set that trail's goals once. Cheap when nothing changes (called every tick).
+    func refreshTrail(now: Date = Date()) {
+        if let ev = trailEvent, now >= ev.end {
+            for step in ev.steps where trailClaimable(step) { grantTrail(step, ev) }
+            clearTrail()
+        } else if trailEvent == nil, !state.solsticeTargets.isEmpty || !state.trailEventId.isEmpty {
+            clearTrail()   // unknown id (shouldn't happen): start clean
         }
+        guard let open = SeasonalTrails.open(now), state.trailEventId != open.id else { return }
+        if let ev = trailEvent {   // a different trail still stored (overlap can't happen, but settle it)
+            for step in ev.steps where trailClaimable(step) { grantTrail(step, ev) }
+        }
+        state.solsticeBaselines = [:]; state.solsticeTargets = [:]
+        state.solsticeMet = []; state.solsticeClaimed = []
+        for (step, goal) in SeasonalTrails.make(open, state) {
+            state.solsticeBaselines[step.rawValue] = goal.base
+            state.solsticeTargets[step.rawValue] = goal.target
+        }
+        state.trailEventId = open.id
+        save()
+    }
+
+    private func clearTrail() {
+        state.solsticeBaselines = [:]; state.solsticeTargets = [:]
+        state.solsticeMet = []; state.solsticeClaimed = []
+        state.trailEventId = ""
+        save()
     }
 
     /// Latch goals the moment they're met. Runs with `checkChallenge` (every tick and
-    /// before anything that resets a run), only while the window is open.
-    func checkSolstice(now: Date = Date()) {
-        guard solsticeStarted, SolsticeTrail.isOpen(now),
-              state.solsticeMet.count < SolsticeStep.allCases.count else { return }
+    /// before anything that resets a run), only while the trail's window is open.
+    func checkTrail(now: Date = Date()) {
+        guard let ev = trailEvent, ev.isOpen(now), state.solsticeMet.count < ev.steps.count else { return }
         var changed = false
-        for step in SolsticeStep.allCases where !SolsticeTrail.isMet(step, state) {
-            if SolsticeTrail.current(step, state) >= SolsticeTrail.target(step, state) {
+        for step in ev.steps where !SeasonalTrails.isMet(step, state) {
+            if SeasonalTrails.current(step, state) >= SeasonalTrails.target(step, state) {
                 state.solsticeMet.append(step.rawValue)
                 changed = true
             }
@@ -1046,23 +1060,24 @@ final class GameEngine {
         if changed { save() }
     }
 
-    func solsticeClaimable(_ step: SolsticeStep) -> Bool {
-        SolsticeTrail.isMet(step, state) && !SolsticeTrail.isClaimed(step, state)
+    func trailClaimable(_ step: TrailStep) -> Bool {
+        SeasonalTrails.isMet(step, state) && !SeasonalTrails.isClaimed(step, state)
     }
 
     /// Claim one met goal. Returns the shards granted (0 if nothing to claim).
     @discardableResult
-    func claimSolstice(_ step: SolsticeStep) -> Big {
-        guard solsticeClaimable(step) else { return .zero }
-        return grantSolstice(step)
+    func claimTrail(_ step: TrailStep) -> Big {
+        guard let ev = trailEvent, trailClaimable(step) else { return .zero }
+        return grantTrail(step, ev)
     }
 
     @discardableResult
-    private func grantSolstice(_ step: SolsticeStep) -> Big {
-        let shards = solsticeRewardShards
+    private func grantTrail(_ step: TrailStep, _ ev: TrailEvent) -> Big {
+        let shards = trailRewardShards
         state.solsticeClaimed.append(step.rawValue)
-        if SolsticeTrail.claimedCount(state) == SolsticeStep.allCases.count && !state.solsticeOrbEarned {
-            state.solsticeOrbEarned = true
+        if SeasonalTrails.claimedCount(ev, state) == ev.steps.count && !state.trailOrbsEarned.contains(ev.id) {
+            state.trailOrbsEarned.append(ev.id)
+            if ev.id == SeasonalTrails.solsticeId { state.solsticeOrbEarned = true }
             state.challengeStars += 1
         }
         grantShards(shards)   // saves
