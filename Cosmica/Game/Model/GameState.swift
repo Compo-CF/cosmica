@@ -195,6 +195,17 @@ struct GameState: Codable {
     /// Completed tiers per Rift (0–3). Rewards scale with these and are kept forever.
     var riftTiers: [String: Int] = [:]
 
+    // ───────── Winter Solstice Trail (v4.0.4, time-limited event) ─────────
+    /// Per-goal baseline and target (keys = `SolsticeStep.rawValue`), set the first
+    /// time the game runs inside the event window. Empty = trail not started.
+    var solsticeBaselines: [String: Big] = [:]
+    var solsticeTargets: [String: Big] = [:]
+    /// Goals met (latched) and goals claimed.
+    var solsticeMet: [String] = []
+    var solsticeClaimed: [String] = []
+    /// The Frost orb: all five goals claimed during the event. Kept forever.
+    var solsticeOrbEarned: Bool = false
+
     // ───────── Codable: lenient decode so v1.0.x saves migrate to v2 ─────────
 
     init() {}   // memberwise-equivalent default init for fresh saves.
@@ -277,6 +288,11 @@ struct GameState: Codable {
         activeRiftId        = try c.decodeIfPresent(String.self,        forKey: .activeRiftId)
         riftGoalLog         = try c.decodeIfPresent(Double.self,        forKey: .riftGoalLog)         ?? 0
         riftTiers           = try c.decodeIfPresent([String: Int].self, forKey: .riftTiers)           ?? [:]
+        solsticeBaselines   = try c.decodeIfPresent([String: Big].self, forKey: .solsticeBaselines)   ?? [:]
+        solsticeTargets     = try c.decodeIfPresent([String: Big].self, forKey: .solsticeTargets)     ?? [:]
+        solsticeMet         = try c.decodeIfPresent([String].self,      forKey: .solsticeMet)         ?? []
+        solsticeClaimed     = try c.decodeIfPresent([String].self,      forKey: .solsticeClaimed)     ?? []
+        solsticeOrbEarned   = try c.decodeIfPresent(Bool.self,          forKey: .solsticeOrbEarned)   ?? false
 
         // v3.0.4 — the Autonomous Reactor node was retired (automation now covers
         // its cluster). Give back the 25 ◈ it cost. Removing the key makes this

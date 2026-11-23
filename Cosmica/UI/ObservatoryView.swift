@@ -29,6 +29,7 @@ struct ObservatoryView: View {
             VStack(spacing: 0) {
                 CurrencyBar()
                 tierStrip
+                SolsticeBanner()   // v4.0.4 — Winter Solstice Trail (time-limited)
                 if let event = engine.state.activeEvent {
                     eventBanner(event)
                 }

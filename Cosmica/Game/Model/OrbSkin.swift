@@ -9,6 +9,8 @@ import SwiftUI
 enum OrbSkin: String, CaseIterable, Identifiable {
     // v3.4 — singularity: exclusive to the Ultimate Bundle / Deluxe Upgrade.
     case tier, golden, singularity, aurora, nebula, pulsar, void
+    // v4.0.4 — frost: earned only during the Winter Solstice Trail (Dec 2026–Jan 2027).
+    case frost
 
     var id: String { rawValue }
 
@@ -27,6 +29,7 @@ enum OrbSkin: String, CaseIterable, Identifiable {
         case .nebula: return "Nebula"
         case .pulsar: return "Pulsar"
         case .void:   return "Void"
+        case .frost:  return "Frost"
         }
     }
 
@@ -40,6 +43,9 @@ enum OrbSkin: String, CaseIterable, Identifiable {
         case .nebula: return "Complete a True Cosmos"
         case .pulsar: return "Earn 5 Challenge Stars"
         case .void:   return "Complete 10 True Cosmoi"
+        case .frost:  return Date() < SolsticeTrail.end
+            ? "Finish the Winter Solstice Trail (until Jan 10)"
+            : "Winter Solstice Trail 2026 (event ended)"
         }
     }
 
@@ -53,6 +59,7 @@ enum OrbSkin: String, CaseIterable, Identifiable {
         case .nebula: return Color(red: 1.00, green: 0.45, blue: 0.85)
         case .pulsar: return Color(red: 0.40, green: 0.75, blue: 1.00)
         case .void:   return Color(red: 0.45, green: 0.20, blue: 0.95)
+        case .frost:  return Color(red: 0.86, green: 0.96, blue: 1.00)
         }
     }
 
@@ -67,6 +74,7 @@ enum OrbSkin: String, CaseIterable, Identifiable {
         case .nebula: return Color(red: 0.70, green: 0.45, blue: 1.00)
         case .pulsar: return .white
         case .void:   return Color(red: 0.85, green: 0.75, blue: 1.00)
+        case .frost:  return Color(red: 0.45, green: 0.80, blue: 1.00)
         }
     }
 
@@ -79,6 +87,7 @@ enum OrbSkin: String, CaseIterable, Identifiable {
         case .nebula: return state.cosmosCount >= 1
         case .pulsar: return state.challengeStars >= 5
         case .void:   return state.cosmosCount >= 10
+        case .frost:  return state.solsticeOrbEarned
         }
     }
 
