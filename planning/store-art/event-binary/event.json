@@ -1,0 +1,24 @@
+{
+  "_doc": "Binary Stars In-App Event (CHALLENGE). Real content: SeasonalTrails.binaryStars in Cosmica/Game/Model/SeasonalTrail.swift (v4.0.5), window 2027-01-15T08:00Z to 2027-02-15T07:00Z hard-coded to match eventStart/eventEnd (under Apple's 31-day cap, Feb 14 included in every US timezone). publishStart 14 days early (Jan 1) so the card shows as upcoming while the Winter Solstice Trail (ends Jan 10) is live. Create/update: python C:/Users/anthony.compofelice/Neatly/scripts/asc/app_event.py planning/store-art/event-binary/event.json. Media: ../cosmica_event_art_binary.py. Submit with 4.0.5.",
+  "app_id": "6784340038",
+  "referenceName": "Cosmica Binary Stars 2027",
+  "badge": "CHALLENGE",
+  "purpose": "APPROPRIATE_FOR_ALL_USERS",
+  "priority": "HIGH",
+  "purchaseRequirement": "NO_COST_ASSOCIATED",
+  "primaryLocale": "en-US",
+  "deepLink": "cosmica://observatory",
+  "publishStart": "2027-01-01T08:00:00Z",
+  "eventStart": "2027-01-15T08:00:00Z",
+  "eventEnd": "2027-02-15T07:00:00Z",
+  "localization": {
+    "locale": "en-US",
+    "name": "Binary Stars Challenge",
+    "shortDescription": "Twin-star goals for Valentine's and a Binary orb.",
+    "longDescription": "Five goals in twos, sized to your progress: Cosmic Shards for each, then a Challenge Star and the event-only Binary orb."
+  },
+  "media": {
+    "EVENT_CARD": "binary_card_1920x1080.png",
+    "EVENT_DETAILS_PAGE": "binary_details_1080x1920.png"
+  }
+}
