@@ -1,0 +1,24 @@
+{
+  "_doc": "Winter Solstice Trail In-App Event (CHALLENGE). Real content: SolsticeTrail.swift (v4.0.4), window 2026-12-13T16:00Z to 2027-01-10T16:00Z hard-coded to match eventStart/eventEnd. publishStart 7 days early so the card shows as upcoming while 'Beyond the Ceiling' (ends Dec 12) is still live: no gap in Browse. Create/update: python C:/Users/anthony.compofelice/Neatly/scripts/asc/app_event.py planning/store-art/event-solstice/event.json. Media: ../cosmica_event_art_solstice.py. Submit with 4.0.4 in the same reviewSubmission.",
+  "app_id": "6784340038",
+  "referenceName": "Cosmica Winter Solstice Trail 2026",
+  "badge": "CHALLENGE",
+  "purpose": "APPROPRIATE_FOR_ALL_USERS",
+  "priority": "HIGH",
+  "purchaseRequirement": "NO_COST_ASSOCIATED",
+  "primaryLocale": "en-US",
+  "deepLink": "cosmica://observatory",
+  "publishStart": "2026-12-06T16:00:00Z",
+  "eventStart": "2026-12-13T16:00:00Z",
+  "eventEnd": "2027-01-10T16:00:00Z",
+  "localization": {
+    "locale": "en-US",
+    "name": "Winter Solstice Trail",
+    "shortDescription": "Five winter goals. One orb you can only earn now.",
+    "longDescription": "Finish five goals sized to your progress for Cosmic Shards, a Challenge Star and the Frost orb, only earnable now."
+  },
+  "media": {
+    "EVENT_CARD": "solstice_card_1920x1080.png",
+    "EVENT_DETAILS_PAGE": "solstice_details_1080x1920.png"
+  }
+}
