@@ -57,7 +57,7 @@ final class V403Tests: XCTestCase {
     func test_shardsPerDollar_riseWithEachTier() {
         let e = engine()
         e.state.lastBigBangShards = Big(1e6)
-        let p = packs(e), prices = [1.99, 9.99, 19.99]
+        let p = packs(e), prices = [1.99, 9.99, 14.99]   // Huge $19.99 -> $14.99 on 2026-11-23
         let perDollar = zip(p, prices).map { $0.0 / Big($0.1) }
         XCTAssertLessThan(perDollar[0], perDollar[1])
         XCTAssertLessThan(perDollar[1], perDollar[2])
