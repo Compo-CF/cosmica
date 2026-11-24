@@ -1,0 +1,110 @@
+Command line invocation:
+    /Applications/Xcode_26.6.app/Contents/Developer/usr/bin/xcodebuild -project Cosmica.xcodeproj -scheme CosmicaScreens -destination id=6478AFFB-AE17-412A-A1E5-51BCFFD300B6 -derivedDataPath dd "-only-testing:CosmicaUITests/AdClipsUITests/test_clip_b" -skipPackagePluginValidation -skipMacroValidation CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM= PROVISIONING_PROFILE_SPECIFIER= test-without-building
+
+Build settings from command line:
+    CODE_SIGN_IDENTITY = -
+    CODE_SIGN_STYLE = Manual
+    DEVELOPMENT_TEAM = 
+    PROVISIONING_PROFILE_SPECIFIER = 
+
+Resolve Package Graph
+
+
+Resolved source packages:
+  GoogleUserMessagingPlatform: https://github.com/googleads/swift-package-manager-google-user-messaging-platform.git @ 3.1.0
+  GoogleMobileAds: https://github.com/googleads/swift-package-manager-google-mobile-ads.git @ 12.14.0
+
+--- xcodebuild: WARNING: Using the first of multiple matching destinations:
+{ platform:iOS Simulator, arch:arm64, id:6478AFFB-AE17-412A-A1E5-51BCFFD300B6, OS:26.5, name:iPhone 17 Pro }
+{ platform:iOS Simulator, arch:x86_64, id:6478AFFB-AE17-412A-A1E5-51BCFFD300B6, OS:26.5, name:iPhone 17 Pro }
+2026-11-24 22:02:47.540816+0000 CosmicaUITests-Runner[18916:58477] [Default] Running tests...
+    t =      nans Interface orientation changed to Portrait
+Test Suite 'Selected tests' started at 2026-11-24 22:02:50.287.
+Test Suite 'CosmicaUITests.xctest' started at 2026-11-24 22:02:50.289.
+Test Suite 'AdClipsUITests' started at 2026-11-24 22:02:50.290.
+Test Case '-[CosmicaUITests.AdClipsUITests test_clip_b]' started.
+    t =     0.01s Start Test at 2026-11-24 22:02:50.297
+    t =     0.10s Set Up
+ADCLIP_MARK launch 1795557770.411
+    t =     0.13s Open com.centricfiber.cosmica
+    t =     0.13s     Launch com.centricfiber.cosmica
+objc[18916]: Class UIAccessibilityLoaderWebShared is implemented in both /Library/Developer/CoreSimulator/Volumes/iOS_23F77/Library/Developer/CoreSimulator/Profiles/Runtimes/iOS 26.5.simruntime/Contents/Resources/RuntimeRoot/System/Library/AccessibilityBundles/WebCore.axbundle/WebCore (0x105d6c310) and /Library/Developer/CoreSimulator/Volumes/iOS_23F77/Library/Developer/CoreSimulator/Profiles/Runtimes/iOS 26.5.simruntime/Contents/Resources/RuntimeRoot/System/Library/AccessibilityBundles/WebKit.axbundle/WebKit (0x105cd0398). This may cause spurious casting failures and mysterious crashes. One of the duplicates must be removed or renamed.
+2026-11-24 22:02:54.055 xcodebuild[17895:55920] [MT] IDELaunchParametersSnapshot: The operation couldn’t be completed. (DebuggerLLDB.DebuggerVersionStore.StoreError error 0.)
+2026-11-24 22:02:54.056 xcodebuild[17895:55920] [MT] IDELaunchParametersSnapshot: no debugger version
+    t =    14.90s         Setting up automation session
+ADCLIP_MARK scene 1795557793.713
+    t =    28.73s Waiting 3.0s for "Big Bang" Button to exist
+    t =    29.78s     Checking `Expect predicate `existsNoRetry == 1` for object "Big Bang" Button`
+    t =    29.78s         Checking existence of `"Big Bang" Button`
+    t =    32.02s         Capturing element debug description
+    t =    32.03s     Checking existence of `"Big Bang" Button`
+    t =    38.63s Tap "Big Bang" Button
+    t =    38.63s     Find the "Big Bang" Button
+    t =    39.40s     Check for interrupting elements affecting "burst.fill" Button
+    t =    41.21s     Synthesize event
+ADCLIP_MARK bigbang-tab 1795557813.414
+    t =    44.64s Checking existence of `Button (First Match)`
+    t =    47.50s Find the Button (First Match)
+    t =    48.65s Swipe up Target Application 'com.centricfiber.cosmica'
+    t =    48.65s     Find the Target Application 'com.centricfiber.cosmica'
+    t =    48.97s     Check for interrupting elements affecting "Cosmica" Application
+    t =    49.27s     Synthesize event
+    t =    49.91s Checking existence of `"Big Bang — claim 1.39M ◈" Button`
+    t =    50.85s Find the "Big Bang — claim 1.39M ◈" Button
+    t =    52.27s Swipe up Target Application 'com.centricfiber.cosmica'
+    t =    52.27s     Find the Target Application 'com.centricfiber.cosmica'
+    t =    52.87s     Check for interrupting elements affecting "Cosmica" Application
+    t =    53.27s     Synthesize event
+    t =    54.24s Checking existence of `"Big Bang — claim 1.40M ◈" Button`
+    t =    54.83s Find the "Big Bang — claim 1.40M ◈" Button
+    t =    57.94s Checking existence of `"Big Bang — claim 1.41M ◈" Button`
+    t =    59.08s Find the "Big Bang — claim 1.41M ◈" Button
+    t =    60.95s Checking existence of `"Big Bang — claim 1.43M ◈" Button`
+    t =    64.09s Find the "Big Bang — claim 1.43M ◈" Button
+    t =    65.02s Checking existence of `"Big Bang — claim 1.46M ◈" Button`
+    t =    65.34s Find the "Big Bang — claim 1.46M ◈" Button
+    t =    65.95s Checking existence of `"Big Bang — claim 1.46M ◈" Button`
+    t =    66.27s Find the "Big Bang — claim 1.46M ◈" Button
+    t =    66.84s Checking existence of `"Big Bang — claim 1.46M ◈" Button`
+    t =    67.10s Find the "Big Bang — claim 1.46M ◈" Button
+    t =    69.36s Tap "Big Bang — claim 1.47M ◈" Button
+    t =    69.36s     Find the "Big Bang — claim 1.47M ◈" Button
+    t =    70.64s     Check for interrupting elements affecting "Big Bang — claim 1.48M ◈" Button
+    t =    71.44s     Synthesize event
+ADCLIP_MARK confirm-dialog 1795557842.366
+    t =    72.08s Waiting 5.0s for Button (First Match) to exist
+    t =    73.13s     Checking `Expect predicate `existsNoRetry == 1` for object Button (First Match)`
+    t =    73.14s         Checking existence of `Button (First Match)`
+    t =    76.16s Tap Button (First Match)
+    t =    76.16s     Find the Button (First Match)
+    t =    76.64s     Check for interrupting elements affecting "Big Bang (1.49M ◈)" Button
+    t =    77.12s     Synthesize event
+ADCLIP_MARK confirmed 1795557847.983
+ADCLIP_MARK after 1795557852.985
+    t =    82.70s Waiting 3.0s for "Observatory" Button to exist
+    t =    83.76s     Checking `Expect predicate `existsNoRetry == 1` for object "Observatory" Button`
+    t =    83.76s         Checking existence of `"Observatory" Button`
+    t =    84.14s Tap "Observatory" Button
+    t =    84.14s     Find the "Observatory" Button
+    t =    84.55s     Check for interrupting elements affecting "scope" Button
+    t =    84.91s     Synthesize event
+ADCLIP_MARK reclimb 1795557856.788
+ADCLIP_MARK end 1795557872.796
+    t =   102.52s Tear Down
+Test Case '-[CosmicaUITests.AdClipsUITests test_clip_b]' passed (109.034 seconds).
+Test Suite 'AdClipsUITests' passed at 2026-11-24 22:04:39.336.
+	 Executed 1 test, with 0 failures (0 unexpected) in 109.034 (109.046) seconds
+Test Suite 'CosmicaUITests.xctest' passed at 2026-11-24 22:04:39.340.
+	 Executed 1 test, with 0 failures (0 unexpected) in 109.034 (109.050) seconds
+Test Suite 'Selected tests' passed at 2026-11-24 22:04:39.340.
+	 Executed 1 test, with 0 failures (0 unexpected) in 109.034 (109.053) seconds
+2026-11-24 22:04:43.259 xcodebuild[17895:55920] [MT] IDETestOperationsObserverDebug: 137.650 elapsed -- Testing started completed.
+2026-11-24 22:04:43.260 xcodebuild[17895:55920] [MT] IDETestOperationsObserverDebug: 0.000 sec, +0.000 sec -- start
+2026-11-24 22:04:43.260 xcodebuild[17895:55920] [MT] IDETestOperationsObserverDebug: 137.650 sec, +137.650 sec -- end
+
+Test session results, code coverage, and logs:
+	/Users/runner/work/cosmica/cosmica/dd/Logs/Test/Test-CosmicaScreens-2026.11.24_22-02-15-+0000.xcresult
+
+** TEST EXECUTE SUCCEEDED **
+
+Testing started

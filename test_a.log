@@ -1,0 +1,139 @@
+Command line invocation:
+    /Applications/Xcode_26.6.app/Contents/Developer/usr/bin/xcodebuild -project Cosmica.xcodeproj -scheme CosmicaScreens -destination id=6478AFFB-AE17-412A-A1E5-51BCFFD300B6 -derivedDataPath dd "-only-testing:CosmicaUITests/AdClipsUITests/test_clip_a" -skipPackagePluginValidation -skipMacroValidation CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM= PROVISIONING_PROFILE_SPECIFIER= test-without-building
+
+Build settings from command line:
+    CODE_SIGN_IDENTITY = -
+    CODE_SIGN_STYLE = Manual
+    DEVELOPMENT_TEAM = 
+    PROVISIONING_PROFILE_SPECIFIER = 
+
+Resolve Package Graph
+
+
+Resolved source packages:
+  GoogleUserMessagingPlatform: https://github.com/googleads/swift-package-manager-google-user-messaging-platform.git @ 3.1.0
+  GoogleMobileAds: https://github.com/googleads/swift-package-manager-google-mobile-ads.git @ 12.14.0
+
+--- xcodebuild: WARNING: Using the first of multiple matching destinations:
+{ platform:iOS Simulator, arch:arm64, id:6478AFFB-AE17-412A-A1E5-51BCFFD300B6, OS:26.5, name:iPhone 17 Pro }
+{ platform:iOS Simulator, arch:x86_64, id:6478AFFB-AE17-412A-A1E5-51BCFFD300B6, OS:26.5, name:iPhone 17 Pro }
+2026-11-24 21:57:15.869017+0000 CosmicaUITests-Runner[11148:37439] [Default] Running tests...
+objc[11148]: Class UIAccessibilityLoaderWebShared is implemented in both /Library/Developer/CoreSimulator/Volumes/iOS_23F77/Library/Developer/CoreSimulator/Profiles/Runtimes/iOS 26.5.simruntime/Contents/Resources/RuntimeRoot/System/Library/AccessibilityBundles/WebCore.axbundle/WebCore (0x109114310) and /Library/Developer/CoreSimulator/Volumes/iOS_23F77/Library/Developer/CoreSimulator/Profiles/Runtimes/iOS 26.5.simruntime/Contents/Resources/RuntimeRoot/System/Library/AccessibilityBundles/WebKit.axbundle/WebKit (0x108be0398). This may cause spurious casting failures and mysterious crashes. One of the duplicates must be removed or renamed.
+    t =      nans Interface orientation changed to Portrait
+Test Suite 'Selected tests' started at 2026-11-24 21:57:30.476.
+Test Suite 'CosmicaUITests.xctest' started at 2026-11-24 21:57:30.478.
+Test Suite 'AdClipsUITests' started at 2026-11-24 21:57:30.478.
+Test Case '-[CosmicaUITests.AdClipsUITests test_clip_a]' started.
+    t =     0.00s Start Test at 2026-11-24 21:57:30.479
+    t =     0.32s Set Up
+ADCLIP_MARK launch 1795557450.811
+    t =     0.34s Open com.centricfiber.cosmica
+    t =     0.34s     Launch com.centricfiber.cosmica
+2026-11-24 21:57:35.820 xcodebuild[8234:28484] [MT] IDELaunchParametersSnapshot: The operation couldn’t be completed. (DebuggerLLDB.DebuggerVersionStore.StoreError error 0.)
+2026-11-24 21:57:35.821 xcodebuild[8234:28484] [MT] IDELaunchParametersSnapshot: no debugger version
+    t =    21.53s         Setting up automation session
+ADCLIP_MARK scene 1795557480.058
+    t =    38.68s Waiting 3.0s for "Max" Button to exist
+    t =    39.74s     Checking `Expect predicate `existsNoRetry == 1` for object "Max" Button`
+    t =    39.75s         Checking existence of `"Max" Button`
+    t =    41.96s         Capturing element debug description
+    t =    41.97s     Checking existence of `"Max" Button`
+    t =    48.54s Tap "Max" Button
+    t =    48.54s     Find the "Max" Button
+    t =    49.55s     Check for interrupting elements affecting "Max" Button
+    t =    50.94s     Synthesize event
+ADCLIP_MARK max 1795557502.789
+    t =    52.31s Waiting 3.0s for "1" Button to exist
+    t =    53.32s     Checking `Expect predicate `existsNoRetry == 1` for object "1" Button`
+    t =    53.34s         Checking existence of `"1" Button`
+    t =    55.38s     Checking existence of `"1" Button`
+    t =    57.27s Find the "1" Button
+    t =    58.22s Find the Target Application 'com.centricfiber.cosmica'
+    t =    58.46s Tap Target Application 'com.centricfiber.cosmica'[0.00, 0.00] -> (333.7, 493.0)
+    t =    58.46s     Find the Target Application 'com.centricfiber.cosmica'
+    t =    58.81s     Check for interrupting elements affecting "Cosmica" Application
+    t =    59.29s     Synthesize event
+    t =    59.34s         Find the Target Application 'com.centricfiber.cosmica'
+    t =    59.62s         Find the Target Application 'com.centricfiber.cosmica'
+    t =    60.09s         Find the Target Application 'com.centricfiber.cosmica'
+    t =    62.64s Waiting 3.0s for "1" Button to exist
+    t =    63.73s     Checking `Expect predicate `existsNoRetry == 1` for object "1" Button`
+    t =    63.75s         Checking existence of `"1" Button`
+    t =    65.05s Find the "1" Button
+    t =    66.31s Find the Target Application 'com.centricfiber.cosmica'
+    t =    66.70s Tap Target Application 'com.centricfiber.cosmica'[0.00, 0.00] -> (333.7, 575.7)
+    t =    66.70s     Find the Target Application 'com.centricfiber.cosmica'
+    t =    67.11s     Check for interrupting elements affecting "Cosmica" Application
+    t =    69.19s     Synthesize event
+    t =    69.26s         Find the Target Application 'com.centricfiber.cosmica'
+    t =    70.46s         Find the Target Application 'com.centricfiber.cosmica'
+    t =    70.96s         Find the Target Application 'com.centricfiber.cosmica'
+    t =    73.46s Waiting 3.0s for "1" Button to exist
+    t =    74.47s     Checking `Expect predicate `existsNoRetry == 1` for object "1" Button`
+    t =    74.48s         Checking existence of `"1" Button`
+    t =    74.91s Find the "1" Button
+    t =    75.71s Find the Target Application 'com.centricfiber.cosmica'
+    t =    76.11s Tap Target Application 'com.centricfiber.cosmica'[0.00, 0.00] -> (333.7, 489.7)
+    t =    76.11s     Find the Target Application 'com.centricfiber.cosmica'
+    t =    76.75s     Check for interrupting elements affecting "Cosmica" Application
+    t =    77.53s     Synthesize event
+    t =    77.53s         Find the Target Application 'com.centricfiber.cosmica'
+    t =    77.88s         Find the Target Application 'com.centricfiber.cosmica'
+    t =    78.45s         Find the Target Application 'com.centricfiber.cosmica'
+    t =    81.48s Waiting 3.0s for "1" Button to exist
+    t =    82.55s     Checking `Expect predicate `existsNoRetry == 1` for object "1" Button`
+    t =    82.60s         Checking existence of `"1" Button`
+    t =    84.75s         Capturing element debug description
+    t =    84.75s     Checking existence of `"1" Button`
+    t =    86.75s Find the "1" Button
+    t =    87.19s Find the Target Application 'com.centricfiber.cosmica'
+    t =    87.58s Tap Target Application 'com.centricfiber.cosmica'[0.00, 0.00] -> (333.7, 575.7)
+    t =    87.58s     Find the Target Application 'com.centricfiber.cosmica'
+    t =    87.94s     Check for interrupting elements affecting "Cosmica" Application
+    t =    90.61s     Synthesize event
+    t =    90.72s         Find the Target Application 'com.centricfiber.cosmica'
+    t =    91.01s         Find the Target Application 'com.centricfiber.cosmica'
+    t =    91.49s         Find the Target Application 'com.centricfiber.cosmica'
+    t =    94.67s Waiting 3.0s for "1" Button to exist
+    t =    95.74s     Checking `Expect predicate `existsNoRetry == 1` for object "1" Button`
+    t =    95.76s         Checking existence of `"1" Button`
+    t =    96.46s Find the "1" Button
+    t =    98.00s Find the Target Application 'com.centricfiber.cosmica'
+    t =    98.60s Tap Target Application 'com.centricfiber.cosmica'[0.00, 0.00] -> (333.7, 489.7)
+    t =    98.60s     Find the Target Application 'com.centricfiber.cosmica'
+    t =    99.92s     Check for interrupting elements affecting "Cosmica" Application
+    t =   102.34s     Synthesize event
+    t =   102.44s         Find the Target Application 'com.centricfiber.cosmica'
+    t =   103.17s         Find the Target Application 'com.centricfiber.cosmica'
+    t =   104.32s         Find the Target Application 'com.centricfiber.cosmica'
+    t =   106.92s Waiting 3.0s for "1" Button to exist
+    t =   107.94s     Checking `Expect predicate `existsNoRetry == 1` for object "1" Button`
+    t =   107.94s         Checking existence of `"1" Button`
+    t =   108.84s Find the "1" Button
+    t =   109.77s Find the Target Application 'com.centricfiber.cosmica'
+    t =   110.20s Tap Target Application 'com.centricfiber.cosmica'[0.00, 0.00] -> (333.7, 575.7)
+    t =   110.20s     Find the Target Application 'com.centricfiber.cosmica'
+    t =   111.01s     Check for interrupting elements affecting "Cosmica" Application
+    t =   111.71s     Synthesize event
+    t =   111.74s         Find the Target Application 'com.centricfiber.cosmica'
+    t =   112.16s         Find the Target Application 'com.centricfiber.cosmica'
+    t =   112.85s         Find the Target Application 'com.centricfiber.cosmica'
+ADCLIP_MARK end 1795557566.355
+    t =   117.94s Tear Down
+Test Case '-[CosmicaUITests.AdClipsUITests test_clip_a]' passed (128.954 seconds).
+Test Suite 'AdClipsUITests' passed at 2026-11-24 21:59:39.437.
+	 Executed 1 test, with 0 failures (0 unexpected) in 128.954 (128.959) seconds
+Test Suite 'CosmicaUITests.xctest' passed at 2026-11-24 21:59:39.443.
+	 Executed 1 test, with 0 failures (0 unexpected) in 128.954 (128.965) seconds
+Test Suite 'Selected tests' passed at 2026-11-24 21:59:39.444.
+	 Executed 1 test, with 0 failures (0 unexpected) in 128.954 (128.968) seconds
+2026-11-24 21:59:46.532 xcodebuild[8234:28484] [MT] IDETestOperationsObserverDebug: 302.107 elapsed -- Testing started completed.
+2026-11-24 21:59:46.533 xcodebuild[8234:28484] [MT] IDETestOperationsObserverDebug: 0.000 sec, +0.000 sec -- start
+2026-11-24 21:59:46.533 xcodebuild[8234:28484] [MT] IDETestOperationsObserverDebug: 302.107 sec, +302.107 sec -- end
+
+Test session results, code coverage, and logs:
+	/Users/runner/work/cosmica/cosmica/dd/Logs/Test/Test-CosmicaScreens-2026.11.24_21-54-27-+0000.xcresult
+
+** TEST EXECUTE SUCCEEDED **
+
+Testing started
