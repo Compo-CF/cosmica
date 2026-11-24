@@ -140,6 +140,11 @@ struct ShopView: View {
         let ultimate = iap.premiumOffer == .ultimate
         let productId = ultimate ? IAPManager.ultimateBundleProductId : IAPManager.deluxeUpgradeProductId
         if let price = iap.displayPrice(for: productId) {
+            // v4.0.6 — Black Friday: StoreKit already charges the sale price (scheduled in ASC);
+            // this only labels it, and only while it's really below the remembered price.
+            let regular = BlackFridaySale.regular(productId)
+            let sale = BlackFridaySale.onSale(now: Date(), price: iap.product(for: productId)?.price,
+                                              regular: regular?.price)
             let parts = ultimate
                 ? [IAPManager.removeAdsProductId, IAPManager.automationCoreProductId,
                    IAPManager.stardustDoublerProductId, IAPManager.supporterProductId]
@@ -155,7 +160,7 @@ struct ShopView: View {
             cardBackground {
                 VStack(alignment: .leading, spacing: 12) {
                     HStack(spacing: 10) {
-                        Text(ultimate ? "EVERYTHING" : "UPGRADE YOUR BUNDLE")
+                        Text(sale ? "BLACK FRIDAY SALE" : (ultimate ? "EVERYTHING" : "UPGRADE YOUR BUNDLE"))
                             .lineLimit(1).minimumScaleFactor(0.6)   // v4.0.1 — tags stay on one line
                             .font(.caption2.bold())
                             .foregroundStyle(.black)
@@ -191,6 +196,17 @@ struct ShopView: View {
                             .foregroundStyle(.black)
                     }
                     .disabled(iap.purchaseInFlight)
+                    if sale {
+                        HStack(spacing: 6) {
+                            if let regular, regular.label != price {
+                                Text(regular.label).strikethrough().foregroundStyle(.secondary)
+                            }
+                            Text("Sale ends in \(Formatter.duration(BlackFridaySale.end.timeIntervalSince(Date())))")
+                                .foregroundStyle(.orange)
+                        }
+                        .font(.caption.bold())
+                        .frame(maxWidth: .infinity)
+                    }
                 }
             }
             .seen(ShopStats.key(productId), in: self)

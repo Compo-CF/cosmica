@@ -262,6 +262,13 @@ final class IAPManager {
     func loadProducts() async {
         do {
             products = try await Product.products(for: Self.allProductIds)
+            // v4.0.6 — remember the pre-sale bundle prices so the Black Friday tag can show the old
+            // price, and never claims a sale StoreKit isn't charging (BlackFridaySale.onSale).
+            for id in [Self.ultimateBundleProductId, Self.deluxeUpgradeProductId] {
+                if let p = product(for: id) {
+                    BlackFridaySale.remember(id, price: p.price, label: p.displayPrice, now: Date())
+                }
+            }
         } catch {
             lastError = "Couldn't load products: \(error.localizedDescription)"
         }

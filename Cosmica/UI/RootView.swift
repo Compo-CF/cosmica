@@ -132,6 +132,7 @@ struct RootView: View {
             switch pending {
             case .bigBang:     selectedTab = .prestige
             case .observatory: selectedTab = .observatory
+            case .shop:        selectedTab = .shop
             }
             notif.pendingTab = nil
         }

@@ -45,7 +45,8 @@ final class NotificationManager: NSObject {
     /// notification. RootView observes and pushes the tab.
     var pendingTab: PendingTab? = nil
 
-    enum PendingTab: String { case bigBang, observatory }
+    /// `.shop` (v4.0.6) is set in-app by the Black Friday banner; no notification sends it.
+    enum PendingTab: String { case bigBang, observatory, shop }
 
     // MARK: - Preferences (backed by UserDefaults)
 

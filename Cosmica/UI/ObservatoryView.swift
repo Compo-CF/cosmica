@@ -30,6 +30,7 @@ struct ObservatoryView: View {
                 CurrencyBar()
                 tierStrip
                 SeasonalTrailBanner()   // v4.0.4/4.0.5 — Seasonal Trails (time-limited events)
+                BlackFridayBanner()     // v4.0.6 — Black Friday 2026 sale (hidden outside the window)
                 if let event = engine.state.activeEvent {
                     eventBanner(event)
                 }
