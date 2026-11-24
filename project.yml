@@ -13,7 +13,7 @@ settings:
     # extension (App Store rejects an extension whose version differs from
     # its app). scripts/testflight.sh overrides CURRENT_PROJECT_VERSION with the git
     # commit count; the value here only matters for manual Xcode archives.
-    MARKETING_VERSION: "4.0.6"
+    MARKETING_VERSION: "4.0.7"
     CURRENT_PROJECT_VERSION: "40"
     TARGETED_DEVICE_FAMILY: "1"
     ALWAYS_SEARCH_USER_PATHS: NO
@@ -65,6 +65,59 @@ targets:
         NSUserTrackingUsageDescription: "Cosmica uses your identifier to show more relevant ads and support the game."
         GADApplicationIdentifier: "ca-app-pub-1927040492403163~7701480321"
         ITSAppUsesNonExemptEncryption: false
+        # 4.0.7 — SKAdNetwork IDs (50, from Critter Conga's list: Google cstr6suwn9, Meta v9wttpbfk9 + n38lu8286q)
+        # so Meta can optimize installs and AdMob bidding gets attribution.
+        SKAdNetworkItems:
+          - SKAdNetworkIdentifier: 22mmun2rn5.skadnetwork
+          - SKAdNetworkIdentifier: 2fnua5tdw4.skadnetwork
+          - SKAdNetworkIdentifier: 2u9pt9hc89.skadnetwork
+          - SKAdNetworkIdentifier: 3qcr597p9d.skadnetwork
+          - SKAdNetworkIdentifier: 3qy4746246.skadnetwork
+          - SKAdNetworkIdentifier: 3rd42ekr43.skadnetwork
+          - SKAdNetworkIdentifier: 3sh42y64q3.skadnetwork
+          - SKAdNetworkIdentifier: 4468km3ulz.skadnetwork
+          - SKAdNetworkIdentifier: 44jx6755aq.skadnetwork
+          - SKAdNetworkIdentifier: 47vhws6wlr.skadnetwork
+          - SKAdNetworkIdentifier: 4dzt52r2t5.skadnetwork
+          - SKAdNetworkIdentifier: 4fzdc2evr5.skadnetwork
+          - SKAdNetworkIdentifier: 578prtvx9j.skadnetwork
+          - SKAdNetworkIdentifier: 7ug5zh24hu.skadnetwork
+          - SKAdNetworkIdentifier: 8c4e2ghe7u.skadnetwork
+          - SKAdNetworkIdentifier: 8s468mfl3y.skadnetwork
+          - SKAdNetworkIdentifier: 97r2b46745.skadnetwork
+          - SKAdNetworkIdentifier: 9t245vhmpl.skadnetwork
+          - SKAdNetworkIdentifier: a2p9lx4jpn.skadnetwork
+          - SKAdNetworkIdentifier: c3frkrj4fj.skadnetwork
+          - SKAdNetworkIdentifier: c6k4g5qg8m.skadnetwork
+          - SKAdNetworkIdentifier: cp8zw746q7.skadnetwork
+          - SKAdNetworkIdentifier: cstr6suwn9.skadnetwork
+          - SKAdNetworkIdentifier: e5fvkxwrpn.skadnetwork
+          - SKAdNetworkIdentifier: f38h382jlk.skadnetwork
+          - SKAdNetworkIdentifier: gta9lk7p23.skadnetwork
+          - SKAdNetworkIdentifier: hs6bdukanm.skadnetwork
+          - SKAdNetworkIdentifier: k674qkevps.skadnetwork
+          - SKAdNetworkIdentifier: kbd757ywx3.skadnetwork
+          - SKAdNetworkIdentifier: kbmxgpxpgc.skadnetwork
+          - SKAdNetworkIdentifier: klf5c3l5u5.skadnetwork
+          - SKAdNetworkIdentifier: ludvb6z3bs.skadnetwork
+          - SKAdNetworkIdentifier: mlmmfzh3r3.skadnetwork
+          - SKAdNetworkIdentifier: n38lu8286q.skadnetwork
+          - SKAdNetworkIdentifier: p78axxw29g.skadnetwork
+          - SKAdNetworkIdentifier: ppxm28t8ap.skadnetwork
+          - SKAdNetworkIdentifier: s39g8k73mm.skadnetwork
+          - SKAdNetworkIdentifier: su67r6k2v3.skadnetwork
+          - SKAdNetworkIdentifier: t38b2kh725.skadnetwork
+          - SKAdNetworkIdentifier: tl55sbb4fm.skadnetwork
+          - SKAdNetworkIdentifier: uw77j35x4d.skadnetwork
+          - SKAdNetworkIdentifier: v4nxqhlyqp.skadnetwork
+          - SKAdNetworkIdentifier: v72qych5uu.skadnetwork
+          - SKAdNetworkIdentifier: v9wttpbfk9.skadnetwork
+          - SKAdNetworkIdentifier: vutu7akeur.skadnetwork
+          - SKAdNetworkIdentifier: wg4vff78zm.skadnetwork
+          - SKAdNetworkIdentifier: wzmmz9fp6w.skadnetwork
+          - SKAdNetworkIdentifier: y5ghdn5j9k.skadnetwork
+          - SKAdNetworkIdentifier: yclnxrl5pm.skadnetwork
+          - SKAdNetworkIdentifier: ydx93a7ass.skadnetwork
     settings:
       base:
         PRODUCT_NAME: Cosmica

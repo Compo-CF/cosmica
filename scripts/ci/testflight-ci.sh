@@ -38,6 +38,14 @@ xcodebuild archive \
 [ -d "$ARCHIVE" ] || { echo "archive failed"; grep -E "error:" "$BUILD_DIR/archive.log" | sort -u | head -40; tail -30 "$BUILD_DIR/archive.log"; exit 1; }
 BUILT="$(/usr/libexec/PlistBuddy -c 'Print :ApplicationProperties:CFBundleVersion' "$ARCHIVE/Info.plist")"
 [ "$BUILT" = "$BUILD_NUMBER" ] || { echo "archive has build $BUILT, expected $BUILD_NUMBER"; exit 1; }
+# 4.0.7 — SKAdNetwork IDs must reach the shipped Info.plist (Meta install ads + AdMob attribution).
+APP_PLIST="$(ls -d "$ARCHIVE"/Products/Applications/*.app)/Info.plist"
+SKAN="$(/usr/libexec/PlistBuddy -c 'Print :SKAdNetworkItems' "$APP_PLIST" 2>/dev/null | grep -c 'SKAdNetworkIdentifier' || true)"
+echo "SKAdNetworkItems in built Info.plist: $SKAN"
+for id in cstr6suwn9 v9wttpbfk9 n38lu8286q; do
+  /usr/libexec/PlistBuddy -c 'Print :SKAdNetworkItems' "$APP_PLIST" | grep -q "$id.skadnetwork" || { echo "missing SKAdNetwork $id"; exit 1; }
+done
+[ "$SKAN" -ge 50 ] || { echo "expected 50 SKAdNetworkItems, found $SKAN"; exit 1; }
 
 DEST=export; [ "$UPLOAD" -eq 1 ] && DEST=upload
 cat > "$BUILD_DIR/ExportOptions.plist" <<EOF
