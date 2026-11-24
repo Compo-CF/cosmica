@@ -52,7 +52,7 @@ final class AdClipsUITests: XCTestCase {
         let confirm = button(beginning: "Big Bang (")
         if confirm.waitForExistence(timeout: 5) { confirm.tap() }
         mark("confirmed")
-        pause(3.5)
+        pause(5.0)
         mark("after")
         tab("Observatory")
         mark("reclimb")

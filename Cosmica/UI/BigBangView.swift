@@ -11,6 +11,8 @@ struct BigBangView: View {
     @State private var showConfirm = false
     @State private var collapseAnim = false
     @State private var showBoostNudge = false
+    /// Ad capture only (AdClipMode): bumped to scroll the orb into view before the collapse.
+    @State private var adClipScrollToTop = 0
 
     /// v3.0 Phase 3 — Auto-Big-Bang threshold options. Double to match the
     /// post-v2.1.1 shard type. v3.1: extended past 1M — late-game players earn
@@ -22,9 +24,10 @@ struct BigBangView: View {
         NavigationStack {
             ZStack {
                 background
+                ScrollViewReader { proxy in
                 ScrollView {
                     VStack(spacing: 22) {
-                        CurrencyBar().background(.clear)
+                        CurrencyBar().background(.clear).id("bigBangTop")
                         prestigeOrb
                         statsCard
                         tierCard
@@ -62,6 +65,10 @@ struct BigBangView: View {
                         }
                     }
                     .padding(.bottom, 24)
+                }
+                .onChange(of: adClipScrollToTop) { _, _ in
+                    withAnimation(.easeInOut(duration: 0.55)) { proxy.scrollTo("bigBangTop", anchor: .top) }
+                }
                 }
             }
             .navigationTitle("Big Bang")
@@ -435,6 +442,14 @@ struct BigBangView: View {
     }
 
     private func triggerBigBang() {
+        // Ad capture only (`-cosmicaAdClip`): bring the orb on screen first so the
+        // collapse is on camera. Everyone else collapses straight away, as before.
+        guard AdClipMode.isActive else { return collapse() }
+        adClipScrollToTop += 1
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.7) { collapse() }
+    }
+
+    private func collapse() {
         withAnimation { collapseAnim = true }
         haptics.bigBang()
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
