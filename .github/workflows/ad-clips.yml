@@ -42,6 +42,9 @@ jobs:
           echo "SIM=$SIM" >> "$GITHUB_ENV"
           echo "Simulator: $(xcrun simctl list devices | grep "$SIM" | head -1)"
 
+      - name: ffmpeg (trims the recordings; GitHub rejects files over 100 MB)
+        run: command -v ffmpeg >/dev/null || brew install ffmpeg
+
       - name: Build for testing
         run: |
           set -o pipefail
@@ -85,6 +88,29 @@ jobs:
             grep -oE "ADCLIP_MARK [^ ]+ [0-9.]+" "out/test_$c.log" >> "out/markers_$c.txt" || true
             grep -E "Test Case|error|skipped" "out/test_$c.log" | head -20 || true
             cat "out/markers_$c.txt"
+            # Keep launch (splash) to end + 2 s, re-encoded at 30 fps so it fits under 100 MB.
+            if [ -s "out/clip_$c.mp4" ]; then
+              read SS DUR < <(python3 - "out/markers_$c.txt" <<'PY'
+          import sys
+          m = {}
+          for line in open(sys.argv[1]):
+              p = line.split()
+              if p[0] == "REC_START": m["rec"] = float(p[1])
+              elif len(p) == 3: m.setdefault(p[1], float(p[2]))
+          start = max(0.0, m.get("launch", m["rec"]) - m["rec"] - 0.5)
+          end = m.get("end", m["rec"] + 600) - m["rec"] + 2.5
+          print(f"{start:.2f} {end - start:.2f}")
+          PY
+              )
+              echo "trim $c: start $SS s, $DUR s" | tee -a "out/markers_$c.txt"
+              mv "out/clip_$c.mp4" raw.mp4
+              ffmpeg -v error -y -ss "$SS" -i raw.mp4 -t "$DUR" -vf fps=30 -c:v libx264 -preset veryfast -crf 20                 -pix_fmt yuv420p -movflags +faststart -an "out/clip_$c.mp4"
+              SIZE=$(stat -f%z "out/clip_$c.mp4")
+              if [ "$SIZE" -gt 95000000 ]; then
+                ffmpeg -v error -y -ss "$SS" -i raw.mp4 -t "$DUR" -vf fps=30 -c:v libx264 -preset veryfast -crf 27                   -pix_fmt yuv420p -movflags +faststart -an "out/clip_$c.mp4"
+              fi
+              rm -f raw.mp4
+            fi
             ls -la "out/clip_$c.mp4" || true
             xcrun simctl terminate "$SIM" com.centricfiber.cosmica || true
           done

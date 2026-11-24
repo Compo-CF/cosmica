@@ -17,89 +17,79 @@ final class AdClipsUITests: XCTestCase {
     }
 
     // MARK: Clips
+    // The orb taps come from the app itself in ad-clip mode (ObservatoryView), because
+    // synthesized taps run about one per 3 s on the CI simulator while it records.
 
     /// a — numbers that never stop: a fresh run, automation buying, orb taps, Max buys.
     func test_clip_a() {
         launch("a")
         mark("scene")
-        tapOrb(count: 18, every: 0.22)
+        pause(9)
         tapButton("Max")                        // buy mode: Max
         mark("max")
-        for round in 0..<7 {
-            tapBuyRow(round % 3)
-            tapOrb(count: 8, every: 0.22)
+        for round in 0..<6 {
+            tapBuyRow(round % 2)
+            pause(1.5)
         }
         mark("end")
-        pause(1.5)
+        pause(2)
     }
 
     /// b — a Big Bang: watch the run, open the Big Bang tab, claim, confirm, collapse, re-climb.
     func test_clip_b() {
         launch("b")
         mark("scene")
-        tapOrb(count: 12, every: 0.25)
+        pause(5)
         tab("Big Bang")
         mark("bigbang-tab")
-        pause(2.0)
-        let claim = app.buttons.containing(NSPredicate(format: "label BEGINSWITH %@", "Big Bang —")).firstMatch
+        pause(1.5)
+        let claim = button(beginning: "Big Bang —")
         for _ in 0..<8 where !(claim.exists && claim.isHittable) {
             app.swipeUp(velocity: .slow)
-            pause(0.7)
         }
-        pause(0.8)
         claim.tap()
         mark("confirm-dialog")
-        pause(1.4)
-        let confirm = app.buttons.containing(NSPredicate(format: "label BEGINSWITH %@", "Big Bang (")).firstMatch
-        if confirm.waitForExistence(timeout: 3) { confirm.tap() }
+        let confirm = button(beginning: "Big Bang (")
+        if confirm.waitForExistence(timeout: 5) { confirm.tap() }
         mark("confirmed")
-        pause(0.3)
-        scrollToTop()
-        pause(4.5)
+        pause(3.5)
         mark("after")
         tab("Observatory")
         mark("reclimb")
-        tapOrb(count: 26, every: 0.23)
+        pause(16)
         mark("end")
-        pause(1.0)
     }
 
     /// c — every layer in its own colours, then into a Rift and a fresh run.
     func test_clip_c() {
         launch("c")
         mark("scene")
-        tapOrb(count: 8, every: 0.25)
+        pause(3)
         tab("Big Bang")
         mark("bigbang-tab")
-        pause(1.2)
         for name in ["True Cosmos", "Multiverse"] {
             if open(name) {
                 mark(name)
-                pause(2.2)
+                pause(1.5)
                 back()
-                pause(0.8)
             }
         }
         if open("Omniverse") {
             mark("Omniverse")
-            pause(2.0)
+            pause(1.0)
             if open("Rifts") {
                 mark("Rifts")
-                pause(1.8)
                 let enter = app.buttons["Enter"].firstMatch
-                if enter.waitForExistence(timeout: 3) { enter.tap() }
-                pause(1.2)
-                let go = app.buttons.containing(NSPredicate(format: "label BEGINSWITH %@", "Enter (")).firstMatch
-                if go.waitForExistence(timeout: 3) { go.tap() }
+                if enter.waitForExistence(timeout: 5) { enter.tap() }
+                let go = button(beginning: "Enter (")
+                if go.waitForExistence(timeout: 5) { go.tap() }
                 mark("rift-entered")
-                pause(1.5)
             }
         }
         tab("Observatory")
         mark("rift-run")
-        tapOrb(count: 26, every: 0.23)
+        pause(16)
         mark("end")
-        pause(1.0)
     }
 
     // MARK: Helpers
@@ -129,15 +119,6 @@ final class AdClipsUITests: XCTestCase {
         return one.waitForExistence(timeout: 3) ? one.frame : CGRect(x: 0, y: app.frame.height * 0.55, width: 80, height: 30)
     }
 
-    private func tapOrb(count: Int, every: Double) {
-        let p = picker
-        let target = point(app.frame.midX, p.minY - 100)
-        for i in 0..<count {
-            target.tap()
-            pause(every + (i % 3 == 0 ? 0.04 : 0))
-        }
-    }
-
     /// Buy button of the n-th visible generator row (rows sit under the buy-mode picker).
     private func tapBuyRow(_ n: Int) {
         let p = picker
@@ -164,24 +145,19 @@ final class AdClipsUITests: XCTestCase {
         if b.exists { b.tap() }
     }
 
-    /// Tap the status bar (scroll to top), then make sure with a quick fling.
-    private func scrollToTop() {
-        point(app.frame.midX, 8).tap()
-        pause(0.45)
-        let header = app.staticTexts["Prestige Reward"].firstMatch
-        if !(header.exists && header.isHittable) {
-            app.swipeDown(velocity: .fast)
-        }
+    private func button(beginning prefix: String) -> XCUIElement {
+        app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", prefix)).firstMatch
     }
 
     /// Scrolls until a link whose label mentions `name` appears, then taps it.
     @discardableResult
     private func open(_ name: String) -> Bool {
-        let link = app.buttons.containing(NSPredicate(format: "label CONTAINS[c] %@", name)).firstMatch
-        for _ in 0..<7 {
-            if link.exists && link.isHittable { link.tap(); pause(0.6); return true }
+        let pred = NSPredicate(format: "label CONTAINS[c] %@", name)
+        for _ in 0..<8 {
+            let own = app.buttons.matching(pred).firstMatch
+            let link = own.exists ? own : app.buttons.containing(pred).firstMatch
+            if link.exists && link.isHittable { link.tap(); return true }
             app.swipeUp(velocity: .slow)
-            pause(0.6)
         }
         return false
     }

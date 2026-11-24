@@ -204,16 +204,30 @@ struct ObservatoryView: View {
         .frame(maxWidth: .infinity)
         .padding(.vertical, tapZoneVerticalPad)
         .contentShape(Rectangle())
-        .onTapGesture {
-            let v = engine.manualTap()
-            haptics.tap()
-            let floater = Floater(value: v, x: CGFloat.random(in: -40...40))
-            withAnimation(.easeOut(duration: 0.7)) {
-                floats.append(floater)
+        .onTapGesture { tapOrb() }
+        // Ad capture only (`-cosmicaAdClip`, AdClipMode.swift): tap the orb at a quick
+        // human rhythm while this tab is on screen. UI-test taps run ~1 per 3 s on CI.
+        .task {
+            guard AdClipMode.isActive else { return }
+            var n = 0
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: n % 14 == 13 ? 650_000_000 : 170_000_000 + UInt64.random(in: 0...60_000_000))
+                guard !Task.isCancelled else { return }
+                tapOrb()
+                n += 1
             }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.7) {
-                floats.removeAll { $0.id == floater.id }
-            }
+        }
+    }
+
+    private func tapOrb() {
+        let v = engine.manualTap()
+        haptics.tap()
+        let floater = Floater(value: v, x: CGFloat.random(in: -40...40))
+        withAnimation(.easeOut(duration: 0.7)) {
+            floats.append(floater)
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.7) {
+            floats.removeAll { $0.id == floater.id }
         }
     }
 
