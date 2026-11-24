@@ -1,0 +1,104 @@
+name: ad-clips
+
+# Gameplay clips for the Meta app-install test (2026-11-24). Builds the CosmicaScreens
+# scheme for a simulator, then for each clip: start `simctl io recordVideo`, run that one
+# AdClipsUITests test (-cosmicaDemo -cosmicaAdClip <x>, see Cosmica/App/AdClipMode.swift),
+# stop the recorder with SIGINT. The mp4s + logs + trim markers are force-pushed to the
+# `ad-clips` branch (Actions artifacts upload empty on this account).
+#   Re-run: gh workflow run ad-clips.yml -R Compo-CF/cosmica --ref v4.0
+#   or:     git push -f origin v4.0:ad-clips-src
+# Fetch:    git fetch origin ad-clips && git show origin/ad-clips:clip_a.mp4 > clip_a.mp4
+on:
+  workflow_dispatch:
+    inputs:
+      clips:
+        description: "Clips to record (space-separated: a b c)"
+        default: "a b c"
+  push:
+    branches: [ad-clips-src]
+
+concurrency:
+  group: ad-clips
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  clips:
+    runs-on: macos-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Generate project and pick a simulator
+        run: |
+          command -v xcodegen >/dev/null || brew install xcodegen
+          xcodegen generate
+          xcodebuild -version
+          SIM=$(xcrun simctl list devices available | grep -E "iPhone 1[6-9] Pro \(" | grep -oE '[0-9A-F]{8}-([0-9A-F]{4}-){3}[0-9A-F]{12}' | tail -1)
+          [ -n "$SIM" ] || SIM=$(xcrun simctl list devices available | grep -E "iPhone 1[6-9] \(" | grep -oE '[0-9A-F]{8}-([0-9A-F]{4}-){3}[0-9A-F]{12}' | tail -1)
+          [ -n "$SIM" ] || SIM=$(xcrun simctl list devices available iPhone | grep -oE '[0-9A-F]{8}-([0-9A-F]{4}-){3}[0-9A-F]{12}' | tail -1)
+          echo "SIM=$SIM" >> "$GITHUB_ENV"
+          echo "Simulator: $(xcrun simctl list devices | grep "$SIM" | head -1)"
+
+      - name: Build for testing
+        run: |
+          set -o pipefail
+          xcodebuild -project Cosmica.xcodeproj -scheme CosmicaScreens -destination "id=$SIM" \
+            -derivedDataPath dd -skipPackagePluginValidation -skipMacroValidation \
+            CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM= PROVISIONING_PROFILE_SPECIFIER= \
+            build-for-testing 2>&1 | tee build.log | grep -E "error:|BUILD" || true
+          grep -q "TEST BUILD SUCCEEDED\|BUILD SUCCEEDED" build.log
+
+      - name: Boot and tidy the simulator
+        run: |
+          xcrun simctl boot "$SIM" || true
+          xcrun simctl bootstatus "$SIM" -b
+          xcrun simctl ui "$SIM" appearance dark || true
+          xcrun simctl status_bar "$SIM" override --time "9:41" --dataNetwork wifi --wifiMode active --wifiBars 3 \
+            --cellularMode active --cellularBars 4 --batteryState charged --batteryLevel 100 || true
+          sleep 5
+
+      - name: Record clips
+        env:
+          CLIPS: ${{ github.event.inputs.clips || 'a b c' }}
+        run: |
+          mkdir -p out
+          for c in $CLIPS; do
+            echo "=== clip $c ==="
+            rm -f "out/clip_$c.mp4" rec.err
+            xcrun simctl io "$SIM" recordVideo --codec=h264 --force "out/clip_$c.mp4" 2> rec.err &
+            REC=$!
+            for i in $(seq 1 40); do grep -q "Recording started" rec.err && break; sleep 0.25; done
+            echo "REC_START $(python3 -c 'import time; print(f"{time.time():.3f}")')" > "out/markers_$c.txt"
+            cat rec.err || true
+            TEST_RUNNER_COSMICA_AD_CLIPS=1 xcodebuild -project Cosmica.xcodeproj -scheme CosmicaScreens \
+              -destination "id=$SIM" -derivedDataPath dd \
+              -only-testing:"CosmicaUITests/AdClipsUITests/test_clip_$c" \
+              -skipPackagePluginValidation -skipMacroValidation \
+              CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM= PROVISIONING_PROFILE_SPECIFIER= \
+              test-without-building > "out/test_$c.log" 2>&1 || echo "test $c exited non-zero"
+            sleep 1
+            kill -INT $REC || true
+            wait $REC || true
+            grep -oE "ADCLIP_MARK [^ ]+ [0-9.]+" "out/test_$c.log" >> "out/markers_$c.txt" || true
+            grep -E "Test Case|error|skipped" "out/test_$c.log" | head -20 || true
+            cat "out/markers_$c.txt"
+            ls -la "out/clip_$c.mp4" || true
+            xcrun simctl terminate "$SIM" com.centricfiber.cosmica || true
+          done
+
+      - name: Publish to the ad-clips branch
+        if: always()
+        run: |
+          SHA=$(git rev-parse --short HEAD)
+          mkdir -p /tmp/pub && cp out/* /tmp/pub/ 2>/dev/null || true
+          cp build.log /tmp/pub/ 2>/dev/null || true
+          cd /tmp/pub
+          git init -q -b ad-clips
+          git config user.name "cosmica-ci"
+          git config user.email "cosmica-ci@users.noreply.github.com"
+          echo "Ad clips from $GITHUB_REF_NAME @ $SHA (run $GITHUB_RUN_ID)" > README.md
+          git add -A && git commit -qm "ad clips @ $SHA"
+          git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" ad-clips

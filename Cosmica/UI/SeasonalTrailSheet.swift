@@ -9,7 +9,8 @@ struct SeasonalTrailBanner: View {
 
     var body: some View {
         TimelineView(.periodic(from: .now, by: 60)) { ctx in
-            if let ev = SeasonalTrails.featured(ctx.date) {
+            // Ad capture hides the dated banner so the footage stays evergreen (AdClipMode.swift).
+            if !AdClipMode.isActive, let ev = SeasonalTrails.featured(ctx.date) {
                 Button { shown = ev } label: { row(ev, ctx.date) }
                     .buttonStyle(.plain)
                     .padding(.horizontal)

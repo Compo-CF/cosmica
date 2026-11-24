@@ -35,7 +35,9 @@ struct CosmicaApp: App {
         // v4.0 — `-cosmicaDemo` (CI screenshot run): a late-game save in memory only.
         if DemoMode.isActive {
             DemoMode.prepareDefaults()
-            _engine = State(initialValue: GameEngine(state: DemoMode.state(), persistence: Persistence.inMemory()))
+            // Ad capture (`-cosmicaAdClip a|b|c`, AdClipMode.swift) swaps in its scene's save.
+            _engine = State(initialValue: GameEngine(state: AdClipMode.state() ?? DemoMode.state(),
+                                                     persistence: Persistence.inMemory()))
             return
         }
         let persistence = (try? Persistence()) ?? Persistence.inMemory()
